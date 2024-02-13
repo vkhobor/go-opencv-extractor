@@ -82,11 +82,11 @@ func ImportVideo(url string, outputDir string, fpsWant int, db *db.Db[DbEntry]) 
 
 func ImportVideoFromPath(id string, path string, outputDir string, fpsWant int, db *db.Db[DbEntry]) error {
 	return importVideoDbWrapper(id, db, func() (*DbEntry, error) {
-		return handleVideoFromPath(path, outputDir, fpsWant, id)
+		return HandleVideoFromPath(path, outputDir, fpsWant, id)
 	})
 }
 
-func handleVideoFromPath(path string, outputDir string, fpsWant int, videoTitle string) (*DbEntry, error) {
+func HandleVideoFromPath(path string, outputDir string, fpsWant int, videoTitle string) (*DbEntry, error) {
 	fps, err := extractMetadata(path)
 	if err != nil {
 		return nil, err
@@ -170,5 +170,5 @@ func handleVideo(url string, outputDir string, fpsWant int) (*DbEntry, error) {
 		return nil, err
 	}
 
-	return handleVideoFromPath(videoPath, outputDir, fpsWant, videoTitle)
+	return HandleVideoFromPath(videoPath, outputDir, fpsWant, videoTitle)
 }

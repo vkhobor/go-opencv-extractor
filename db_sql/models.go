@@ -8,6 +8,30 @@ import (
 	"database/sql"
 )
 
+type BlobStorage struct {
+	ID   string
+	Path sql.NullString
+}
+
 type Job struct {
+	ID          string
 	SearchQuery sql.NullString
+	Limit       sql.NullInt64
+}
+
+type Picture struct {
+	ID            string
+	YtVideoID     sql.NullString
+	FrameNumber   sql.NullInt64
+	BlobStorageID sql.NullString
+	Foreign       interface{}
+}
+
+type YtVideo struct {
+	ID            string
+	JobID         sql.NullString
+	Status        sql.NullString
+	Error         sql.NullString
+	BlobStorageID sql.NullString
+	Foreign       interface{}
 }

@@ -19,6 +19,9 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/vkhobor/go-opencv/api"
 	"github.com/vkhobor/go-opencv/db_sql"
+	"github.com/vkhobor/go-opencv/importing"
+	"github.com/vkhobor/go-opencv/jobs"
+	"github.com/vkhobor/go-opencv/scraper"
 
 	"github.com/spf13/cobra"
 )
@@ -39,10 +42,67 @@ func run(ctx context.Context, w io.Writer, args []string) error {
 		return err
 	}
 
-	m.Up()
-	queries := db_sql.New(db)
+	err = m.Up()
+	if err != nil && err != migrate.ErrNoChange {
+		return err
+	}
 
-	srv := &http.Server{Addr: ":3010", Handler: api.NewRouter(queries)}
+	queries := db_sql.New(db)
+	jobCreator := &jobs.JobCreator{
+		Queries: queries,
+		Scrape: func(args jobs.ScrapeArgs) <-chan jobs.ScrapedVideo {
+			return jobs.MapChannel(scraper.ScrapeToChannel(args.SearchQuery, args.Limit, 0), func(id string) jobs.ScrapedVideo {
+				return jobs.ScrapedVideo{ID: id}
+			})
+		},
+		VImport: func(vid ...jobs.DownlodedVideo) <-chan jobs.ImportedVideo {
+			output := make(chan jobs.ImportedVideo)
+			go func() {
+				for _, video := range vid {
+					val, err := importing.HandleVideoFromPath(video.SavePath, "~/test", 1, "")
+					fmt.Printf("Imported video to %v\n", val)
+					if err != nil {
+						output <- jobs.ImportedVideo{
+							Error: err,
+						}
+					}
+					frames := make([]jobs.Frame, 0)
+					for _, v := range val.FileNames {
+						frames = append(frames, jobs.Frame{FrameNumber: 0, Path: v})
+					}
+					output <- jobs.ImportedVideo{
+						DownlodedVideo:  video,
+						ExtractedFrames: frames,
+					}
+				}
+				close(output)
+			}()
+			return output
+		},
+		Download: func(vid ...jobs.ScrapedVideo) <-chan jobs.DownlodedVideo {
+			output := make(chan jobs.DownlodedVideo)
+			go func() {
+				for _, video := range vid {
+					time.Sleep(time.Second * 45)
+					path, _, err := importing.DownloadVideo(video.ID)
+					if err != nil {
+						output <- jobs.DownlodedVideo{
+							Error: err,
+						}
+					}
+					output <- jobs.DownlodedVideo{
+						ScrapedVideo: video,
+						SavePath:     path,
+					}
+				}
+				close(output)
+			}()
+			return output
+		},
+	}
+	jobCreator.RunJobPool()
+
+	srv := &http.Server{Addr: ":3010", Handler: api.NewRouter(queries, jobCreator)}
 
 	go func() {
 		httpError := srv.ListenAndServe()

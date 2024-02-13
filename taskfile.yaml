@@ -1,5 +1,6 @@
 version: '3'
 
+interval: '500ms'
 tasks:
   install-sqlc:
     cmds:
@@ -15,8 +16,9 @@ tasks:
   install-dev-deps:
     deps: [install-sqlc, install-migrate]
 
-  generate-sql-mapping:
+  generate-sql-mapping-watcher:
     deps: [install-sqlc]
+    watch: true
     sources:
     - db_sql/migrations/*.sql
     - db_sql/queries/*.sql
@@ -53,3 +55,15 @@ tasks:
       msg: "Please provide a name for the migration"
     cmds:
     - task: generate-migration
+
+  start:
+    cmds:
+    - go run . serve
+
+  watch:
+    watch: true
+    sources:
+    - frontend/dist/**/*
+    cmds:
+    - pkill go-opencv || true
+    - task: start
