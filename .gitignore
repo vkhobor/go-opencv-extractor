@@ -2,5 +2,5 @@
 /bin
 /build
 /vid.mp4
-db.sqlite3
-*.sqlite3
+/db.sqlite3
+
