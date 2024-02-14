@@ -36,6 +36,7 @@ require (
 	github.com/dop251/goja v0.0.0-20231027120936-b396bb4c349d // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/go-chi/chi v1.5.5
+	github.com/go-chi/cors v1.2.1
 	github.com/go-chi/render v1.0.3
 	github.com/go-errors/errors v1.5.1
 	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect

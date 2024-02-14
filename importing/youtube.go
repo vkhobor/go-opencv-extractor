@@ -13,12 +13,7 @@ import (
 	"github.com/schollz/progressbar/v3"
 )
 
-func DownloadVideo(url string) (path string, title string, err error) {
-
-	videoID, err := youtubeParser(url)
-	if err != nil {
-		return "", "", err
-	}
+func DownloadVideo(videoID string) (path string, title string, err error) {
 
 	youtube.DefaultClient = youtube.AndroidClient
 	client := youtube.Client{}
@@ -58,7 +53,7 @@ func DownloadVideo(url string) (path string, title string, err error) {
 
 var youtubeRegexp = regexp.MustCompile(`^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*`)
 
-func youtubeParser(url string) (string, error) {
+func YoutubeParser(url string) (string, error) {
 	match := youtubeRegexp.FindStringSubmatch(url)
 	if len(match) > 7 && len(match[7]) == 11 {
 		return match[7], nil

@@ -1,16 +1,22 @@
 <div class="w-screen h-screen dark:bg-gray-950">
-  <app-navbar></app-navbar>
+  <app-navbar id="main"></app-navbar>
 
   <app-navbar id="dummy" [sticky]="false"></app-navbar>
   <div class="space-y-4 mt-4 flex flex-col items-center">
-    @if (data().isInitialLoading) {
+    <!-- Loading -->
+    @if (data().isLoading) {
     <p class="dark:text-white">Loading..</p>
-    } @if (data().data; as data) { @for (item of dataMapped(); track item.id) {
+    }
+    <!-- Data -->
+    @if (data().data; as data) {
+    <!-- For -->
+    @for (item of dataMapped(); track item.id) {
     <div class="md:w-1/2 w-full px-7 md:px-0">
       <app-job-card [job]="item"></app-job-card>
     </div>
-
-    } } @if (data().isError) {
+    }}
+    <!-- Error -->
+    @if (data().isError) {
     <p class="dark:text-white">Error</p>
     }
   </div>

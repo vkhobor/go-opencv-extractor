@@ -63,7 +63,7 @@ tasks:
   watch:
     watch: true
     sources:
-    - frontend/dist/**/*
+    - web/dist/**/*
     cmds:
     - pkill go-opencv || true
     - task: start

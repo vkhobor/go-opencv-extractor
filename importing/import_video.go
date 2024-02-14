@@ -70,7 +70,7 @@ func importVideoDbWrapper(id string, db *db.Db[DbEntry], operation func() (*DbEn
 }
 
 func ImportVideo(url string, outputDir string, fpsWant int, db *db.Db[DbEntry]) error {
-	id, err := youtubeParser(url)
+	id, err := YoutubeParser(url)
 	if err != nil {
 		return err
 	}

@@ -1,0 +1,32 @@
+<div
+  href="#"
+  class="w-full block p-6 bg-white border border-gray-200 rounded-lg shadow hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700"
+>
+  <h3 class="dark:text-white flex mb-7 flex-row justify-between items-center">
+    <div class="font-bold text-2xl">Searching...</div>
+    <div class="text-sm">"{{ job.search_query }}"</div>
+  </h3>
+  <div class="flex justify-start mb-2">
+    <span class="text-sm font-medium text-white-700 dark:text-white"
+      >{{ job.progress.imported }}/{{ job.limit }}</span
+    >
+  </div>
+  <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+    <div
+      class="bg-blue-600 h-2.5 rounded-full"
+      style.width="{{ (job.progress.scraped / job.limit) * 100 }}%"
+    ></div>
+  </div>
+  <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+    <div
+      class="bg-red-600 h-2.5 rounded-full"
+      style.width="{{ (job.progress.downloaded / job.limit) * 100 }}%"
+    ></div>
+  </div>
+  <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+    <div
+      class="bg-purple-600 h-2.5 rounded-full"
+      style.width="{{ (job.progress.imported / job.limit) * 100 }}%"
+    ></div>
+  </div>
+</div>

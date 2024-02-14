@@ -10,4 +10,3 @@ INSERT INTO jobs (
   ?, ?, ?
 )
 RETURNING *;
-

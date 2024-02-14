@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"github.com/vkhobor/go-opencv/db_sql"
 )
 
@@ -20,8 +21,10 @@ type JobCreator struct {
 }
 
 type ScrapeArgs struct {
+	JobId       string
 	SearchQuery string
 	Limit       int
+	Offset      int
 }
 
 type ScrapedVideo struct {
@@ -51,23 +54,29 @@ type Progress struct {
 	Errored   int
 }
 
-// func (jc *JobCreator) CreateJob(searchQuery string, limit int, jobId string) {
-// 	progress := jc.RunJob(searchQuery, limit, jobId)
-// 	for p := range progress {
-// 		jc.OnProgressUpdate(p)
-// 	}
-// }
-
 func (jc *JobCreator) RunJobPool() {
+	go jc.RunScrapeJob()
 	go jc.RunDownloadJob()
 	go jc.RunImportJob()
 }
 
-func (jc *JobCreator) RunScrapeJob(searchQuery string, limit int, jobId string) {
-	scrapeChan := jc.Scrape(ScrapeArgs{SearchQuery: searchQuery, Limit: limit})
+func (jc *JobCreator) RunScrapeJob() {
+	for {
+		time.Sleep(5 * time.Second)
 
-	for video := range scrapeChan {
-		jc.SaveSraped(video, jobId)
+		toScrape := jc.GetToScrapeVideos()
+		fmt.Printf("Running scrape job\n, %v\n", toScrape)
+		for _, scrapeArgs := range toScrape {
+			if scrapeArgs.Limit == 0 {
+				continue
+			}
+
+			scrapeChan := jc.Scrape(ScrapeArgs{SearchQuery: scrapeArgs.SearchQuery, Limit: scrapeArgs.Limit, Offset: scrapeArgs.Offset})
+
+			for video := range scrapeChan {
+				jc.SaveSraped(video, scrapeArgs.JobId)
+			}
+		}
 	}
 }
 
@@ -99,6 +108,48 @@ func (jc *JobCreator) RunImportJob() {
 	}
 }
 
+func (jc *JobCreator) GetToScrapeVideos() []ScrapeArgs {
+	dbVal, err := jc.Queries.ListJobsWithProgress(context.Background())
+
+	if err != nil {
+		return []ScrapeArgs{}
+	}
+
+	have := lo.Filter(dbVal, func(item db_sql.ListJobsWithProgressRow, index int) bool {
+		return item.ID_2.Valid == true
+	})
+	grouping := lo.GroupBy(have, func(row db_sql.ListJobsWithProgressRow) string {
+		return row.ID
+	})
+
+	result := make([]ScrapeArgs, len(dbVal))
+	for i, v := range dbVal {
+		val, ok := grouping[v.ID]
+		if !ok {
+			result[i] = ScrapeArgs{
+				SearchQuery: v.SearchQuery.String,
+				Limit:       int(v.Limit.Int64),
+				Offset:      0,
+				JobId:       v.ID,
+			}
+			continue
+		}
+
+		scrapedForJob := len(val)
+
+		missing := int(v.Limit.Int64) - scrapedForJob
+
+		result[i] = ScrapeArgs{
+			SearchQuery: v.SearchQuery.String,
+			Limit:       missing,
+			Offset:      scrapedForJob,
+			JobId:       v.ID,
+		}
+	}
+
+	return result
+}
+
 func (jc *JobCreator) GetScrapedVideos() []ScrapedVideo {
 	val, err := jc.Queries.GetScrapedVideos(context.Background())
 	if err != nil {
@@ -127,66 +178,6 @@ func (jc *JobCreator) GetDownloadedVideos() []DownlodedVideo {
 	}
 	return result
 }
-
-var statuses = []string{"errored", "completed"}
-
-// func (jc *JobCreator) RunJob(searchQuery string, limit int, jobId string) <-chan Progress {
-// 	progress := make(chan Progress)
-
-// 	go func() {
-
-// 		scrapeChan := jc.Scrape(ScrapeArgs{SearchQuery: searchQuery, Limit: limit})
-// 		scrapeChanMap := MultiplexChan(scrapeChan, func(input ScrapedVideo) string {
-// 			ok := jc.SaveSraped(input, jobId)
-// 			if ok {
-// 				return "completed"
-// 			} else {
-// 				return "errored"
-// 			}
-// 		}, statuses)
-// 		scrapeChan = scrapeChanMap["completed"]
-
-// 		downloadChan := jc.Download(scrapeChan)
-// 		downloadChanMap := MultiplexChan(downloadChan, func(input DownlodedVideo) string {
-// 			ok := jc.DownloadSaved(input)
-// 			fmt.Printf("downloaded video %v\n", ok)
-// 			if ok {
-// 				return "completed"
-// 			} else {
-// 				return "errored"
-// 			}
-// 		}, statuses)
-// 		downloadChan = downloadChanMap["completed"]
-
-// 		importChan := jc.VImport(downloadChan)
-// 		importChanMap := MultiplexChan(importChan, func(input ImportedVideo) string {
-// 			ok := jc.SaveImported(input)
-// 			if ok {
-// 				return "completed"
-// 			} else {
-// 				return "errored"
-// 			}
-// 		}, statuses)
-// 		importChan = importChanMap["completed"]
-// 		importCountChan := CountChan(importChan)
-
-// 		failedChan := MergeChans(CountChan(importChanMap["errored"]), CountChan(downloadChanMap["errored"]), CountChan(scrapeChanMap["errored"]))
-
-// 		latest := LatestFromChans(importCountChan, failedChan)
-
-// 		for l := range latest {
-// 			progress <- Progress{
-// 				Total:     limit,
-// 				Errored:   l[1],
-// 				Completed: l[0],
-// 			}
-// 		}
-
-// 		close(progress)
-// 	}()
-
-// 	return progress
-// }
 
 func (jc *JobCreator) SaveSraped(video ScrapedVideo, jobId string) bool {
 	_, err := jc.Queries.AddYtVideo(context.Background(), db_sql.AddYtVideoParams{
@@ -303,10 +294,6 @@ func (jc *JobCreator) SaveImported(video ImportedVideo) {
 		})
 
 	return
-}
-
-func (jc *JobCreator) OnProgressUpdate(progress Progress) {
-
 }
 
 func RemoveAllPaths(files ...string) {

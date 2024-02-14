@@ -7,11 +7,12 @@ import (
 	"time"
 
 	"github.com/gocolly/colly"
+	"github.com/vkhobor/go-opencv/importing"
 )
 
 type MyCollyCollector struct {
 	*colly.Collector
-	stop *bool
+	stopped *bool
 }
 
 func NewCollector() MyCollyCollector {
@@ -39,7 +40,7 @@ func NewCollector() MyCollyCollector {
 
 func (c MyCollyCollector) OnVideoDetailLink(handler func(link string)) {
 	c.OnHTML("div.thumbnail", func(e *colly.HTMLElement) {
-		if *c.stop {
+		if *c.stopped {
 			return
 		}
 
@@ -52,7 +53,7 @@ func (c MyCollyCollector) OnVideoDetailLink(handler func(link string)) {
 	})
 
 	c.OnHTML(`div.page-next-container`, func(e *colly.HTMLElement) {
-		if *c.stop {
+		if *c.stopped {
 			return
 		}
 
@@ -67,7 +68,7 @@ func (c MyCollyCollector) OnVideoDetailLink(handler func(link string)) {
 
 func (c MyCollyCollector) OnYoutubeUrl(handler func(url string)) {
 	c.OnHTML("a#link-yt-watch", func(e *colly.HTMLElement) {
-		if *c.stop {
+		if *c.stopped {
 			return
 		}
 
@@ -80,7 +81,7 @@ func (c MyCollyCollector) OnYoutubeUrl(handler func(url string)) {
 	})
 }
 
-func Scrape(search string, limit int, offset int, onUrlFound func(url string)) {
+func Scrape(search string, limit int, offset int, onYoutubeIdFound func(url string)) {
 	singlePageVisitor := NewCollector()
 	singlePageVisitor.MaxDepth = 1
 
@@ -100,12 +101,17 @@ func Scrape(search string, limit int, offset int, onUrlFound func(url string)) {
 
 	found := 0
 	singlePageVisitor.OnYoutubeUrl(func(url string) {
-		onUrlFound(url)
+		id, err := importing.YoutubeParser(url)
+		if err != nil {
+			return
+		}
+
+		onYoutubeIdFound(id)
 		found++
 
 		if found >= limit {
-			*singlePageVisitor.stop = true
-			*allPagesVisitor.stop = true
+			*singlePageVisitor.stopped = true
+			*allPagesVisitor.stopped = true
 		}
 	})
 
@@ -116,9 +122,18 @@ func Scrape(search string, limit int, offset int, onUrlFound func(url string)) {
 func ScrapeToChannel(search string, limit int, offset int) <-chan string {
 	resultUrl := make(chan string)
 
-	go Scrape(search, limit, offset, func(url string) {
-		resultUrl <- url
-		fmt.Printf("Found %v\n", url)
-	})
+	if limit == 0 {
+		close(resultUrl)
+		return resultUrl
+	}
+
+	go func() {
+		Scrape(search, limit, offset, func(url string) {
+			resultUrl <- url
+			fmt.Printf("Found %v\n", url)
+		})
+
+		close(resultUrl)
+	}()
 	return resultUrl
 }

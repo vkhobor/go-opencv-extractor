@@ -2,11 +2,11 @@ package api
 
 import (
 	"database/sql"
-	"fmt"
 	"net/http"
 
 	"github.com/go-chi/render"
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"github.com/vkhobor/go-opencv/db_sql"
 	"github.com/vkhobor/go-opencv/jobs"
 )
@@ -14,7 +14,7 @@ import (
 func HandleCreateJob(queries *db_sql.Queries, jobCreator *jobs.JobCreator) http.HandlerFunc {
 	type jobRequest struct {
 		SearchQuery string `json:"search_query"`
-		Limit       int64  `json:"limit"`
+		Limit       int    `json:"limit"`
 	}
 
 	type jobResponse struct {
@@ -25,7 +25,7 @@ func HandleCreateJob(queries *db_sql.Queries, jobCreator *jobs.JobCreator) http.
 		func(w http.ResponseWriter, r *http.Request) {
 			articleRequest := jobRequest{}
 			err := render.Decode(r, &articleRequest)
-			if err != nil {
+			if err != nil || articleRequest.Limit < 1 || articleRequest.SearchQuery == "" {
 				render.Status(r, http.StatusBadRequest)
 				render.PlainText(w, r, "Error decoding request body")
 				return
@@ -37,7 +37,7 @@ func HandleCreateJob(queries *db_sql.Queries, jobCreator *jobs.JobCreator) http.
 					Valid:  true,
 				},
 				Limit: sql.NullInt64{
-					Int64: articleRequest.Limit,
+					Int64: int64(articleRequest.Limit),
 					Valid: true,
 				},
 				ID: uuid.New().String(),
@@ -47,8 +47,6 @@ func HandleCreateJob(queries *db_sql.Queries, jobCreator *jobs.JobCreator) http.
 				render.PlainText(w, r, err.Error())
 				return
 			}
-			fmt.Printf("Starting job with id %v\n", res.ID)
-			go jobCreator.RunScrapeJob(articleRequest.SearchQuery, int(articleRequest.Limit), res.ID)
 
 			render.JSON(w, r, jobResponse{Id: res.ID})
 		},
@@ -57,14 +55,15 @@ func HandleCreateJob(queries *db_sql.Queries, jobCreator *jobs.JobCreator) http.
 
 func HandleListJobs(queries *db_sql.Queries) http.HandlerFunc {
 	type jobProgress struct {
-		Total     int64 `json:"total"`
-		Completed int64 `json:"completed"`
+		Imported   int `json:"imported"`
+		Scraped    int `json:"scraped"`
+		Downloaded int `json:"downloaded"`
 	}
 
 	type jobResponse struct {
 		ID          string      `json:"id"`
 		SearchQuery string      `json:"search_query"`
-		Limit       int64       `json:"limit"`
+		Limit       int         `json:"limit"`
 		Progesss    jobProgress `json:"progress"`
 	}
 
@@ -79,39 +78,53 @@ func HandleListJobs(queries *db_sql.Queries) http.HandlerFunc {
 
 			type job struct {
 				ID            string
-				NumOfImported int64
-				All           int64
+				NumOfImported int
+				All           int
 				SearchQuery   string
-				Limit         int64
-			}
-			jobs := make(map[string]*job)
-			for _, j := range res {
-				hm := jobs[j.ID]
-				if hm == nil {
-					jk := &job{
-						ID:            j.ID,
-						NumOfImported: 0,
-						SearchQuery:   j.SearchQuery.String,
-						Limit:         j.Limit.Int64,
-					}
-					jobs[j.ID] = jk
-					hm = jk
-				}
-				hm.All++
-				if j.Status.String == "imported" {
-					hm.NumOfImported++
-				}
+				Limit         int
 			}
 
+			grouped := lo.GroupBy(res, func(row db_sql.ListJobsWithProgressRow) string {
+				return row.ID
+			})
+
 			jobsResponse := []jobResponse{}
-			for _, j := range jobs {
+			for key, value := range grouped {
+
+				if len(value) == 1 && value[0].ID_2.Valid == false {
+					jobsResponse = append(jobsResponse, jobResponse{
+						SearchQuery: value[0].SearchQuery.String,
+						ID:          key,
+						Limit:       int(value[0].Limit.Int64),
+						Progesss: jobProgress{
+							Imported:   0,
+							Scraped:    0,
+							Downloaded: 0,
+						},
+					})
+					continue
+				}
+
+				scraped := len(value)
+
+				downloaded := lo.CountBy(value,
+					func(row db_sql.ListJobsWithProgressRow) bool {
+						return row.Status.String == "downloaded" || row.Status.String == "imported"
+					})
+
+				imported := lo.CountBy(value,
+					func(row db_sql.ListJobsWithProgressRow) bool {
+						return row.Status.String == "imported"
+					})
+
 				jobsResponse = append(jobsResponse, jobResponse{
-					SearchQuery: j.SearchQuery,
-					ID:          j.ID,
-					Limit:       j.Limit,
+					SearchQuery: value[0].SearchQuery.String,
+					ID:          key,
+					Limit:       int(value[0].Limit.Int64),
 					Progesss: jobProgress{
-						Total:     j.All,
-						Completed: j.NumOfImported,
+						Imported:   imported,
+						Scraped:    scraped,
+						Downloaded: downloaded,
 					},
 				})
 			}
