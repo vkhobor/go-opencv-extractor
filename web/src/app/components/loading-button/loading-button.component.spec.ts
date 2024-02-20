@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { AddSearchModalComponent } from './add-search-modal.component';
+import { LoadingButtonComponent } from './loading-button.component';
 
-describe('AddSearchModalComponent', () => {
-  let component: AddSearchModalComponent;
-  let fixture: ComponentFixture<AddSearchModalComponent>;
+describe('LoadingButtonComponent', () => {
+  let component: LoadingButtonComponent;
+  let fixture: ComponentFixture<LoadingButtonComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AddSearchModalComponent]
+      imports: [LoadingButtonComponent]
     })
     .compileComponents();
     
-    fixture = TestBed.createComponent(AddSearchModalComponent);
+    fixture = TestBed.createComponent(LoadingButtonComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

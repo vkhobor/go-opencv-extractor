@@ -38,19 +38,13 @@
   >
     <ul class="py-2" aria-labelledby="user-menu-button">
       <li>
-        <a
-          href="#"
-          class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white"
-          >Add new</a
-        >
-      </li>
-      <li>
         <button
-          (click)="addNewService.showModal()"
+          (click)="modal.openModal()"
           class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white"
         >
           Add new
         </button>
+        <app-add-modal #modal></app-add-modal>
       </li>
     </ul>
   </div>
