@@ -50,8 +50,8 @@ func run(ctx context.Context, w io.Writer, args []string) error {
 	queries := db_sql.New(db)
 	jobCreator := &jobs.JobCreator{
 		Queries: queries,
-		Scrape: func(args jobs.ScrapeArgs) <-chan jobs.ScrapedVideo {
-			return jobs.MapChannel(scraper.ScrapeToChannel(args.SearchQuery, args.Limit, args.Offset), func(id string) jobs.ScrapedVideo {
+		Scrape: func(args jobs.ScrapeArgs, ctx context.Context) <-chan jobs.ScrapedVideo {
+			return jobs.MapChannel(scraper.ScrapeToChannel(args.SearchQuery, args.Limit, args.Offset, ctx), func(id string) jobs.ScrapedVideo {
 				return jobs.ScrapedVideo{ID: id}
 			})
 		},
@@ -65,6 +65,7 @@ func run(ctx context.Context, w io.Writer, args []string) error {
 						output <- jobs.ImportedVideo{
 							Error: err,
 						}
+						continue
 					}
 					frames := make([]jobs.Frame, 0)
 					for _, v := range val.FileNames {

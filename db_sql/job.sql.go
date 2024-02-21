@@ -32,21 +32,71 @@ func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (Job, erro
 	return i, err
 }
 
-const listJobsWithProgress = `-- name: ListJobsWithProgress :many
-SELECT jobs.id, search_query, "limit", yt_videos.id, job_id, status, error, blob_storage_id, "foreign" FROM jobs
+const getToScrapeVideos = `-- name: GetToScrapeVideos :many
+SELECT COALESCE(found_videos, 0), jobs.id, jobs."limit", jobs.search_query  FROM jobs
+LEFT JOIN
+(SELECT COUNT(*) as found_videos, jobs.id FROM jobs
 LEFT JOIN yt_videos ON jobs.id = yt_videos.job_id
+WHERE yt_videos.id IS NOT NULL
+GROUP BY jobs.id) as t ON t.id = jobs.id
+`
+
+type GetToScrapeVideosRow struct {
+	FoundVideos int64
+	ID          string
+	Limit       sql.NullInt64
+	SearchQuery sql.NullString
+}
+
+func (q *Queries) GetToScrapeVideos(ctx context.Context) ([]GetToScrapeVideosRow, error) {
+	rows, err := q.db.QueryContext(ctx, getToScrapeVideos)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetToScrapeVideosRow
+	for rows.Next() {
+		var i GetToScrapeVideosRow
+		if err := rows.Scan(
+			&i.FoundVideos,
+			&i.ID,
+			&i.Limit,
+			&i.SearchQuery,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listJobsWithProgress = `-- name: ListJobsWithProgress :many
+SELECT jobs.id, search_query, "limit", yt_videos.id, job_id, status, error, yt_videos.blob_storage_id, "foreign", pictures.id, yt_video_id, frame_number, pictures.blob_storage_id, "foreign" FROM jobs
+LEFT JOIN yt_videos ON jobs.id = yt_videos.job_id
+LEFT JOIN pictures ON yt_videos.id = pictures.yt_video_id
 `
 
 type ListJobsWithProgressRow struct {
-	ID            string
-	SearchQuery   sql.NullString
-	Limit         sql.NullInt64
-	ID_2          sql.NullString
-	JobID         sql.NullString
-	Status        sql.NullString
-	Error         sql.NullString
-	BlobStorageID sql.NullString
-	Foreign       interface{}
+	ID              string
+	SearchQuery     sql.NullString
+	Limit           sql.NullInt64
+	ID_2            sql.NullString
+	JobID           sql.NullString
+	Status          sql.NullString
+	Error           sql.NullString
+	BlobStorageID   sql.NullString
+	Foreign         interface{}
+	ID_3            sql.NullString
+	YtVideoID       sql.NullString
+	FrameNumber     sql.NullInt64
+	BlobStorageID_2 sql.NullString
+	Foreign_2       interface{}
 }
 
 func (q *Queries) ListJobsWithProgress(ctx context.Context) ([]ListJobsWithProgressRow, error) {
@@ -68,6 +118,11 @@ func (q *Queries) ListJobsWithProgress(ctx context.Context) ([]ListJobsWithProgr
 			&i.Error,
 			&i.BlobStorageID,
 			&i.Foreign,
+			&i.ID_3,
+			&i.YtVideoID,
+			&i.FrameNumber,
+			&i.BlobStorageID_2,
+			&i.Foreign_2,
 		); err != nil {
 			return nil, err
 		}

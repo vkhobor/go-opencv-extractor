@@ -1,7 +1,7 @@
 package scraper
 
 import (
-	"fmt"
+	"context"
 	"net/url"
 	"strings"
 	"time"
@@ -81,13 +81,13 @@ func (c MyCollyCollector) OnYoutubeUrl(handler func(url string)) {
 	})
 }
 
-func Scrape(search string, limit int, offset int, onYoutubeIdFound func(url string)) {
+func Scrape(ctx context.Context, search string, limit int, offset int, onYoutubeIdFound func(url string)) {
 	singlePageVisitor := NewCollector()
 	singlePageVisitor.MaxDepth = 1
 
 	allPagesVisitor := NewCollector()
-	page := 5 * 4
-	allPagesVisitor.MaxDepth = offset/page + limit/page + 1
+	// page := 5 * 4
+	// allPagesVisitor.MaxDepth = offset/page + limit/page + 1
 
 	videosFound := 0
 	allPagesVisitor.OnVideoDetailLink(func(link string) {
@@ -99,19 +99,19 @@ func Scrape(search string, limit int, offset int, onYoutubeIdFound func(url stri
 		singlePageVisitor.Visit(link)
 	})
 
-	found := 0
 	singlePageVisitor.OnYoutubeUrl(func(url string) {
-		id, err := importing.YoutubeParser(url)
-		if err != nil {
-			return
-		}
-
-		onYoutubeIdFound(id)
-		found++
-
-		if found >= limit {
+		select {
+		case <-ctx.Done():
 			*singlePageVisitor.stopped = true
 			*allPagesVisitor.stopped = true
+			return
+		default:
+			id, err := importing.YoutubeParser(url)
+			if err != nil {
+				return
+			}
+
+			onYoutubeIdFound(id)
 		}
 	})
 
@@ -119,7 +119,7 @@ func Scrape(search string, limit int, offset int, onYoutubeIdFound func(url stri
 	allPagesVisitor.Visit("https://yewtu.be/search?q=" + urlEncoded)
 }
 
-func ScrapeToChannel(search string, limit int, offset int) <-chan string {
+func ScrapeToChannel(search string, limit int, offset int, ctx context.Context) <-chan string {
 	resultUrl := make(chan string)
 
 	if limit == 0 {
@@ -128,9 +128,8 @@ func ScrapeToChannel(search string, limit int, offset int) <-chan string {
 	}
 
 	go func() {
-		Scrape(search, limit, offset, func(url string) {
+		Scrape(ctx, search, limit, offset, func(url string) {
 			resultUrl <- url
-			fmt.Printf("Found %v\n", url)
 		})
 
 		close(resultUrl)

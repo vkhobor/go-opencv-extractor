@@ -14,16 +14,16 @@ import (
 )
 
 type JobCreator struct {
-	Scrape   func(args ScrapeArgs) <-chan ScrapedVideo
+	Scrape   func(args ScrapeArgs, ctx context.Context) <-chan ScrapedVideo
 	VImport  func(...DownlodedVideo) <-chan ImportedVideo
 	Download func(...ScrapedVideo) <-chan DownlodedVideo
 	Queries  *db_sql.Queries
 }
 
 type ScrapeArgs struct {
+	Limit       int
 	JobId       string
 	SearchQuery string
-	Limit       int
 	Offset      int
 }
 
@@ -67,14 +67,28 @@ func (jc *JobCreator) RunScrapeJob() {
 		toScrape := jc.GetToScrapeVideos()
 		fmt.Printf("Running scrape job\n, %v\n", toScrape)
 		for _, scrapeArgs := range toScrape {
-			if scrapeArgs.Limit == 0 {
+			toFind := scrapeArgs.Limit
+
+			if toFind <= 0 {
 				continue
 			}
 
-			scrapeChan := jc.Scrape(ScrapeArgs{SearchQuery: scrapeArgs.SearchQuery, Limit: scrapeArgs.Limit, Offset: scrapeArgs.Offset})
+			ctx, cancel := context.WithCancel(context.Background())
+			scrapeChan := jc.Scrape(ScrapeArgs{SearchQuery: scrapeArgs.SearchQuery, Limit: scrapeArgs.Limit, Offset: scrapeArgs.Offset}, ctx)
 
 			for video := range scrapeChan {
-				jc.SaveSraped(video, scrapeArgs.JobId)
+				fmt.Println("Scraped video", toFind, video.ID)
+				if toFind <= 0 {
+					continue
+				} else {
+					if jc.SaveSraped(video, scrapeArgs.JobId) {
+						toFind--
+						if toFind <= 0 {
+							cancel()
+						}
+					}
+				}
+
 			}
 		}
 	}
@@ -109,45 +123,20 @@ func (jc *JobCreator) RunImportJob() {
 }
 
 func (jc *JobCreator) GetToScrapeVideos() []ScrapeArgs {
-	dbVal, err := jc.Queries.ListJobsWithProgress(context.Background())
+	dbVal, err := jc.Queries.GetToScrapeVideos(context.Background())
 
 	if err != nil {
 		return []ScrapeArgs{}
 	}
 
-	have := lo.Filter(dbVal, func(item db_sql.ListJobsWithProgressRow, index int) bool {
-		return item.ID_2.Valid == true
-	})
-	grouping := lo.GroupBy(have, func(row db_sql.ListJobsWithProgressRow) string {
-		return row.ID
-	})
-
-	result := make([]ScrapeArgs, len(dbVal))
-	for i, v := range dbVal {
-		val, ok := grouping[v.ID]
-		if !ok {
-			result[i] = ScrapeArgs{
-				SearchQuery: v.SearchQuery.String,
-				Limit:       int(v.Limit.Int64),
-				Offset:      0,
-				JobId:       v.ID,
-			}
-			continue
+	return lo.Map(dbVal, func(item db_sql.GetToScrapeVideosRow, i int) ScrapeArgs {
+		return ScrapeArgs{
+			SearchQuery: item.SearchQuery.String,
+			Limit:       int(item.Limit.Int64 - item.FoundVideos),
+			Offset:      int(item.FoundVideos),
+			JobId:       item.ID,
 		}
-
-		scrapedForJob := len(val)
-
-		missing := int(v.Limit.Int64) - scrapedForJob
-
-		result[i] = ScrapeArgs{
-			SearchQuery: v.SearchQuery.String,
-			Limit:       missing,
-			Offset:      scrapedForJob,
-			JobId:       v.ID,
-		}
-	}
-
-	return result
+	})
 }
 
 func (jc *JobCreator) GetScrapedVideos() []ScrapedVideo {

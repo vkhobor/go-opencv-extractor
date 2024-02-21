@@ -3,7 +3,6 @@ import { Injectable, inject } from '@angular/core';
 import { injectMutation, injectQuery, injectQueryClient } from '@ngneat/query';
 import { Job } from '../models/Job';
 import { CreateJob } from '../models/CreateJob';
-import { delay, of } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -28,18 +27,7 @@ export class JobsService {
     return this.#query({
       queryKey: ['jobs'] as const,
       refetchInterval: 5000,
-      initialData: [
-        {
-          search_query: 'test',
-          id: 'test',
-          limit: 0,
-          progress: {
-            imported: 0,
-            downloaded: 0,
-            scraped: 0,
-          },
-        },
-      ] as Job[],
+      initialData: [] as Job[],
 
       queryFn: () => {
         return this.#http.get<Job[]>('http://localhost:3010/jobs');

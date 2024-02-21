@@ -55,9 +55,11 @@ func HandleCreateJob(queries *db_sql.Queries, jobCreator *jobs.JobCreator) http.
 
 func HandleListJobs(queries *db_sql.Queries) http.HandlerFunc {
 	type jobProgress struct {
-		Imported   int `json:"imported"`
-		Scraped    int `json:"scraped"`
-		Downloaded int `json:"downloaded"`
+		Imported         int      `json:"imported"`
+		Scraped          int      `json:"scraped"`
+		Downloaded       int      `json:"downloaded"`
+		VideoIds         []string `json:"video_ids"`
+		NumberOfPictures int      `json:"number_of_pictures"`
 	}
 
 	type jobResponse struct {
@@ -76,14 +78,6 @@ func HandleListJobs(queries *db_sql.Queries) http.HandlerFunc {
 				return
 			}
 
-			type job struct {
-				ID            string
-				NumOfImported int
-				All           int
-				SearchQuery   string
-				Limit         int
-			}
-
 			grouped := lo.GroupBy(res, func(row db_sql.ListJobsWithProgressRow) string {
 				return row.ID
 			})
@@ -97,34 +91,58 @@ func HandleListJobs(queries *db_sql.Queries) http.HandlerFunc {
 						ID:          key,
 						Limit:       int(value[0].Limit.Int64),
 						Progesss: jobProgress{
-							Imported:   0,
-							Scraped:    0,
-							Downloaded: 0,
+							Imported:         0,
+							Scraped:          0,
+							Downloaded:       0,
+							VideoIds:         []string{},
+							NumberOfPictures: 0,
 						},
 					})
 					continue
 				}
 
-				scraped := len(value)
-
-				downloaded := lo.CountBy(value,
-					func(row db_sql.ListJobsWithProgressRow) bool {
-						return row.Status.String == "downloaded" || row.Status.String == "imported"
+				downloaded := lo.Filter(value,
+					func(row db_sql.ListJobsWithProgressRow, index int) bool {
+						return row.BlobStorageID.Valid
 					})
+				downloaded = lo.UniqBy(downloaded, func(item db_sql.ListJobsWithProgressRow) string {
+					return item.BlobStorageID.String
+				})
 
-				imported := lo.CountBy(value,
-					func(row db_sql.ListJobsWithProgressRow) bool {
+				imported := lo.Filter(value,
+					func(row db_sql.ListJobsWithProgressRow, index int) bool {
 						return row.Status.String == "imported"
 					})
+				imported = lo.UniqBy(imported, func(item db_sql.ListJobsWithProgressRow) string {
+					return item.ID_2.String
+				})
+
+				pictures := lo.Filter(value, func(item db_sql.ListJobsWithProgressRow, i int) bool {
+					return item.ID_3.Valid
+				})
+				pictures = lo.UniqBy(pictures, func(item db_sql.ListJobsWithProgressRow) string {
+					return item.ID_3.String
+				})
+
+				allVideoIds := lo.Map(
+					lo.Filter(value, func(item db_sql.ListJobsWithProgressRow, index int) bool {
+						return item.ID_2.Valid
+					}), func(item db_sql.ListJobsWithProgressRow, i int) string {
+						return item.ID_2.String
+					})
+
+				uniqueVideoIds := lo.Uniq(allVideoIds)
 
 				jobsResponse = append(jobsResponse, jobResponse{
 					SearchQuery: value[0].SearchQuery.String,
 					ID:          key,
 					Limit:       int(value[0].Limit.Int64),
 					Progesss: jobProgress{
-						Imported:   imported,
-						Scraped:    scraped,
-						Downloaded: downloaded,
+						Imported:         len(imported),
+						Scraped:          len(uniqueVideoIds),
+						Downloaded:       len(downloaded),
+						NumberOfPictures: len(pictures),
+						VideoIds:         uniqueVideoIds,
 					},
 				})
 			}

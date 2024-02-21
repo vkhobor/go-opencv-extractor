@@ -7,7 +7,7 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { CreateJob } from '../../../models/CreateJob';
+import { CreateJob } from '../../../../models/CreateJob';
 
 @Component({
   selector: 'app-create-new-job-form',
