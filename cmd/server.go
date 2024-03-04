@@ -59,7 +59,7 @@ func run(ctx context.Context, w io.Writer, args []string) error {
 			output := make(chan jobs.ImportedVideo)
 			go func() {
 				for _, video := range vid {
-					val, err := importing.HandleVideoFromPath(video.SavePath, "/home/goblinpapa/test", 1, "")
+					val, err := importing.HandleVideoFromPath(video.SavePath, "/home/goblinpapa/test/images", 1, "")
 					fmt.Printf("Imported video to %v\n", val)
 					if err != nil {
 						output <- jobs.ImportedVideo{

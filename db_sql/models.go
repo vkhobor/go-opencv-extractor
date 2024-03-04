@@ -10,7 +10,7 @@ import (
 
 type BlobStorage struct {
 	ID   string
-	Path sql.NullString
+	Path string
 }
 
 type Job struct {
@@ -25,6 +25,10 @@ type Picture struct {
 	FrameNumber   sql.NullInt64
 	BlobStorageID sql.NullString
 	Foreign       interface{}
+}
+
+type ReferenceImage struct {
+	BlobStorageID string
 }
 
 type YtVideo struct {

@@ -8,10 +8,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/vkhobor/go-opencv/db_sql"
-	"github.com/vkhobor/go-opencv/jobs"
 )
 
-func HandleCreateJob(queries *db_sql.Queries, jobCreator *jobs.JobCreator) http.HandlerFunc {
+func HandleCreateJob(queries *db_sql.Queries) http.HandlerFunc {
 	type jobRequest struct {
 		SearchQuery string `json:"search_query"`
 		Limit       int    `json:"limit"`

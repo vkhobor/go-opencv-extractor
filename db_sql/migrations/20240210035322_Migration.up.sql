@@ -25,5 +25,10 @@ CREATE TABLE pictures (
 
 CREATE TABLE blob_storage (
     id TEXT PRIMARY KEY,
-    path TEXT
+    path TEXT NOT NULL
+);
+
+CREATE TABLE reference_images (
+    blob_storage_id TEXT PRIMARY KEY,
+    FOREIGN KEY (blob_storage_id) REFERENCES blob_storage(id)
 );

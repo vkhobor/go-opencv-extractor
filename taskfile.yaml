@@ -16,7 +16,7 @@ tasks:
   install-dev-deps:
     deps: [install-sqlc, install-migrate]
 
-  generate-sql-mapping-watcher:
+  sql-watch:
     deps: [install-sqlc]
     watch: true
     sources:

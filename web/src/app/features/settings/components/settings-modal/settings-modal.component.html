@@ -1,0 +1,32 @@
+<app-modal-container #modal>
+  <app-modal-layout [title]="'Settings'" (closeModal)="closeModal()">
+    <ul>
+      @for (item of referencesUrls(); track item) {
+      <li>
+        <img [src]="item" alt="image" />
+      </li>
+      }
+    </ul>
+    <app-button>Delete all</app-button>
+
+    <form>
+      <label
+        class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+        for="multiple_files"
+        >Upload multiple pictures</label
+      >
+      <input
+        (change)="fileSelected($event)"
+        class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400"
+        id="multiple_files"
+        type="file"
+        multiple
+      />
+    </form>
+    <div>
+      <app-button [isLoading]="uploadResult().isPending" (click)="save()"
+        >Save</app-button
+      >
+    </div>
+  </app-modal-layout>
+</app-modal-container>

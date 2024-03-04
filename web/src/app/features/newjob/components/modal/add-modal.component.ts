@@ -6,7 +6,7 @@ import { CreateNewJobFormComponent } from '../form/create-new-job-form.component
 import { CommonModule } from '@angular/common';
 import { JobsService } from '../../../../services/jobs.service';
 import { CreateJob } from '../../../../models/CreateJob';
-import { LoadingButtonComponent } from '../../../../components/loading-button/loading-button.component';
+import { ButtonComponent } from '../../../../components/button/button.component';
 
 @Component({
   selector: 'app-add-modal',
@@ -16,7 +16,7 @@ import { LoadingButtonComponent } from '../../../../components/loading-button/lo
     ModalLayoutComponent,
     ModalContainerComponent,
     CreateNewJobFormComponent,
-    LoadingButtonComponent,
+    ButtonComponent,
   ],
   templateUrl: './add-modal.component.html',
   styleUrl: './add-modal.component.css',

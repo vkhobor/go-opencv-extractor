@@ -161,7 +161,7 @@ func (jc *JobCreator) GetDownloadedVideos() []DownlodedVideo {
 
 	result := make([]DownlodedVideo, len(val))
 	for i, v := range val {
-		result[i] = DownlodedVideo{ScrapedVideo: ScrapedVideo{ID: v.ID}, SavePath: v.Path.String}
+		result[i] = DownlodedVideo{ScrapedVideo: ScrapedVideo{ID: v.ID}, SavePath: v.Path}
 
 		return result
 	}
@@ -201,11 +201,8 @@ func (jc *JobCreator) DownloadSaved(video DownlodedVideo) {
 	}
 	blobId := uuid.New().String()
 	_, err1 := jc.Queries.AddBlob(context.Background(), db_sql.AddBlobParams{
-		ID: blobId,
-		Path: sql.NullString{
-			String: video.SavePath,
-			Valid:  true,
-		},
+		ID:   blobId,
+		Path: video.SavePath,
 	})
 
 	_, err2 := jc.Queries.UpdateStatus(context.Background(), db_sql.UpdateStatusParams{
@@ -249,11 +246,8 @@ func (jc *JobCreator) SaveImported(video ImportedVideo) {
 
 		blobID := uuid.New().String()
 		jc.Queries.AddBlob(context.Background(), db_sql.AddBlobParams{
-			ID: blobID,
-			Path: sql.NullString{
-				String: path.Join("~/test", frame.Path),
-				Valid:  true,
-			},
+			ID:   blobID,
+			Path: path.Join("~/test", frame.Path),
 		})
 		jc.Queries.AddPicture(context.Background(), db_sql.AddPictureParams{
 			ID: uuid.New().String(),

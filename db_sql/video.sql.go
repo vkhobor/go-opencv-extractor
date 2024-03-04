@@ -113,7 +113,7 @@ type GetVideosDownloadedRow struct {
 	BlobStorageID sql.NullString
 	Foreign       interface{}
 	ID_2          string
-	Path          sql.NullString
+	Path          string
 }
 
 func (q *Queries) GetVideosDownloaded(ctx context.Context) ([]GetVideosDownloadedRow, error) {

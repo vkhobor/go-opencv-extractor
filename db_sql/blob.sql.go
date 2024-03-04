@@ -7,7 +7,6 @@ package db_sql
 
 import (
 	"context"
-	"database/sql"
 )
 
 const addBlob = `-- name: AddBlob :one
@@ -19,7 +18,7 @@ RETURNING id, path
 
 type AddBlobParams struct {
 	ID   string
-	Path sql.NullString
+	Path string
 }
 
 func (q *Queries) AddBlob(ctx context.Context, arg AddBlobParams) (BlobStorage, error) {
@@ -27,4 +26,16 @@ func (q *Queries) AddBlob(ctx context.Context, arg AddBlobParams) (BlobStorage, 
 	var i BlobStorage
 	err := row.Scan(&i.ID, &i.Path)
 	return i, err
+}
+
+const getBlob = `-- name: GetBlob :one
+SELECT path from blob_storage
+    WHERE id = ?
+`
+
+func (q *Queries) GetBlob(ctx context.Context, id string) (string, error) {
+	row := q.db.QueryRowContext(ctx, getBlob, id)
+	var path string
+	err := row.Scan(&path)
+	return path, err
 }

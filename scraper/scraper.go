@@ -81,13 +81,11 @@ func (c MyCollyCollector) OnYoutubeUrl(handler func(url string)) {
 	})
 }
 
-func Scrape(ctx context.Context, search string, limit int, offset int, onYoutubeIdFound func(url string)) {
+func Scrape(ctx context.Context, search string, offset int, onYoutubeIdFound func(url string)) {
 	singlePageVisitor := NewCollector()
 	singlePageVisitor.MaxDepth = 1
 
 	allPagesVisitor := NewCollector()
-	// page := 5 * 4
-	// allPagesVisitor.MaxDepth = offset/page + limit/page + 1
 
 	videosFound := 0
 	allPagesVisitor.OnVideoDetailLink(func(link string) {
@@ -128,7 +126,7 @@ func ScrapeToChannel(search string, limit int, offset int, ctx context.Context) 
 	}
 
 	go func() {
-		Scrape(ctx, search, limit, offset, func(url string) {
+		Scrape(ctx, search, offset, func(url string) {
 			resultUrl <- url
 		})
 
