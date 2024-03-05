@@ -20,9 +20,20 @@ export class ReferencesService {
       for (const file of files) {
         formData.append(file.name, file);
       }
-      return this.#http.post('/references', formData);
+      return this.#http.post('/references', formData) as Observable<void>;
     },
 
+    onSuccess: () => {
+      this.#queryClient.invalidateQueries({
+        queryKey: ['references'],
+      });
+    },
+  });
+
+  deleteAll = this.#mutate({
+    mutationFn: () => {
+      return this.#http.delete(`/references`) as Observable<void>;
+    },
     onSuccess: () => {
       this.#queryClient.invalidateQueries({
         queryKey: ['references'],

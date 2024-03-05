@@ -1,0 +1,18 @@
+<div class="space-y-4 mt-4 flex flex-col items-center">
+    <!-- Loading -->
+    @if (data().isLoading) {
+    <p class="dark:text-white">Loading..</p>
+    }
+    <!-- Data -->
+    @if (data().data; as data) {
+    <!-- For -->
+    @for (item of dataMapped(); track item.id) {
+    <div class="md:w-1/2 w-full px-7 md:px-0">
+      <app-job-card [job]="item"></app-job-card>
+    </div>
+    }}
+    <!-- Error -->
+    @if (data().isError) {
+    <p class="dark:text-white">Error</p>
+    }
+  </div>

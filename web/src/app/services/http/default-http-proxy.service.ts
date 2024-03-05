@@ -7,7 +7,7 @@ import { HttpClient } from '@angular/common/http';
 })
 export class DefaultHttpProxyService extends HttpProxyService {
   override getBaseUrl(): string {
-    return 'http://localhost:3010';
+    return 'http://localhost:3010/api';
   }
 
   constructor(http: HttpClient) {

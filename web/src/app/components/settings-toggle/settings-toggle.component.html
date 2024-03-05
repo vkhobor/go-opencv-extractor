@@ -39,10 +39,18 @@
     <ul class="py-2" aria-labelledby="user-menu-button">
       <li>
         <button
+          (click)="downloadZip()"
+          class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white"
+        >
+          Download all images zip
+        </button>
+      </li>
+      <li>
+        <button
           (click)="modal.openModal()"
           class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white"
         >
-          Add new
+          New Job
         </button>
         <app-add-modal #modal></app-add-modal>
       </li>
@@ -51,7 +59,7 @@
           (click)="modal2.openModal()"
           class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white"
         >
-          Pictures
+          Reference pictures
         </button>
         <app-settings-modal #modal2></app-settings-modal>
       </li>

@@ -1,15 +1,12 @@
 package importing
 
 import (
-	"context"
 	"fmt"
 	"path/filepath"
 	"time"
 
-	"github.com/vkhobor/go-opencv/db"
 	"github.com/vkhobor/go-opencv/image"
 
-	"github.com/go-errors/errors"
 	"github.com/google/uuid"
 	"github.com/schollz/progressbar/v3"
 	"gocv.io/x/gocv"
@@ -21,72 +18,7 @@ type ImportContext struct {
 	fps    int
 }
 
-func importVideoDbWrapper(id string, db *db.Db[DbEntry], operation func() (*DbEntry, error)) error {
-	ctx := context.Background()
-
-	// Update the database
-	for {
-		ok, entry, err := db.Read(ctx, id)
-		if err != nil {
-			return err
-		}
-
-		if ok && (entry.Status == StatusImported || entry.Status == StatusImporting) {
-			return errors.New("video has already been imported or is being imported")
-		}
-
-		err = db.TryPut(id, DbEntry{Status: StatusImporting})
-		if err == nil {
-			break
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(time.Second * 5):
-			// try again
-		}
-	}
-
-	res, err := operation()
-	defer func() {
-		if err := recover(); err != nil {
-			_ = db.Put(ctx, id, DbEntry{Status: StatusError, ErrorString: fmt.Sprintf("%v", err)})
-			fmt.Println(err)
-		}
-	}()
-
-	if err != nil {
-		_ = db.Put(ctx, id, DbEntry{Status: StatusError, ErrorString: err.Error()})
-		return err
-	}
-
-	errPut := db.Put(ctx, id, *res)
-	if errPut != nil {
-		return errPut
-	}
-
-	return nil
-}
-
-func ImportVideo(url string, outputDir string, fpsWant int, db *db.Db[DbEntry]) error {
-	id, err := YoutubeParser(url)
-	if err != nil {
-		return err
-	}
-
-	return importVideoDbWrapper(id, db, func() (*DbEntry, error) {
-		return handleVideo(url, outputDir, fpsWant)
-	})
-}
-
-func ImportVideoFromPath(id string, path string, outputDir string, fpsWant int, db *db.Db[DbEntry]) error {
-	return importVideoDbWrapper(id, db, func() (*DbEntry, error) {
-		return HandleVideoFromPath(path, outputDir, fpsWant, id)
-	})
-}
-
-func HandleVideoFromPath(path string, outputDir string, fpsWant int, videoTitle string) (*DbEntry, error) {
+func HandleVideoFromPath(path string, outputDir string, fpsWant int, videoTitle string, refImagePaths []string) (*DbEntry, error) {
 	fps, err := extractMetadata(path)
 	if err != nil {
 		return nil, err
@@ -96,9 +28,10 @@ func HandleVideoFromPath(path string, outputDir string, fpsWant int, videoTitle 
 	defer close(progressChan)
 
 	iter, err := image.NewExtractIterator(image.Config{
-		VideoPath:   path,
-		OriginalFPS: fps,
-		WantFPS:     fpsWant,
+		VideoPath:        path,
+		PathsToRefImages: refImagePaths,
+		OriginalFPS:      fps,
+		WantFPS:          fpsWant,
 	}, progressChan)
 
 	if err != nil {
@@ -162,13 +95,4 @@ func processImages(iter *image.ExtractIterator, progressChan chan<- int, outputD
 
 	fmt.Printf("Found %v\n", len(fileNames))
 	return fileNames, nil
-}
-
-func handleVideo(url string, outputDir string, fpsWant int) (*DbEntry, error) {
-	videoPath, videoTitle, err := DownloadVideo(url)
-	if err != nil {
-		return nil, err
-	}
-
-	return HandleVideoFromPath(videoPath, outputDir, fpsWant, videoTitle)
 }

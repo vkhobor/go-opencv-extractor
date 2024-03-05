@@ -1,4 +1,4 @@
-import { Component, ViewChild, computed } from '@angular/core';
+import { Component, ViewChild, computed, signal } from '@angular/core';
 import { Modal } from '../../../../models/Modal';
 import { ModalContainerComponent } from '../../../../components/modal/modal-container/modal-container.component';
 import { CommonModule } from '@angular/common';
@@ -21,14 +21,15 @@ import { ReferencesService } from '../../../../services/references.service';
   styleUrl: './settings-modal.component.css',
 })
 export class SettingsModalComponent implements Modal {
-  files: File[] | null = null;
+  @ViewChild('modal') modal!: ModalContainerComponent;
 
+  filesSignal = signal<File[] | null>(null);
   fileSelected($event: any) {
-    this.files = $event.target.files as File[];
+    this.filesSignal.set($event.target.files as File[]);
   }
 
-  @ViewChild('modal') modal!: ModalContainerComponent;
   uploadResult = this.references.upload.result;
+  deleteAllResult = this.references.deleteAll.result;
 
   referencesValues = this.references.getReferences().result;
   referencesUrls = computed(() =>
@@ -42,9 +43,11 @@ export class SettingsModalComponent implements Modal {
   }
 
   save(): void {
-    this.references.upload
-      .mutateAsync(this.files!)
-      .then(() => this.closeModal());
+    this.references.upload.mutateAsync(this.filesSignal()!);
+  }
+
+  deleteAll(): void {
+    this.references.deleteAll.mutateAsync({});
   }
 
   closeModal(): void {

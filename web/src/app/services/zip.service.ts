@@ -1,0 +1,27 @@
+import { Injectable, inject } from '@angular/core';
+import { injectQuery, injectMutation, injectQueryClient } from '@ngneat/query';
+import { Observable, map } from 'rxjs';
+import { Stats } from '../models/Stats';
+import { DefaultHttpProxyService } from './http/default-http-proxy.service';
+import { HttpResponse } from '@angular/common/http';
+
+@Injectable({
+  providedIn: 'root',
+})
+export class ZipService {
+  #http = inject(DefaultHttpProxyService);
+  #query = injectQuery();
+  #mutate = injectMutation();
+  #queryClient = injectQueryClient();
+
+  getZip() {
+    return this.#query({
+      queryKey: ['zip'] as const,
+      queryFn: () => {
+        return this.#http.get('/zipped', {
+          responseType: 'blob' as 'json',
+        }) as Observable<Blob>;
+      },
+    });
+  }
+}

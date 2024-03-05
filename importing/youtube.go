@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kkdai/youtube/v2"
 	"github.com/schollz/progressbar/v3"
+	"github.com/vkhobor/go-opencv/config"
 )
 
 func DownloadVideo(videoID string) (path string, title string, err error) {
@@ -31,10 +32,13 @@ func DownloadVideo(videoID string) (path string, title string, err error) {
 	}
 	defer stream.Close()
 
-	tempDir := os.TempDir()
+	err = os.MkdirAll(config.VideosDir, os.ModePerm)
+	if err != nil {
+		return "", "", err
+	}
 	id := uuid.New()
 	fileName := fmt.Sprintf("%v_%v.mp4", id.String(), videoID)
-	filePath := filepath.Join(tempDir, fileName)
+	filePath := filepath.Join(config.VideosDir, fileName)
 	file, err := os.Create(filePath)
 	if err != nil {
 		return "", "", err

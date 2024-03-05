@@ -15,7 +15,7 @@ import (
 
 type JobCreator struct {
 	Scrape   func(args ScrapeArgs, ctx context.Context) <-chan ScrapedVideo
-	VImport  func(...DownlodedVideo) <-chan ImportedVideo
+	VImport  func(refImagePaths []string, videos ...DownlodedVideo) <-chan ImportedVideo
 	Download func(...ScrapedVideo) <-chan DownlodedVideo
 	Queries  *db_sql.Queries
 }
@@ -24,7 +24,6 @@ type ScrapeArgs struct {
 	Limit       int
 	JobId       string
 	SearchQuery string
-	Offset      int
 }
 
 type ScrapedVideo struct {
@@ -74,7 +73,7 @@ func (jc *JobCreator) RunScrapeJob() {
 			}
 
 			ctx, cancel := context.WithCancel(context.Background())
-			scrapeChan := jc.Scrape(ScrapeArgs{SearchQuery: scrapeArgs.SearchQuery, Limit: scrapeArgs.Limit, Offset: scrapeArgs.Offset}, ctx)
+			scrapeChan := jc.Scrape(ScrapeArgs{SearchQuery: scrapeArgs.SearchQuery, Limit: scrapeArgs.Limit}, ctx)
 
 			for video := range scrapeChan {
 				fmt.Println("Scraped video", toFind, video.ID)
@@ -113,8 +112,13 @@ func (jc *JobCreator) RunImportJob() {
 		time.Sleep(5 * time.Second)
 
 		d := jc.GetDownloadedVideos()
+		refs, err := jc.GetRefImages()
+		if err != nil || len(refs) == 0 {
+			continue
+		}
+
 		fmt.Printf("Running import job\n, %v\n", d)
-		importChan := jc.VImport(d...)
+		importChan := jc.VImport(refs, d...)
 
 		for video := range importChan {
 			jc.SaveImported(video)
@@ -133,7 +137,6 @@ func (jc *JobCreator) GetToScrapeVideos() []ScrapeArgs {
 		return ScrapeArgs{
 			SearchQuery: item.SearchQuery.String,
 			Limit:       int(item.Limit.Int64 - item.FoundVideos),
-			Offset:      int(item.FoundVideos),
 			JobId:       item.ID,
 		}
 	})
@@ -158,14 +161,23 @@ func (jc *JobCreator) GetDownloadedVideos() []DownlodedVideo {
 	if err != nil {
 		return []DownlodedVideo{}
 	}
-
 	result := make([]DownlodedVideo, len(val))
 	for i, v := range val {
+		fmt.Print(v)
 		result[i] = DownlodedVideo{ScrapedVideo: ScrapedVideo{ID: v.ID}, SavePath: v.Path}
-
-		return result
 	}
 	return result
+}
+
+func (jc *JobCreator) GetRefImages() ([]string, error) {
+	val, err := jc.Queries.GetReferences(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	return lo.Map(val, func(item db_sql.GetReferencesRow, i int) string {
+		return item.Path
+	}), nil
 }
 
 func (jc *JobCreator) SaveSraped(video ScrapedVideo, jobId string) bool {

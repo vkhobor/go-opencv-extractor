@@ -2,6 +2,7 @@ package zip
 
 import (
 	"archive/zip"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -12,6 +13,7 @@ func Zip(src string, target io.Writer) error {
 	defer archive.Close()
 
 	filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+		fmt.Print(path, info, err)
 		if err != nil {
 			return err
 		}

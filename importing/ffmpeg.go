@@ -1,6 +1,7 @@
 package importing
 
 import (
+	"fmt"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -18,6 +19,7 @@ func extractMetadata(videoPath string) (fps float64, err error) {
 	if err == nil {
 		return 0, errors.Errorf("ffmpeg expected error but success: %v", string(output))
 	}
+	fmt.Print(videoPath)
 
 	fpsString := fpsRegexp.FindString(string(output))
 	fpsNumString := strings.Split(fpsString, " ")[0]

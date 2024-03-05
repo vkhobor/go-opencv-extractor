@@ -117,16 +117,11 @@ func Scrape(ctx context.Context, search string, offset int, onYoutubeIdFound fun
 	allPagesVisitor.Visit("https://yewtu.be/search?q=" + urlEncoded)
 }
 
-func ScrapeToChannel(search string, limit int, offset int, ctx context.Context) <-chan string {
+func ScrapeToChannel(search string, ctx context.Context) <-chan string {
 	resultUrl := make(chan string)
 
-	if limit == 0 {
-		close(resultUrl)
-		return resultUrl
-	}
-
 	go func() {
-		Scrape(ctx, search, offset, func(url string) {
+		Scrape(ctx, search, 0, func(url string) {
 			resultUrl <- url
 		})
 

@@ -18,6 +18,7 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/vkhobor/go-opencv/api"
+	"github.com/vkhobor/go-opencv/config"
 	"github.com/vkhobor/go-opencv/db_sql"
 	"github.com/vkhobor/go-opencv/importing"
 	"github.com/vkhobor/go-opencv/jobs"
@@ -51,16 +52,16 @@ func run(ctx context.Context, w io.Writer, args []string) error {
 	jobCreator := &jobs.JobCreator{
 		Queries: queries,
 		Scrape: func(args jobs.ScrapeArgs, ctx context.Context) <-chan jobs.ScrapedVideo {
-			return jobs.MapChannel(scraper.ScrapeToChannel(args.SearchQuery, args.Limit, args.Offset, ctx), func(id string) jobs.ScrapedVideo {
+			return jobs.MapChannel(scraper.ScrapeToChannel(args.SearchQuery, ctx), func(id string) jobs.ScrapedVideo {
 				return jobs.ScrapedVideo{ID: id}
 			})
 		},
-		VImport: func(vid ...jobs.DownlodedVideo) <-chan jobs.ImportedVideo {
+		VImport: func(refs []string, vid ...jobs.DownlodedVideo) <-chan jobs.ImportedVideo {
 			output := make(chan jobs.ImportedVideo)
 			go func() {
 				for _, video := range vid {
-					val, err := importing.HandleVideoFromPath(video.SavePath, "/home/goblinpapa/test/images", 1, "")
-					fmt.Printf("Imported video to %v\n", val)
+					val, err := importing.HandleVideoFromPath(video.SavePath, config.WorkDirImages, 1, "", refs)
+					fmt.Printf("Imported video to %v\n", err)
 					if err != nil {
 						output <- jobs.ImportedVideo{
 							Error: err,

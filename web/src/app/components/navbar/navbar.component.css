@@ -1,0 +1,3 @@
+.is-active {
+  @apply md:text-blue-700 md:p-0 md:dark:text-blue-500;
+}

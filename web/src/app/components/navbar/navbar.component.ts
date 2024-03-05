@@ -1,10 +1,11 @@
 import { Component, Input } from '@angular/core';
 import { SettingsToggleComponent } from '../settings-toggle/settings-toggle.component';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [SettingsToggleComponent],
+  imports: [SettingsToggleComponent, RouterLink, RouterLinkActive],
   templateUrl: './navbar.component.html',
   styleUrl: './navbar.component.css',
 })

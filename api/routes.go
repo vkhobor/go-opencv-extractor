@@ -22,17 +22,21 @@ func NewRouter(
 		MaxAge:           300,
 	}))
 
-	router.Post("/jobs", HandleCreateJob(queries))
-	router.Get("/jobs", HandleListJobs(queries))
+	router.Route("/api", func(r chi.Router) {
+		r.Post("/jobs", HandleCreateJob(queries))
+		r.Get("/jobs", HandleListJobs(queries))
 
-	router.Post("/references", HandleReferenceUpload(queries))
-	router.Get("/references", HandleGetReferences(queries))
-	router.Delete("/references", HandleDeleteAllReferences(queries))
+		r.Post("/references", HandleReferenceUpload(queries))
+		r.Get("/references", HandleGetReferences(queries))
+		r.Delete("/references", HandleDeleteAllReferences(queries))
 
-	router.Get("/files/{fileID}", HandleFileServeById(queries))
-	router.Get("/zipped", ExportWorkspace())
+		r.Get("/files/{fileID}", HandleFileServeById(queries))
+		r.Get("/zipped", ExportWorkspace())
 
-	router.Get("/state", HandleAppState(queries))
+		r.Get("/state", HandleAppState(queries))
+
+		r.Get("/stats", HandleGetStats(queries))
+	})
 
 	router.NotFound(HandleNotFound())
 
