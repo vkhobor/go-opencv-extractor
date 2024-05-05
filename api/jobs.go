@@ -2,6 +2,7 @@ package api
 
 import (
 	"database/sql"
+	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/render"
@@ -10,7 +11,7 @@ import (
 	"github.com/vkhobor/go-opencv/db_sql"
 )
 
-func HandleCreateJob(queries *db_sql.Queries) http.HandlerFunc {
+func HandleCreateJob(queries *db_sql.Queries, wakeJobs chan<- struct{}) http.HandlerFunc {
 	type jobRequest struct {
 		SearchQuery string `json:"search_query"`
 		Limit       int    `json:"limit"`
@@ -48,6 +49,13 @@ func HandleCreateJob(queries *db_sql.Queries) http.HandlerFunc {
 			}
 
 			render.JSON(w, r, jobResponse{Id: res.ID})
+
+			select {
+			case wakeJobs <- struct{}{}:
+				slog.Info("Waking up jobs")
+			default:
+				slog.Info("Jobs already awake")
+			}
 		},
 	)
 }

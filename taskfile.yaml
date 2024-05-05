@@ -2,6 +2,7 @@ version: '3'
 
 interval: '500ms'
 tasks:
+
   install-sqlc:
     cmds:
     - go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
@@ -58,12 +59,44 @@ tasks:
 
   start:
     cmds:
-    - go run . serve
+    - go run . serve -p 8080
 
-  watch:
+  build-frontend:dev:
+    dir: web
+    sources:
+    - web/src/**/*
+    cmds:
+    - npm run build:dev
+    -
+  build-frontend:
+    dir: web
+    sources:
+    - web/src/**/*
+    cmds:
+    - npm run build
+
+  preview:
+    deps: [build-frontend]
+    cmds:
+    - task: start
+
+  create-buildx-builder:
+    cmds:
+    - docker buildx create --name builderx --use
+
+  build-docker:
+    cmds:
+    - docker buildx build --platform linux/amd64 -t vkhobor/extractor:latest --pull --load .
+
+  rebuild-docker:
+    cmds:
+    - docker buildx build --platform linux/amd64  --no-cache -t vkhobor/extractor:latest --pull --load .
+
+  watch:dev:
     watch: true
     sources:
-    - web/dist/**/*
+    - web/src/**/*
     cmds:
+    - task: build-frontend:dev
     - pkill go-opencv || true
     - task: start

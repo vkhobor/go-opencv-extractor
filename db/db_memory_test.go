@@ -1,7 +1,6 @@
 package db
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -36,7 +35,6 @@ func TestWriteEntry(t *testing.T) {
 
 	ok, value, err := ReadEntry[TestStruct](db, "key3")
 
-	fmt.Print(value)
 	assert.True(t, ok)
 	assert.Equal(t, TestStruct{A: "value3", B: 3}, value)
 	assert.NoError(t, err)

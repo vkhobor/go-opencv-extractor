@@ -2,13 +2,13 @@ package importing
 
 import (
 	"fmt"
+	"log/slog"
 	"path/filepath"
 	"time"
 
 	"github.com/vkhobor/go-opencv/image"
 
 	"github.com/google/uuid"
-	"github.com/schollz/progressbar/v3"
 	"gocv.io/x/gocv"
 )
 
@@ -18,21 +18,21 @@ type ImportContext struct {
 	fps    int
 }
 
-func HandleVideoFromPath(path string, outputDir string, fpsWant int, videoTitle string, refImagePaths []string) (*DbEntry, error) {
+func HandleVideoFromPath(path string, outputDir string, fpsWant int, videoTitle string, refImagePaths []string, progressChan chan<- float64) (*DbEntry, error) {
 	fps, err := extractMetadata(path)
 	if err != nil {
 		return nil, err
 	}
 
-	progressChan := make(chan int)
-	defer close(progressChan)
+	frameChan := make(chan struct{})
+	defer close(frameChan)
 
 	iter, err := image.NewExtractIterator(image.Config{
 		VideoPath:        path,
 		PathsToRefImages: refImagePaths,
 		OriginalFPS:      fps,
 		WantFPS:          fpsWant,
-	}, progressChan)
+	}, frameChan)
 
 	if err != nil {
 		return nil, err
@@ -40,15 +40,12 @@ func HandleVideoFromPath(path string, outputDir string, fpsWant int, videoTitle 
 	defer iter.Close()
 
 	go func() {
-		bar := progressbar.Default(int64(iter.Length()))
-		defer bar.Finish()
-
-		for progress := range progressChan {
-			bar.Set(progress)
+		for range frameChan {
+			progressChan <- float64(iter.CurrentFrame()) / float64(iter.Length())
 		}
 	}()
 
-	fileNames, err := processImages(iter, progressChan, outputDir, fpsWant)
+	fileNames, err := processImages(iter, outputDir, fpsWant)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +53,7 @@ func HandleVideoFromPath(path string, outputDir string, fpsWant int, videoTitle 
 	return &DbEntry{Status: StatusImported, Title: videoTitle, FileNames: fileNames}, nil
 }
 
-func processImages(iter *image.ExtractIterator, progressChan chan<- int, outputDir string, fpsWant int) ([]string, error) {
+func processImages(iter *image.ExtractIterator, outputDir string, fpsWant int) ([]string, error) {
 	fileNames := make([]string, 0)
 
 	prev := gocv.NewMat()
@@ -93,6 +90,6 @@ func processImages(iter *image.ExtractIterator, progressChan chan<- int, outputD
 		}
 	}
 
-	fmt.Printf("Found %v\n", len(fileNames))
+	slog.Info("Processed images", "fileNames", fileNames, "outputDir", outputDir, "fpsWant", fpsWant, "count", len(fileNames))
 	return fileNames, nil
 }

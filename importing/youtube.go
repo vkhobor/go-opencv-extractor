@@ -10,7 +10,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kkdai/youtube/v2"
-	"github.com/schollz/progressbar/v3"
 	"github.com/vkhobor/go-opencv/config"
 )
 
@@ -26,7 +25,11 @@ func DownloadVideo(videoID string) (path string, title string, err error) {
 
 	video.FilterQuality("720p")
 
-	stream, size, err := client.GetStream(video, &video.Formats[0])
+	if len(video.Formats) == 0 {
+		return "", "", errors.New("no matching formats found")
+	}
+
+	stream, _, err := client.GetStream(video, &video.Formats[0])
 	if err != nil {
 		return "", "", err
 	}
@@ -45,10 +48,7 @@ func DownloadVideo(videoID string) (path string, title string, err error) {
 	}
 	defer file.Close()
 
-	bar := progressbar.DefaultBytes(size)
-	defer bar.Finish()
-
-	_, err = io.Copy(io.MultiWriter(file, bar), stream)
+	_, err = io.Copy(file, stream)
 	if err != nil {
 		return "", "", err
 	}

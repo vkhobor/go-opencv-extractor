@@ -1,15 +1,12 @@
 package memo
 
-// MemoizedFunc represents the type of a function to be memoized.
-type MemoizedFunc[K comparable, V any] func(K) V
-
 // hashKeyFunc represents the type of a function that generates a key for caching based on the function's input.
-type hashKeyFunc[K comparable] func(K) string
+type hashKeyFunc[K any] func(K) string
 
 type CloseFunc func()
 
 // Memoize takes a function and a hash key function. It returns a memoized version of the function.
-func Memoize[K comparable, V any](f MemoizedFunc[K, V], hashKey hashKeyFunc[K]) (MemoizedFunc[K, V], CloseFunc) {
+func Memoize[K any, V any](f func(K) V, hashKey hashKeyFunc[K]) (func(K) V, CloseFunc) {
 	cache := make(map[string]V)
 	return func(input K) V {
 			hashedKey := hashKey(input)

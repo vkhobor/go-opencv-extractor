@@ -33,7 +33,7 @@ export class SettingsModalComponent implements Modal {
 
   referencesValues = this.references.getReferences().result;
   referencesUrls = computed(() =>
-    this.referencesValues().data?.map((r) => `/files/${r.id}`)
+    this.referencesValues().data?.map((r) => `/api/files/${r.id}`)
   );
 
   constructor(private references: ReferencesService) {}

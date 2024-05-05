@@ -1,0 +1,13 @@
+node_modules/
+**/node_modules/
+**/dist/
+.git
+.task
+.gitignore
+.vscode
+bin
+
+*.mp4
+*.png
+/db.sqlite3
+

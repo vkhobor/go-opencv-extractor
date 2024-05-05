@@ -15,7 +15,7 @@ type MyCollyCollector struct {
 	stopped *bool
 }
 
-func NewCollector() MyCollyCollector {
+func NewCollector(throttle time.Duration) MyCollyCollector {
 	defaultColl := colly.NewCollector(
 		colly.AllowedDomains("yewtu.be"),
 		colly.UserAgent(""),
@@ -24,7 +24,7 @@ func NewCollector() MyCollyCollector {
 
 	defaultColl.Limit(&colly.LimitRule{
 		DomainGlob:  "*",
-		RandomDelay: time.Second * 5,
+		RandomDelay: throttle,
 	})
 
 	stop := false
@@ -81,11 +81,11 @@ func (c MyCollyCollector) OnYoutubeUrl(handler func(url string)) {
 	})
 }
 
-func Scrape(ctx context.Context, search string, offset int, onYoutubeIdFound func(url string)) {
-	singlePageVisitor := NewCollector()
+func Scrape(ctx context.Context, search string, offset int, onYoutubeIdFound func(url string), throttleDuration time.Duration) {
+	singlePageVisitor := NewCollector(throttleDuration)
 	singlePageVisitor.MaxDepth = 1
 
-	allPagesVisitor := NewCollector()
+	allPagesVisitor := NewCollector(throttleDuration)
 
 	videosFound := 0
 	allPagesVisitor.OnVideoDetailLink(func(link string) {
@@ -117,13 +117,13 @@ func Scrape(ctx context.Context, search string, offset int, onYoutubeIdFound fun
 	allPagesVisitor.Visit("https://yewtu.be/search?q=" + urlEncoded)
 }
 
-func ScrapeToChannel(search string, ctx context.Context) <-chan string {
+func ScrapeToChannel(search string, ctx context.Context, throttle time.Duration) <-chan string {
 	resultUrl := make(chan string)
 
 	go func() {
 		Scrape(ctx, search, 0, func(url string) {
 			resultUrl <- url
-		})
+		}, throttle)
 
 		close(resultUrl)
 	}()

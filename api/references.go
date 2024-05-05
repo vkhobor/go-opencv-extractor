@@ -22,7 +22,6 @@ func HandleReferenceUpload(queries *db_sql.Queries) http.HandlerFunc {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			r.ParseMultipartForm(10 * megabyte)
-			fmt.Println("r.MultipartForm.File", r.MultipartForm.File)
 			files := r.MultipartForm.File
 			for _, headers := range files {
 				for _, header := range headers {

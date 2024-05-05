@@ -1,6 +1,7 @@
 package api
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi"
@@ -18,7 +19,7 @@ func ExportWorkspace() http.HandlerFunc {
 
 			// Set the Content-Disposition header so the browser knows it's an attachment
 			w.Header().Set("Content-Disposition", "attachment; filename=images.zip")
-			zip.Zip(config.WorkDirImages, w)
+			zip.Zip(config.WorkDirImages, w, []string{"videos", "references"})
 		},
 	)
 }
@@ -26,8 +27,8 @@ func ExportWorkspace() http.HandlerFunc {
 func HandleFileServeById(queries *db_sql.Queries) http.HandlerFunc {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			fileIdParam := chi.URLParam(r, "fileID")
-
+			fileIdParam := chi.URLParam(r, "id")
+			slog.Debug("Serving file by id", "fileIdParam", fileIdParam)
 			if fileIdParam == "" {
 				render.Status(r, http.StatusBadRequest)
 				render.PlainText(w, r, "No file id provided")

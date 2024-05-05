@@ -3,10 +3,9 @@ package jobs
 import (
 	"context"
 	"database/sql"
-	"fmt"
+	"log/slog"
 	"os"
 	"path"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/samber/lo"
@@ -53,76 +52,77 @@ type Progress struct {
 	Errored   int
 }
 
-func (jc *JobCreator) RunJobPool() {
-	go jc.RunScrapeJob()
-	go jc.RunDownloadJob()
-	go jc.RunImportJob()
+func (jc *JobCreator) RunJobPoolOnce() {
+	slog.Info("Running job pool")
+	jc.RunScrapeJob()
+	jc.RunDownloadJob()
+	jc.RunImportJob()
 }
 
 func (jc *JobCreator) RunScrapeJob() {
-	for {
-		time.Sleep(5 * time.Second)
+	toScrape := jc.GetToScrapeVideos()
+	if len(toScrape) == 0 {
+		slog.Debug("No videos to scrape")
+		return
+	}
 
-		toScrape := jc.GetToScrapeVideos()
-		fmt.Printf("Running scrape job\n, %v\n", toScrape)
-		for _, scrapeArgs := range toScrape {
-			toFind := scrapeArgs.Limit
+	slog.Info("Running scrape job", "needed_to_scrape", toScrape)
+	for _, scrapeArgs := range toScrape {
+		toFind := scrapeArgs.Limit
 
+		if toFind <= 0 {
+			continue
+		}
+
+		ctx, cancel := context.WithCancel(context.Background())
+		scrapeChan := jc.Scrape(ScrapeArgs{SearchQuery: scrapeArgs.SearchQuery, Limit: scrapeArgs.Limit}, ctx)
+
+		for video := range scrapeChan {
 			if toFind <= 0 {
 				continue
-			}
-
-			ctx, cancel := context.WithCancel(context.Background())
-			scrapeChan := jc.Scrape(ScrapeArgs{SearchQuery: scrapeArgs.SearchQuery, Limit: scrapeArgs.Limit}, ctx)
-
-			for video := range scrapeChan {
-				fmt.Println("Scraped video", toFind, video.ID)
-				if toFind <= 0 {
-					continue
-				} else {
-					if jc.SaveSraped(video, scrapeArgs.JobId) {
-						toFind--
-						if toFind <= 0 {
-							cancel()
-						}
+			} else {
+				if jc.SaveSraped(video, scrapeArgs.JobId) {
+					toFind--
+					if toFind <= 0 {
+						cancel()
 					}
 				}
-
 			}
+
 		}
+		cancel()
 	}
 }
 
 func (jc *JobCreator) RunDownloadJob() {
-	for {
-		time.Sleep(5 * time.Second)
+	scraped := jc.GetScrapedVideos()
+	if len(scraped) == 0 {
+		slog.Debug("No videos to download")
+		return
+	}
 
-		fmt.Printf("Running download job\n")
-		scraped := jc.GetScrapedVideos()
-		downloadChan := jc.Download(scraped...)
+	slog.Info("Running download job")
+	downloadChan := jc.Download(scraped...)
 
-		for video := range downloadChan {
-			jc.DownloadSaved(video)
-		}
+	for video := range downloadChan {
+		jc.DownloadSaved(video)
 	}
 }
 
 func (jc *JobCreator) RunImportJob() {
-	for {
-		time.Sleep(5 * time.Second)
 
-		d := jc.GetDownloadedVideos()
-		refs, err := jc.GetRefImages()
-		if err != nil || len(refs) == 0 {
-			continue
-		}
+	d := jc.GetDownloadedVideos()
+	refs, err := jc.GetRefImages()
+	if err != nil || len(refs) == 0 || len(d) == 0 {
+		slog.Debug("No videos to import or no reference images")
+		return
+	}
 
-		fmt.Printf("Running import job\n, %v\n", d)
-		importChan := jc.VImport(refs, d...)
+	slog.Info("Running import job", "videos_waiting_for_import", d)
+	importChan := jc.VImport(refs, d...)
 
-		for video := range importChan {
-			jc.SaveImported(video)
-		}
+	for video := range importChan {
+		jc.SaveImported(video)
 	}
 }
 
@@ -133,12 +133,12 @@ func (jc *JobCreator) GetToScrapeVideos() []ScrapeArgs {
 		return []ScrapeArgs{}
 	}
 
-	return lo.Map(dbVal, func(item db_sql.GetToScrapeVideosRow, i int) ScrapeArgs {
+	return lo.FilterMap(dbVal, func(item db_sql.GetToScrapeVideosRow, i int) (ScrapeArgs, bool) {
 		return ScrapeArgs{
 			SearchQuery: item.SearchQuery.String,
 			Limit:       int(item.Limit.Int64 - item.FoundVideos),
 			JobId:       item.ID,
-		}
+		}, item.Limit.Int64-item.FoundVideos > 0
 	})
 }
 
@@ -163,7 +163,6 @@ func (jc *JobCreator) GetDownloadedVideos() []DownlodedVideo {
 	}
 	result := make([]DownlodedVideo, len(val))
 	for i, v := range val {
-		fmt.Print(v)
 		result[i] = DownlodedVideo{ScrapedVideo: ScrapedVideo{ID: v.ID}, SavePath: v.Path}
 	}
 	return result
@@ -200,24 +199,32 @@ func (jc *JobCreator) SaveSraped(video ScrapedVideo, jobId string) bool {
 }
 
 func (jc *JobCreator) DownloadSaved(video DownlodedVideo) {
+	slog.Debug("Saving downloaded", "video", video)
 	if video.Error != nil {
-		jc.Queries.UpdateStatus(context.Background(), db_sql.UpdateStatusParams{
+		_, err := jc.Queries.UpdateStatus(context.Background(), db_sql.UpdateStatusParams{
 			ID: video.ID,
 			Status: sql.NullString{
 				String: "errored",
 				Valid:  true,
 			},
+			Error: sql.NullString{
+				Valid:  true,
+				String: video.Error.Error(),
+			},
 		})
+		if err != nil {
+			slog.Error("Error while updating status", "error", err)
+		}
 
 		return
 	}
 	blobId := uuid.New().String()
-	_, err1 := jc.Queries.AddBlob(context.Background(), db_sql.AddBlobParams{
+	_, errAddBlob := jc.Queries.AddBlob(context.Background(), db_sql.AddBlobParams{
 		ID:   blobId,
 		Path: video.SavePath,
 	})
 
-	_, err2 := jc.Queries.UpdateStatus(context.Background(), db_sql.UpdateStatusParams{
+	_, errUpdateStatus := jc.Queries.UpdateStatus(context.Background(), db_sql.UpdateStatusParams{
 		ID: video.ID,
 		Status: sql.NullString{
 			String: "downloaded",
@@ -233,11 +240,11 @@ func (jc *JobCreator) DownloadSaved(video DownlodedVideo) {
 		ID: video.ID,
 	})
 
-	if err1 != nil || err2 != nil {
+	if errAddBlob != nil || errUpdateStatus != nil {
+		slog.Error("Error while updating status", "error", errAddBlob, "error2", errUpdateStatus)
 		RemoveAllPaths(video.SavePath)
 		return
 	}
-	return
 }
 
 func (jc *JobCreator) SaveImported(video ImportedVideo) {
