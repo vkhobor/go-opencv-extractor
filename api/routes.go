@@ -24,10 +24,15 @@ func NewRouter(
 	router.Route("/api", func(r chi.Router) {
 		r.Post("/jobs", HandleCreateJob(queries, wakeJobs))
 		r.Get("/jobs", HandleListJobs(queries))
+		r.Get("/jobs/{id}", HandleJobDetails(queries))
+		r.Get("/jobs/{id}/videos", HandleJobVideosFound(queries))
+		r.Get("/jobs/{id}/progress", HandleJobProgress(queries))
 
 		r.Post("/references", HandleReferenceUpload(queries))
 		r.Get("/references", HandleGetReferences(queries))
 		r.Delete("/references", HandleDeleteAllReferences(queries))
+
+		r.Get("/images", HandleImages(queries))
 
 		r.Get("/files/{id}", HandleFileServeById(queries))
 		r.Get("/zipped", ExportWorkspace())

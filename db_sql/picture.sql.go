@@ -41,3 +41,53 @@ func (q *Queries) AddPicture(ctx context.Context, arg AddPictureParams) (Picture
 	)
 	return i, err
 }
+
+const allPicturesCount = `-- name: AllPicturesCount :one
+SELECT COUNT(*) as count_all FROM pictures
+`
+
+func (q *Queries) AllPicturesCount(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, allPicturesCount)
+	var count_all int64
+	err := row.Scan(&count_all)
+	return count_all, err
+}
+
+const getPictures = `-- name: GetPictures :many
+SELECT id, yt_video_id, frame_number, blob_storage_id, "foreign" FROM pictures 
+LIMIT ? OFFSET ?
+`
+
+type GetPicturesParams struct {
+	Limit  int64
+	Offset int64
+}
+
+func (q *Queries) GetPictures(ctx context.Context, arg GetPicturesParams) ([]Picture, error) {
+	rows, err := q.db.QueryContext(ctx, getPictures, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Picture
+	for rows.Next() {
+		var i Picture
+		if err := rows.Scan(
+			&i.ID,
+			&i.YtVideoID,
+			&i.FrameNumber,
+			&i.BlobStorageID,
+			&i.Foreign,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

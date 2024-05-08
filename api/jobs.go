@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/go-chi/chi"
 	"github.com/go-chi/render"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
@@ -155,6 +156,132 @@ func HandleListJobs(queries *db_sql.Queries) http.HandlerFunc {
 			}
 
 			render.JSON(w, r, jobsResponse)
+		},
+	)
+}
+
+func HandleJobDetails(queries *db_sql.Queries) http.HandlerFunc {
+	type jobResponse struct {
+		ID            string `json:"id"`
+		SearchQuery   string `json:"search_query"`
+		VideoTarget   int    `json:"video_target"`
+		PicturesFound int    `json:"pictures_found"`
+		VideosFound   int    `json:"videos_found"`
+		VideosInError int    `json:"videos_in_error"`
+	}
+
+	return http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			jobId := chi.URLParam(r, "id")
+			if jobId == "" {
+				render.Status(r, http.StatusBadRequest)
+				render.PlainText(w, r, "No file id provided")
+				return
+			}
+
+			res, err := queries.GetJob(r.Context(), jobId)
+			if err != nil {
+				render.Status(r, http.StatusInternalServerError)
+				render.PlainText(w, r, err.Error())
+				return
+			}
+
+			resp := jobResponse{
+				ID:            res.ID,
+				SearchQuery:   res.SearchQuery.String,
+				VideoTarget:   int(res.Limit.Int64),
+				PicturesFound: int(res.PicturesFound),
+				VideosFound:   int(res.VideosFound),
+				VideosInError: int(res.VideosInError),
+			}
+
+			render.JSON(w, r, resp)
+		},
+	)
+}
+
+func HandleJobVideosFound(queries *db_sql.Queries) http.HandlerFunc {
+	type video struct {
+		YoutubeId     string `json:"youtube_id"`
+		Status        string `json:"status"`
+		PicturesFound int    `json:"pictures_found"`
+	}
+
+	type jobResponse struct {
+		ID     string  `json:"id"`
+		Videos []video `json:"videos"`
+	}
+
+	return http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			jobId := chi.URLParam(r, "id")
+			if jobId == "" {
+				render.Status(r, http.StatusBadRequest)
+				render.PlainText(w, r, "No file id provided")
+				return
+			}
+
+			res, err := queries.GetOneWithVideos(r.Context(), jobId)
+			if err != nil {
+				render.Status(r, http.StatusInternalServerError)
+				render.PlainText(w, r, err.Error())
+				return
+			}
+
+			videos := lo.Map(res, func(row db_sql.GetOneWithVideosRow, index int) video {
+				return video{
+					YoutubeId:     row.VideoYoutubeID.String,
+					Status:        row.VideoStatus.String,
+					PicturesFound: int(row.PicturesFound),
+				}
+			})
+
+			resp := jobResponse{
+				ID:     res[0].ID,
+				Videos: videos,
+			}
+
+			render.JSON(w, r, resp)
+		},
+	)
+}
+
+func HandleJobProgress(queries *db_sql.Queries) http.HandlerFunc {
+	type jobResponse struct {
+		ID               string `json:"id"`
+		Imported         int    `json:"imported"`
+		Scraped          int    `json:"scraped"`
+		Downloaded       int    `json:"downloaded"`
+		NumberOfPictures int    `json:"number_of_pictures"`
+		Limit            int    `json:"limit"`
+	}
+
+	return http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			jobId := chi.URLParam(r, "id")
+			if jobId == "" {
+				render.Status(r, http.StatusBadRequest)
+				render.PlainText(w, r, "No file id provided")
+				return
+			}
+
+			res, err := queries.GetJobWithProgress(r.Context(), jobId)
+			if err != nil {
+				render.Status(r, http.StatusInternalServerError)
+				render.PlainText(w, r, err.Error())
+				return
+			}
+
+			resp := jobResponse{
+				ID:               res.ID,
+				Imported:         int(res.VideosImported),
+				Scraped:          int(res.VideosScraped) + int(res.VideosDownloaded) + int(res.VideosImported),
+				Downloaded:       int(res.VideosDownloaded) + int(res.VideosImported),
+				NumberOfPictures: int(res.PicturesFound),
+				Limit:            int(res.Limit.Int64),
+			}
+
+			render.JSON(w, r, resp)
 		},
 	)
 }

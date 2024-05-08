@@ -50,11 +50,11 @@ func HandleVideoFromPath(path string, outputDir string, fpsWant int, videoTitle 
 		return nil, err
 	}
 
-	return &DbEntry{Status: StatusImported, Title: videoTitle, FileNames: fileNames}, nil
+	return &DbEntry{Status: StatusImported, Title: videoTitle, FilePaths: fileNames}, nil
 }
 
 func processImages(iter *image.ExtractIterator, outputDir string, fpsWant int) ([]string, error) {
-	fileNames := make([]string, 0)
+	filePaths := make([]string, 0)
 
 	prev := gocv.NewMat()
 	var prevFrame int
@@ -79,7 +79,7 @@ func processImages(iter *image.ExtractIterator, outputDir string, fpsWant int) (
 			fileName := fmt.Sprintf("%v.jpg", uuid.New().String())
 			filePath := filepath.Join(outputDir, fileName)
 			gocv.IMWrite(filePath, value)
-			fileNames = append(fileNames, fileName)
+			filePaths = append(filePaths, filePath)
 
 			value.CopyTo(&prev)
 			prevFrame = currFrame
@@ -90,6 +90,6 @@ func processImages(iter *image.ExtractIterator, outputDir string, fpsWant int) (
 		}
 	}
 
-	slog.Info("Processed images", "fileNames", fileNames, "outputDir", outputDir, "fpsWant", fpsWant, "count", len(fileNames))
-	return fileNames, nil
+	slog.Info("Processed images", "fileNames", filePaths, "outputDir", outputDir, "fpsWant", fpsWant, "count", len(filePaths))
+	return filePaths, nil
 }

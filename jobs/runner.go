@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"log/slog"
 	"os"
-	"path"
 
 	"github.com/google/uuid"
 	"github.com/samber/lo"
@@ -266,7 +265,7 @@ func (jc *JobCreator) SaveImported(video ImportedVideo) {
 		blobID := uuid.New().String()
 		jc.Queries.AddBlob(context.Background(), db_sql.AddBlobParams{
 			ID:   blobID,
-			Path: path.Join("~/test", frame.Path),
+			Path: frame.Path,
 		})
 		jc.Queries.AddPicture(context.Background(), db_sql.AddPictureParams{
 			ID: uuid.New().String(),

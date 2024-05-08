@@ -1,18 +1,38 @@
 <div class="space-y-4 mt-4 flex flex-col items-center">
-    <!-- Loading -->
-    @if (data().isLoading) {
-    <p class="dark:text-white">Loading..</p>
-    }
-    <!-- Data -->
-    @if (data().data; as data) {
-    <!-- For -->
-    @for (item of dataMapped(); track item.id) {
-    <div class="md:w-1/2 w-full px-7 md:px-0">
-      <app-job-card [job]="item"></app-job-card>
-    </div>
-    }}
-    <!-- Error -->
-    @if (data().isError) {
-    <p class="dark:text-white">Error</p>
-    }
+  <!-- Loading -->
+  @if (data().isLoading) {
+  <p class="dark:text-white">Loading..</p>
+  } @if (data().isError) {
+  <p clasifs="dark:text-white">Error</p>
+  } @if (data().data; as data) {
+  <!-- For -->
+  <div class="relative overflow-x-auto">
+    <table
+      class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400"
+    >
+      <thead
+        class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400"
+      >
+        <tr>
+          <th scope="col" class="px-6 py-3">Query</th>
+          <th scope="col" class="px-6 py-3">Details</th>
+          <th scope="col" class="px-6 py-3">Limit</th>
+          <th scope="col" class="px-6 py-3">Progress</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of dataMapped(); track item.id) {
+        <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+          <td class="px-6 py-4">{{ item.search_query }}</td>
+          <td class="px-6 py-4">
+            <a routerLink="/jobs/{{ item.id }}">Detais</a>
+          </td>
+          <td class="px-6 py-4">{{ item.limit }}</td>
+          <td class="px-6 py-4">{{ item.progress_simple * 100 }} %</td>
+        </tr>
+        }
+      </tbody>
+    </table>
   </div>
+  }
+</div>

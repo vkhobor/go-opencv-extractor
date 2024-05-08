@@ -32,6 +32,148 @@ func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (Job, erro
 	return i, err
 }
 
+const getJob = `-- name: GetJob :one
+SELECT
+    j.id AS id,
+    j.search_query AS search_query,
+    j."limit" AS "limit",
+    COUNT(DISTINCT v.id) AS videos_found,
+    COUNT(DISTINCT CASE WHEN v.status = 'errored' THEN v.id END) AS videos_in_error,
+    COUNT(DISTINCT p.id) AS pictures_found
+FROM
+    jobs j
+LEFT JOIN
+    yt_videos v ON j.id = v.job_id
+LEFT JOIN
+    pictures p ON v.id = p.yt_video_id
+WHERE
+    j.id = ?
+GROUP BY
+    j.id, j.search_query, j."limit"
+`
+
+type GetJobRow struct {
+	ID            string
+	SearchQuery   sql.NullString
+	Limit         sql.NullInt64
+	VideosFound   int64
+	VideosInError int64
+	PicturesFound int64
+}
+
+func (q *Queries) GetJob(ctx context.Context, id string) (GetJobRow, error) {
+	row := q.db.QueryRowContext(ctx, getJob, id)
+	var i GetJobRow
+	err := row.Scan(
+		&i.ID,
+		&i.SearchQuery,
+		&i.Limit,
+		&i.VideosFound,
+		&i.VideosInError,
+		&i.PicturesFound,
+	)
+	return i, err
+}
+
+const getJobWithProgress = `-- name: GetJobWithProgress :one
+SELECT
+    j.id AS id,
+    j."limit" AS "limit",
+    COUNT(DISTINCT v.id) AS videos_found,
+    COUNT(DISTINCT CASE WHEN v.status = 'errored' THEN v.id END) AS videos_downloaded,
+    COUNT(DISTINCT CASE WHEN v.status = 'imported' THEN v.id END) AS videos_imported,
+    COUNT(DISTINCT CASE WHEN v.status = 'scraped' THEN v.id END) AS videos_scraped,
+    COUNT(DISTINCT p.id) AS pictures_found
+FROM
+    jobs j
+LEFT JOIN
+    yt_videos v ON j.id = v.job_id
+LEFT JOIN
+    pictures p ON v.id = p.yt_video_id
+WHERE
+    j.id = ?
+GROUP BY
+    j.id, j.search_query, j."limit"
+`
+
+type GetJobWithProgressRow struct {
+	ID               string
+	Limit            sql.NullInt64
+	VideosFound      int64
+	VideosDownloaded int64
+	VideosImported   int64
+	VideosScraped    int64
+	PicturesFound    int64
+}
+
+func (q *Queries) GetJobWithProgress(ctx context.Context, id string) (GetJobWithProgressRow, error) {
+	row := q.db.QueryRowContext(ctx, getJobWithProgress, id)
+	var i GetJobWithProgressRow
+	err := row.Scan(
+		&i.ID,
+		&i.Limit,
+		&i.VideosFound,
+		&i.VideosDownloaded,
+		&i.VideosImported,
+		&i.VideosScraped,
+		&i.PicturesFound,
+	)
+	return i, err
+}
+
+const getOneWithVideos = `-- name: GetOneWithVideos :many
+SELECT
+    j.id AS id,
+    v.id AS video_youtube_id,
+    v.status AS video_status,
+    COUNT(DISTINCT p.id) AS pictures_found
+FROM
+    jobs j
+LEFT JOIN
+    yt_videos v ON j.id = v.job_id
+LEFT JOIN
+    pictures p ON v.id = p.yt_video_id
+WHERE
+    j.id = ?
+GROUP BY
+    j.id, v.id
+`
+
+type GetOneWithVideosRow struct {
+	ID             string
+	VideoYoutubeID sql.NullString
+	VideoStatus    sql.NullString
+	PicturesFound  int64
+}
+
+func (q *Queries) GetOneWithVideos(ctx context.Context, id string) ([]GetOneWithVideosRow, error) {
+	rows, err := q.db.QueryContext(ctx, getOneWithVideos, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetOneWithVideosRow
+	for rows.Next() {
+		var i GetOneWithVideosRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.VideoYoutubeID,
+			&i.VideoStatus,
+			&i.PicturesFound,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getToScrapeVideos = `-- name: GetToScrapeVideos :many
 SELECT COALESCE(found_videos, 0), jobs.id, jobs."limit", jobs.search_query  FROM jobs
 LEFT JOIN

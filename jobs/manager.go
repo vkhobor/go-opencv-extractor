@@ -61,9 +61,9 @@ func (jm *JobManager) Run() {
 					}
 					continue
 				}
-				slog.Info("Imported video", "video", val.FileNames, "id", video.ID)
+				slog.Info("Imported video", "video", val.FilePaths, "id", video.ID)
 				frames := make([]Frame, 0)
-				for _, v := range val.FileNames {
+				for _, v := range val.FilePaths {
 					frames = append(frames, Frame{FrameNumber: 0, Path: v})
 				}
 				output <- ImportedVideo{

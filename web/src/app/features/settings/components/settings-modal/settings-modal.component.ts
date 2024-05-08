@@ -6,6 +6,7 @@ import { ModalLayoutComponent } from '../../../../components/modal/modal-layout/
 import { CreateNewJobFormComponent } from '../../../newjob/components/form/create-new-job-form.component';
 import { ButtonComponent } from '../../../../components/button/button.component';
 import { ReferencesService } from '../../../../services/references.service';
+import enviroment from '../../../../../enviroments/enviroment';
 
 @Component({
   selector: 'app-settings-modal',
@@ -33,7 +34,7 @@ export class SettingsModalComponent implements Modal {
 
   referencesValues = this.references.getReferences().result;
   referencesUrls = computed(() =>
-    this.referencesValues().data?.map((r) => `/api/files/${r.id}`)
+    this.referencesValues().data?.map((r) => `${enviroment.api}/files/${r.id}`)
   );
 
   constructor(private references: ReferencesService) {}

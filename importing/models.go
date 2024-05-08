@@ -13,6 +13,6 @@ type DbEntry struct {
 	Status      Status
 	Title       string
 	Url         string
-	FileNames   []string
+	FilePaths   []string
 	ErrorString string
 }

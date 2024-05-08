@@ -96,6 +96,7 @@ tasks:
     watch: true
     sources:
     - web/src/**/*
+    - ./*.go
     cmds:
     - task: build-frontend:dev
     - pkill go-opencv || true

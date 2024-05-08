@@ -1,0 +1,183 @@
+<app-layout>
+  <div>
+    <h1
+      class="mb-14 text-3xl font-extrabold text-gray-900 dark:text-white md:text-5xl lg:text-6xl"
+    >
+      Based on
+      <span
+        class="text-transparent bg-clip-text bg-gradient-to-r to-emerald-600 from-sky-400"
+      >
+        @if (details().data; as jobDetails) {
+        {{ jobDetails.search_query }}
+        }
+      </span>
+      query on youtube
+    </h1>
+
+    <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
+      <table
+        class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400"
+      >
+        <thead class="text-xs text-gray-700 uppercase dark:text-gray-400">
+          <tr>
+            <th scope="col" class="px-6 py-3 bg-gray-50 dark:bg-gray-800">
+              Property
+            </th>
+            <th scope="col" class="px-6 py-3">Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="border-b border-gray-200 dark:border-gray-700">
+            <th
+              scope="row"
+              class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap bg-gray-50 dark:text-white dark:bg-gray-800"
+            >
+              Target video amount
+            </th>
+            <td class="px-6 py-4">
+              @if (details().data; as jobDetails) {
+              {{ jobDetails.video_target }}
+              }
+            </td>
+          </tr>
+          <tr class="border-bGoal border-gray-200 dark:border-gray-700">
+            <th
+              scope="row"
+              class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap bg-gray-50 dark:text-white dark:bg-gray-800"
+            >
+              Pictures found
+            </th>
+            <td class="px-6 py-4">
+              @if (details().data; as jobDetails) {
+              {{ jobDetails.pictures_found }}
+              }
+            </td>
+          </tr>
+          <tr class="border-b border-gray-200 dark:border-gray-700">
+            <th
+              scope="row"
+              class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap bg-gray-50 dark:text-white dark:bg-gray-800"
+            >
+              Videos found
+            </th>
+            <td class="px-6 py-4">
+              @if (details().data; as jobDetails) {
+              {{ jobDetails.videos_found }}
+              }
+            </td>
+          </tr>
+          <tr class="border-b border-gray-200 dark:border-gray-700">
+            <th
+              scope="row"
+              class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap bg-gray-50 dark:text-white dark:bg-gray-800"
+            >
+              Videos in errored state
+            </th>
+            <td class="px-6 py-4">
+              @if (details().data; as jobDetails) {
+              {{ jobDetails.videos_in_error }}
+              }
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div
+      id="accordion-flush"
+      data-accordion="collapse"
+      class="mt-10"
+      [ngClass]="{
+        'bg-white dark:bg-gray-900 text-gray-900 dark:text-white': openVideos(),
+        'text-gray-500 dark:text-gray-400': !openVideos()
+      }"
+    >
+      <h2 id="accordion-flush-heading-1">
+        <button
+          (click)="toggleVideos()"
+          type="button"
+          class="flex items-center justify-between w-full py-5 font-medium rtl:text-right border-b border-gray-200 dark:border-gray-700 gap-3"
+        >
+          <span>Videos</span>
+          <svg
+            [class.rotate-180]="!openVideos()"
+            class="w-3 h-3 shrink-0"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 10 6"
+          >
+            <path
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 5 5 1 1 5"
+            />
+          </svg>
+        </button>
+      </h2>
+      <div
+        id="accordion-flush-body-1"
+        class="space-y-5 my-10"
+        [class.hidden]="!openVideos()"
+      >
+        @if(openVideos()){ @if(videos().data; as videos){
+        <!-- for -->
+        @for (item of videos.videos; track item.youtube_id) {
+        <div class="flex flex-row justify-around">
+          <app-youtube-embed [id]="item.youtube_id"></app-youtube-embed>
+          <div>
+            <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
+              <app-object-table [value]="item"></app-object-table>
+            </div>
+          </div>
+        </div>
+
+        } } }
+      </div>
+    </div>
+    <div
+      id="accordion-flush"
+      data-accordion="collapse"
+      [ngClass]="{
+        'bg-white dark:bg-gray-900 text-gray-900 dark:text-white':
+          openProgress(),
+        'text-gray-500 dark:text-gray-400': !openProgress()
+      }"
+    >
+      <h2 id="accordion-flush-heading-1">
+        <button
+          (click)="toggleProgress()"
+          type="button"
+          class="flex items-center justify-between w-full py-5 font-medium rtl:text-right border-b border-gray-200 dark:border-gray-700 gap-3"
+        >
+          <span>Progress</span>
+          <svg
+            [class.rotate-180]="!openProgress()"
+            class="w-3 h-3 shrink-0"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 10 6"
+          >
+            <path
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 5 5 1 1 5"
+            />
+          </svg>
+        </button>
+      </h2>
+      <div
+        id="accordion-flush-body-1"
+        class="py-10"
+        [class.hidden]="!openProgress()"
+      >
+        @if(openProgress()){ @if(progress().data; as progress){
+        <app-progress [job]="progress"> </app-progress>
+        } }
+      </div>
+    </div>
+  </div>
+</app-layout>
