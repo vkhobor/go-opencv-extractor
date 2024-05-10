@@ -32,8 +32,12 @@ RUN CGO_ENABLED=1 GO111MODULE=on GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build 
 # run server
 FROM ghcr.io/hybridgroup/opencv:4.9.0 as server-runner
 
+RUN apt-get update -qq && apt-get install ffmpeg -y
+
 COPY --from=server-builder /build/extractor /build/extractor
 COPY --from=server-builder /go/src/go-opencv-extractor/db_sql/migrations /build/db_sql/migrations
+
+WORKDIR /build
 
 EXPOSE 8080
 

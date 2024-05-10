@@ -80,13 +80,13 @@ tasks:
     cmds:
     - task: start
 
-  create-buildx-builder:
+  create-builder:
     cmds:
     - docker buildx create --name builderx --use
 
   build-docker:
     cmds:
-    - docker buildx build --platform linux/amd64 -t vkhobor/extractor:latest --pull --load .
+    - docker buildx build --platform linux/amd64 -t vkhobor/extractor:latest --pull --push .
 
   rebuild-docker:
     cmds:
