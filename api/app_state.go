@@ -4,10 +4,10 @@ import (
 	"net/http"
 
 	"github.com/go-chi/render"
-	"github.com/vkhobor/go-opencv/db_sql"
+	"github.com/vkhobor/go-opencv/db"
 )
 
-func HandleAppState(queries *db_sql.Queries) http.HandlerFunc {
+func HandleAppState(queries *db.Queries) http.HandlerFunc {
 
 	type appStateResponse struct {
 		State string `json:"state"`

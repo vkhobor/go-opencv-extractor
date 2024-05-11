@@ -1,9 +1,9 @@
 version: "2"
 sql:
 - engine: "sqlite"
-  queries: "./db_sql/queries"
-  schema: "./db_sql/migrations"
+  queries: "./db/queries"
+  schema: "./db/migrations"
   gen:
     go:
-      package: "db_sql"
-      out: "db_sql"
+      package: "db"
+      out: "db"

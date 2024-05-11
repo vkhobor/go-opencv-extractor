@@ -1,131 +1,60 @@
 package scraper
 
 import (
-	"context"
 	"net/url"
-	"strings"
 	"time"
 
-	"github.com/gocolly/colly"
-	"github.com/vkhobor/go-opencv/importing"
+	"github.com/vkhobor/go-opencv/youtube"
 )
 
-type MyCollyCollector struct {
-	*colly.Collector
-	stopped *bool
+const apiForQuery = "search?q="
+
+func apiForSearchQuery(baseUrl string, search string) string {
+	return baseUrl + apiForQuery + url.QueryEscape(search)
 }
 
-func NewCollector(throttle time.Duration) MyCollyCollector {
-	defaultColl := colly.NewCollector(
-		colly.AllowedDomains("yewtu.be"),
-		colly.UserAgent(""),
-		// colly.Debugger(&debug.LogDebugger{}),
-	)
-
-	defaultColl.Limit(&colly.LimitRule{
-		DomainGlob:  "*",
-		RandomDelay: throttle,
-	})
-
-	stop := false
-	defaultColl.OnRequest(func(r *colly.Request) {
-		if stop {
-			r.Abort()
-		}
-	})
-
-	v := MyCollyCollector{defaultColl, &stop}
-	return v
+type Scraper struct {
+	Throttle time.Duration
+	Domain   string
 }
 
-func (c MyCollyCollector) OnVideoDetailLink(handler func(link string)) {
-	c.OnHTML("div.thumbnail", func(e *colly.HTMLElement) {
-		if *c.stopped {
-			return
-		}
+func (s Scraper) Scrape(limit int, query string) []youtube.YoutubeVideo {
+	singlePageVisitor := NewCollector(s)
+	defer singlePageVisitor.Stop()
 
-		href := e.ChildAttr("a", "href")
-		if !strings.Contains(href, "watch") {
-			return
-		}
-
-		handler(e.Request.AbsoluteURL(href))
-	})
-
-	c.OnHTML(`div.page-next-container`, func(e *colly.HTMLElement) {
-		if *c.stopped {
-			return
-		}
-
-		link := e.ChildAttr("a", "href")
-		if link == "" {
-			return
-		}
-
-		e.Request.Visit(link)
-	})
-}
-
-func (c MyCollyCollector) OnYoutubeUrl(handler func(url string)) {
-	c.OnHTML("a#link-yt-watch", func(e *colly.HTMLElement) {
-		if *c.stopped {
-			return
-		}
-
-		href := e.Attr("href")
-		if href == "" {
-			return
-		}
-
-		handler(href)
-	})
-}
-
-func Scrape(ctx context.Context, search string, offset int, onYoutubeIdFound func(url string), throttleDuration time.Duration) {
-	singlePageVisitor := NewCollector(throttleDuration)
 	singlePageVisitor.MaxDepth = 1
 
-	allPagesVisitor := NewCollector(throttleDuration)
+	allPagesVisitor := NewCollector(s)
+	defer allPagesVisitor.Stop()
 
-	videosFound := 0
+	youtubeIDs := make(chan youtube.YoutubeVideo, 1)
+	defer close(youtubeIDs)
+
 	allPagesVisitor.OnVideoDetailLink(func(link string) {
-		videosFound++
-		if videosFound <= offset {
-			return
-		}
-
 		singlePageVisitor.Visit(link)
 	})
 
 	singlePageVisitor.OnYoutubeUrl(func(url string) {
-		select {
-		case <-ctx.Done():
-			*singlePageVisitor.stopped = true
-			*allPagesVisitor.stopped = true
+		id, err := youtube.NewYoutubeIDFromUrl(url)
+		if err != nil {
 			return
-		default:
-			id, err := importing.YoutubeParser(url)
-			if err != nil {
-				return
-			}
-
-			onYoutubeIdFound(id)
 		}
+		youtubeIDs <- id
 	})
 
-	urlEncoded := url.QueryEscape(search)
-	allPagesVisitor.Visit("https://yewtu.be/search?q=" + urlEncoded)
-}
+	urlEncoded := url.QueryEscape(query)
+	allPagesVisitor.Visit(apiForSearchQuery(s.Domain, urlEncoded))
 
-func ScrapeToChannel(search string, ctx context.Context, throttle time.Duration) <-chan string {
-	resultUrl := make(chan string)
+	youtubeIDsSlice := []youtube.YoutubeVideo{}
+	for item := range youtubeIDs {
+		if limit > 0 {
+			youtubeIDsSlice = append(youtubeIDsSlice, item)
+			limit--
+		} else {
 
-	go func() {
-		Scrape(ctx, search, 0, func(url string) {
-			resultUrl <- url
-		}, throttle)
+			break
+		}
+	}
 
-		close(resultUrl)
-	}()
-	return resultUrl
+	return youtubeIDsSlice
 }

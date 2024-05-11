@@ -6,10 +6,10 @@ import (
 
 	"github.com/go-chi/render"
 	"github.com/samber/lo"
-	"github.com/vkhobor/go-opencv/db_sql"
+	"github.com/vkhobor/go-opencv/db"
 )
 
-func HandleImages(queries *db_sql.Queries) http.HandlerFunc {
+func HandleImages(queries *db.Queries) http.HandlerFunc {
 	type picture struct {
 		ID        string `json:"id"`
 		BlobId    string `json:"blob_id"`
@@ -46,7 +46,7 @@ func HandleImages(queries *db_sql.Queries) http.HandlerFunc {
 				return
 			}
 
-			res, err := queries.GetPictures(r.Context(), db_sql.GetPicturesParams{
+			res, err := queries.GetPictures(r.Context(), db.GetPicturesParams{
 				Limit:  int64(limitAsInt),
 				Offset: int64(offsetAsInt),
 			})
@@ -65,7 +65,7 @@ func HandleImages(queries *db_sql.Queries) http.HandlerFunc {
 
 			resp := response{
 				Total: int(count),
-				Pictures: lo.Map(res, func(row db_sql.Picture, index int) picture {
+				Pictures: lo.Map(res, func(row db.Picture, index int) picture {
 					return picture{
 						ID:        row.ID,
 						BlobId:    row.BlobStorageID.String,

@@ -7,11 +7,9 @@ import (
 )
 
 func main() {
-	rootCmd := &cobra.Command{Use: "go-opencv"}
+	rootCmd := &cobra.Command{Use: "go-extractor"}
 
-	//rootCmd.AddCommand(cmd.NewCompare())
-	//rootCmd.AddCommand(cmd.NewImport())
-	//rootCmd.AddCommand(cmd.NewImportFile())
+	rootCmd.AddCommand(cmd.NewConfig())
 	rootCmd.AddCommand(cmd.NewVersion())
 	rootCmd.AddCommand(cmd.NewRunserver())
 

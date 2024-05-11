@@ -35,7 +35,7 @@ FROM ghcr.io/hybridgroup/opencv:4.9.0 as server-runner
 RUN apt-get update -qq && apt-get install ffmpeg -y
 
 COPY --from=server-builder /build/extractor /build/extractor
-COPY --from=server-builder /go/src/go-opencv-extractor/db_sql/migrations /build/db_sql/migrations
+COPY --from=server-builder /go/src/go-opencv-extractor/db/migrations /build/db/migrations
 
 WORKDIR /build
 

@@ -21,12 +21,12 @@ tasks:
     deps: [install-sqlc]
     watch: true
     sources:
-    - db_sql/migrations/*.sql
-    - db_sql/queries/*.sql
+    - db/migrations/*.sql
+    - db/queries/*.sql
     generates:
-    - db_sql/db.go
-    - db_sql/models.go
-    - db_sql/*.sql.go
+    - db/db.go
+    - db/models.go
+    - db/*.sql.go
     cmds:
     - sqlc generate
 
@@ -36,7 +36,7 @@ tasks:
 
   generate-migration:
     deps: [install-migrate]
-    dir: db_sql/migrations
+    dir: db/migrations
     preconditions:
     - sh: test -n "{{.CLI_ARGS}}"
       msg: "Please provide a name for the migration"
@@ -44,12 +44,12 @@ tasks:
     - migrate create -ext sql {{.CLI_ARGS}}
 
   delete-last-migration:
-    dir: db_sql/migrations
+    dir: db/migrations
     cmds:
     - rm -f $(ls -t | head -n2)
 
   redo-last-migration:
-    dir: db_sql/migrations
+    dir: db/migrations
     deps: [delete-last-migration]
     preconditions:
     - sh: test -n "{{.CLI_ARGS}}"

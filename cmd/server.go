@@ -20,32 +20,42 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/vkhobor/go-opencv/api"
-	"github.com/vkhobor/go-opencv/db_sql"
+	"github.com/vkhobor/go-opencv/config"
+	pathutils "github.com/vkhobor/go-opencv/path"
+
+	database "github.com/vkhobor/go-opencv/db"
+	"github.com/vkhobor/go-opencv/domain"
 	"github.com/vkhobor/go-opencv/jobs"
 
 	"github.com/spf13/cobra"
 )
 
-func run(ctx context.Context, w io.Writer, args []string, port int) error {
+func run(ctx context.Context, w io.Writer, args []string, programConfig config.ProgramConfig) error {
 	opts := &slog.HandlerOptions{
 		Level: slog.LevelDebug}
 
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, opts))
+	logger := slog.New(slog.NewTextHandler(os.Stdout, opts))
 	slog.SetLogLoggerLevel(slog.LevelDebug)
 	slog.SetDefault(logger)
 
-	slog.Info("Opening database")
-	db, err := sql.Open("sqlite3", "./db.sqlite3")
+	slog.Info("Opening database", "file", programConfig.DbFile)
+	path, err := pathutils.EnsurePath(programConfig.StoragePath)
 	if err != nil {
 		return err
 	}
-	driver, err := sqlite3.WithInstance(db, &sqlite3.Config{})
+
+	dbconn, err := sql.Open("sqlite3", path)
 	if err != nil {
 		return err
 	}
+	driver, err := sqlite3.WithInstance(dbconn, &sqlite3.Config{})
+	if err != nil {
+		return err
+	}
+
 	slog.Info("Migrating database")
 	m, err := migrate.NewWithDatabaseInstance(
-		"file://./db_sql/migrations",
+		"file://./db/migrations",
 		"sqlite3", driver)
 	if err != nil {
 		return err
@@ -57,24 +67,32 @@ func run(ctx context.Context, w io.Writer, args []string, port int) error {
 	}
 
 	slog.Info("Setup dependencies")
-	queries := db_sql.New(db)
+	queries := database.New(dbconn)
+	domainQueries := domain.JobQueries{
+		Queries: queries,
+	}
+
+	dirConfig, err := config.NewDirectoryConfig(programConfig.StoragePath)
+	if err != nil {
+		return err
+	}
 
 	wake := make(chan struct{}, 1)
 	jobManager := jobs.JobManager{
-		Queries:          queries,
-		Wake:             wake,
-		AutoWakePeriod:   time.Minute * 2,
-		ScrapeThrottle:   time.Second * 5,
-		ImportThrottle:   time.Second * 0,
-		DownloadThrottle: time.Second * 15,
+		Wake:           wake,
+		AutoWakePeriod: time.Minute * 2,
+		Scraper:        jobs.NewScraper(&domainQueries, time.Second*5),
+		Importer:       jobs.NewImporter(&domainQueries, time.Second*0, dirConfig),
+		Downloader:     jobs.NewDownloader(&domainQueries, time.Second*15),
 	}
 
-	go jobManager.Run()
+	slog.Info("Starting job manager")
+	go jobManager.Start()
 	wake <- struct{}{}
 
-	portString := fmt.Sprintf(":%d", port)
-	srv := &http.Server{Addr: portString, Handler: api.NewRouter(queries, wake)}
-	slog.Info("Server started", "port", port)
+	portString := fmt.Sprintf(":%d", programConfig.Port)
+	srv := &http.Server{Addr: portString, Handler: api.NewRouter(queries, wake, dirConfig)}
+	slog.Info("Server started", "port", programConfig.Port)
 
 	go func() {
 		httpError := srv.ListenAndServe()
@@ -99,7 +117,7 @@ func run(ctx context.Context, w io.Writer, args []string, port int) error {
 }
 
 func NewRunserver() *cobra.Command {
-	var port int
+	viperConf := config.MustNewDefaultViperConfig()
 
 	var cmdPrint = &cobra.Command{
 		Use: "serve",
@@ -108,7 +126,20 @@ func NewRunserver() *cobra.Command {
 
 			ctx, cancel := signal.NotifyContext(ctx, os.Interrupt, os.Kill, syscall.SIGTERM)
 			defer cancel()
-			if err := run(ctx, os.Stdout, args, port); err != nil {
+
+			config := config.ProgramConfig{}
+			err := viperConf.Unmarshal(&config)
+			if err != nil {
+				return err
+			}
+			if err := config.Validate(); err != nil {
+				slog.Error("Invalid configuration", "config", config)
+				return fmt.Errorf("invalid configuration")
+			}
+
+			slog.Info("Starting serve", "configuration", config)
+
+			if err := run(ctx, os.Stdout, args, config); err != nil {
 				fmt.Fprintf(os.Stderr, "%s\n", err)
 				os.Exit(1)
 			}
@@ -116,8 +147,12 @@ func NewRunserver() *cobra.Command {
 		},
 	}
 
-	cmdPrint.Flags().IntVarP(&port, "port", "p", 8080, "Specify the port")
+	cmdPrint.Flags().IntP("port", "p", 8080, "Specify the port")
 	cmdPrint.MarkFlagRequired("port")
+	viperConf.BindPFlag("port", cmdPrint.Flags().Lookup("port"))
+
+	cmdPrint.Flags().StringP("storage-path", "s", "~/test", "Specify where to store files")
+	viperConf.BindPFlag("storage_path", cmdPrint.Flags().Lookup("storage-path"))
 
 	return cmdPrint
 }

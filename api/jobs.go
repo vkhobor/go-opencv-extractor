@@ -9,10 +9,10 @@ import (
 	"github.com/go-chi/render"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
-	"github.com/vkhobor/go-opencv/db_sql"
+	"github.com/vkhobor/go-opencv/db"
 )
 
-func HandleCreateJob(queries *db_sql.Queries, wakeJobs chan<- struct{}) http.HandlerFunc {
+func HandleCreateJob(queries *db.Queries, wakeJobs chan<- struct{}) http.HandlerFunc {
 	type jobRequest struct {
 		SearchQuery string `json:"search_query"`
 		Limit       int    `json:"limit"`
@@ -32,7 +32,7 @@ func HandleCreateJob(queries *db_sql.Queries, wakeJobs chan<- struct{}) http.Han
 				return
 			}
 
-			res, err := queries.CreateJob(r.Context(), db_sql.CreateJobParams{
+			res, err := queries.CreateJob(r.Context(), db.CreateJobParams{
 				SearchQuery: sql.NullString{
 					String: articleRequest.SearchQuery,
 					Valid:  true,
@@ -61,7 +61,7 @@ func HandleCreateJob(queries *db_sql.Queries, wakeJobs chan<- struct{}) http.Han
 	)
 }
 
-func HandleListJobs(queries *db_sql.Queries) http.HandlerFunc {
+func HandleListJobs(queries *db.Queries) http.HandlerFunc {
 	type jobProgress struct {
 		Imported         int      `json:"imported"`
 		Scraped          int      `json:"scraped"`
@@ -86,7 +86,7 @@ func HandleListJobs(queries *db_sql.Queries) http.HandlerFunc {
 				return
 			}
 
-			grouped := lo.GroupBy(res, func(row db_sql.ListJobsWithProgressRow) string {
+			grouped := lo.GroupBy(res, func(row db.ListJobsWithProgressRow) string {
 				return row.ID
 			})
 
@@ -110,32 +110,32 @@ func HandleListJobs(queries *db_sql.Queries) http.HandlerFunc {
 				}
 
 				downloaded := lo.Filter(value,
-					func(row db_sql.ListJobsWithProgressRow, index int) bool {
+					func(row db.ListJobsWithProgressRow, index int) bool {
 						return row.BlobStorageID.Valid
 					})
-				downloaded = lo.UniqBy(downloaded, func(item db_sql.ListJobsWithProgressRow) string {
+				downloaded = lo.UniqBy(downloaded, func(item db.ListJobsWithProgressRow) string {
 					return item.BlobStorageID.String
 				})
 
 				imported := lo.Filter(value,
-					func(row db_sql.ListJobsWithProgressRow, index int) bool {
+					func(row db.ListJobsWithProgressRow, index int) bool {
 						return row.Status.String == "imported"
 					})
-				imported = lo.UniqBy(imported, func(item db_sql.ListJobsWithProgressRow) string {
+				imported = lo.UniqBy(imported, func(item db.ListJobsWithProgressRow) string {
 					return item.ID_2.String
 				})
 
-				pictures := lo.Filter(value, func(item db_sql.ListJobsWithProgressRow, i int) bool {
+				pictures := lo.Filter(value, func(item db.ListJobsWithProgressRow, i int) bool {
 					return item.ID_3.Valid
 				})
-				pictures = lo.UniqBy(pictures, func(item db_sql.ListJobsWithProgressRow) string {
+				pictures = lo.UniqBy(pictures, func(item db.ListJobsWithProgressRow) string {
 					return item.ID_3.String
 				})
 
 				allVideoIds := lo.Map(
-					lo.Filter(value, func(item db_sql.ListJobsWithProgressRow, index int) bool {
+					lo.Filter(value, func(item db.ListJobsWithProgressRow, index int) bool {
 						return item.ID_2.Valid
-					}), func(item db_sql.ListJobsWithProgressRow, i int) string {
+					}), func(item db.ListJobsWithProgressRow, i int) string {
 						return item.ID_2.String
 					})
 
@@ -160,7 +160,7 @@ func HandleListJobs(queries *db_sql.Queries) http.HandlerFunc {
 	)
 }
 
-func HandleJobDetails(queries *db_sql.Queries) http.HandlerFunc {
+func HandleJobDetails(queries *db.Queries) http.HandlerFunc {
 	type jobResponse struct {
 		ID            string `json:"id"`
 		SearchQuery   string `json:"search_query"`
@@ -200,7 +200,7 @@ func HandleJobDetails(queries *db_sql.Queries) http.HandlerFunc {
 	)
 }
 
-func HandleJobVideosFound(queries *db_sql.Queries) http.HandlerFunc {
+func HandleJobVideosFound(queries *db.Queries) http.HandlerFunc {
 	type video struct {
 		YoutubeId     string `json:"youtube_id"`
 		Status        string `json:"status"`
@@ -228,7 +228,7 @@ func HandleJobVideosFound(queries *db_sql.Queries) http.HandlerFunc {
 				return
 			}
 
-			videos := lo.Map(res, func(row db_sql.GetOneWithVideosRow, index int) video {
+			videos := lo.Map(res, func(row db.GetOneWithVideosRow, index int) video {
 				return video{
 					YoutubeId:     row.VideoYoutubeID.String,
 					Status:        row.VideoStatus.String,
@@ -246,7 +246,7 @@ func HandleJobVideosFound(queries *db_sql.Queries) http.HandlerFunc {
 	)
 }
 
-func HandleJobProgress(queries *db_sql.Queries) http.HandlerFunc {
+func HandleJobProgress(queries *db.Queries) http.HandlerFunc {
 	type jobResponse struct {
 		ID               string `json:"id"`
 		Imported         int    `json:"imported"`

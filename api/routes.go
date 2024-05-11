@@ -3,12 +3,14 @@ package api
 import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/cors"
-	"github.com/vkhobor/go-opencv/db_sql"
+	"github.com/vkhobor/go-opencv/config"
+	"github.com/vkhobor/go-opencv/db"
 )
 
 func NewRouter(
-	queries *db_sql.Queries,
+	queries *db.Queries,
 	wakeJobs chan<- struct{},
+	config config.DirectoryConfig,
 ) chi.Router {
 	router := chi.NewRouter()
 
@@ -28,14 +30,14 @@ func NewRouter(
 		r.Get("/jobs/{id}/videos", HandleJobVideosFound(queries))
 		r.Get("/jobs/{id}/progress", HandleJobProgress(queries))
 
-		r.Post("/references", HandleReferenceUpload(queries))
+		r.Post("/references", HandleReferenceUpload(queries, config))
 		r.Get("/references", HandleGetReferences(queries))
 		r.Delete("/references", HandleDeleteAllReferences(queries))
 
 		r.Get("/images", HandleImages(queries))
 
 		r.Get("/files/{id}", HandleFileServeById(queries))
-		r.Get("/zipped", ExportWorkspace())
+		r.Get("/zipped", ExportWorkspace(config))
 
 		r.Get("/state", HandleAppState(queries))
 
