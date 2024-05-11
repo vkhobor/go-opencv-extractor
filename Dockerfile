@@ -39,7 +39,7 @@ COPY --from=server-builder /go/src/go-opencv-extractor/db/migrations /build/db/m
 
 WORKDIR /build
 
-EXPOSE 8080
+EXPOSE 80
 
 ENTRYPOINT ["/build/extractor"]
-CMD ["serve", "--port", "8080"]
+CMD ["serve", "--port", "80", "--db", "/DATA/db.sqlite3","--blob-storage", "/DATA/blobs"]

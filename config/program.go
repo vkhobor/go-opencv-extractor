@@ -8,14 +8,14 @@ import (
 
 type ProgramConfig struct {
 	Port        int    `mapstructure:"port"`
-	StoragePath string `mapstructure:"storage_path"`
-	DbFile      string `mapstructure:"db_file"`
+	BlobStorage string `mapstructure:"blob_storage"`
+	Db          string `mapstructure:"db"`
 }
 
 func addDefaults(viperConf *viper.Viper) {
 	viperConf.SetDefault("port", 8080)
-	viperConf.SetDefault("storage_path", "~/.go_extractor/data")
-	viperConf.SetDefault("db_file", "~/.go_extractor/db.sqlite3")
+	viperConf.SetDefault("blob_storage", "~/.go_extractor/data")
+	viperConf.SetDefault("db", "~/.go_extractor/db.sqlite3")
 }
 
 func (c ProgramConfig) Validate() error {
@@ -23,11 +23,11 @@ func (c ProgramConfig) Validate() error {
 		return fmt.Errorf("invalid port")
 	}
 
-	if c.StoragePath == "" {
+	if c.BlobStorage == "" {
 		return fmt.Errorf("invalid storage path")
 	}
 
-	if c.DbFile == "" {
+	if c.Db == "" {
 		return fmt.Errorf("invalid db file")
 	}
 

@@ -17,6 +17,7 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/sqlite3"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/lmittmann/tint"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/vkhobor/go-opencv/api"
@@ -31,15 +32,14 @@ import (
 )
 
 func run(ctx context.Context, w io.Writer, args []string, programConfig config.ProgramConfig) error {
-	opts := &slog.HandlerOptions{
-		Level: slog.LevelDebug}
-
-	logger := slog.New(slog.NewTextHandler(os.Stdout, opts))
+	logger := slog.New(tint.NewHandler(w, &tint.Options{
+		Level: slog.LevelDebug,
+	}))
 	slog.SetLogLoggerLevel(slog.LevelDebug)
 	slog.SetDefault(logger)
 
-	slog.Info("Opening database", "file", programConfig.DbFile)
-	path, err := pathutils.EnsurePath(programConfig.StoragePath)
+	slog.Info("Opening database", "file", programConfig.Db)
+	path, err := pathutils.EnsurePath(programConfig.BlobStorage)
 	if err != nil {
 		return err
 	}
@@ -72,7 +72,7 @@ func run(ctx context.Context, w io.Writer, args []string, programConfig config.P
 		Queries: queries,
 	}
 
-	dirConfig, err := config.NewDirectoryConfig(programConfig.StoragePath)
+	dirConfig, err := config.NewDirectoryConfig(programConfig.BlobStorage)
 	if err != nil {
 		return err
 	}
@@ -151,8 +151,11 @@ func NewRunserver() *cobra.Command {
 	cmdPrint.MarkFlagRequired("port")
 	viperConf.BindPFlag("port", cmdPrint.Flags().Lookup("port"))
 
-	cmdPrint.Flags().StringP("storage-path", "s", "~/test", "Specify where to store files")
-	viperConf.BindPFlag("storage_path", cmdPrint.Flags().Lookup("storage-path"))
+	cmdPrint.Flags().StringP("db", "d", "~/test", "Address of the sqlite database")
+	viperConf.BindPFlag("db", cmdPrint.Flags().Lookup("db"))
+
+	cmdPrint.Flags().StringP("blob-storage", "s", "~/test", "Specify where to store files")
+	viperConf.BindPFlag("blob_storage", cmdPrint.Flags().Lookup("blob-storage"))
 
 	return cmdPrint
 }
