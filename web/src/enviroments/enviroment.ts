@@ -2,5 +2,5 @@ import { Enviroment } from './enviroment.d';
 
 export default {
   production: false,
-  api: 'http://localhost:8080/api',
+  api: import.meta.env['NG_APP_API_URL'] ?? '/api',
 } satisfies Enviroment;

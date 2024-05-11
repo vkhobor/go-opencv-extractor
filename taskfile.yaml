@@ -1,7 +1,42 @@
 version: '3'
 
 interval: '500ms'
+
+vars:
+  GO_EXTRACTOR_DEV_SERVER_PORT: 8080
+  GO_EXTRACTOR_DEV_CLIENT_PORT: 4200
+
 tasks:
+
+  # Basic development related tasks
+
+  dev:
+    deps:
+    - server:dev
+    - client:dev
+
+  server:dev:
+    cmds:
+    - go run . serve -p {{.GO_EXTRACTOR_DEV_SERVER_PORT}}
+
+  client:dev:
+    dir: web
+    cmds:
+    - NG_APP_API_URL=http://localhost:{{.GO_EXTRACTOR_DEV_SERVER_PORT}}/api npm run start -- --port {{.GO_EXTRACTOR_DEV_CLIENT_PORT}}
+
+  client:dev:build:
+    dir: web
+    sources:
+    - web/src/**/*
+    cmds:
+    - npm run build:dev
+
+  preview:
+    deps: ['client:dev:build']
+    cmds:
+    - task: start
+
+  # Advanced development related tasks
 
   install-sqlc:
     cmds:
@@ -30,10 +65,6 @@ tasks:
     cmds:
     - sqlc generate
 
-  migrate:
-    cmds:
-    - echo "TODO run migrations"
-
   generate-migration:
     deps: [install-migrate]
     dir: db/migrations
@@ -57,47 +88,23 @@ tasks:
     cmds:
     - task: generate-migration
 
-  start:
-    cmds:
-    - go run . serve -p 8080
+  # Production related tasks
 
-  build-frontend:dev:
-    dir: web
-    sources:
-    - web/src/**/*
-    cmds:
-    - npm run build:dev
-    -
-  build-frontend:
+  client:prod:build:
     dir: web
     sources:
     - web/src/**/*
     cmds:
     - npm run build
 
-  preview:
-    deps: [build-frontend]
-    cmds:
-    - task: start
-
-  create-builder:
+  docker:new-builder:
     cmds:
     - docker buildx create --name builderx --use
 
-  build-docker:
+  docker:build-docker:
     cmds:
     - docker buildx build --platform linux/amd64 -t vkhobor/extractor:latest --pull --push .
 
-  rebuild-docker:
+  docker:rebuild-docker:
     cmds:
     - docker buildx build --platform linux/amd64  --no-cache -t vkhobor/extractor:latest --pull --load .
-
-  watch:dev:
-    watch: true
-    sources:
-    - web/src/**/*
-    - ./*.go
-    cmds:
-    - task: build-frontend:dev
-    - pkill go-opencv || true
-    - task: start
