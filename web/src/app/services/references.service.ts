@@ -27,6 +27,9 @@ export class ReferencesService {
       this.#queryClient.invalidateQueries({
         queryKey: ['references'],
       });
+      this.#queryClient.invalidateQueries({
+        queryKey: ['filters'],
+      });
     },
   });
 
@@ -37,6 +40,9 @@ export class ReferencesService {
     onSuccess: () => {
       this.#queryClient.invalidateQueries({
         queryKey: ['references'],
+      });
+      this.#queryClient.invalidateQueries({
+        queryKey: ['filters'],
       });
     },
   });

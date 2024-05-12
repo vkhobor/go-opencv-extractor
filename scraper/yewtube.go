@@ -1,6 +1,7 @@
 package scraper
 
 import (
+	"log/slog"
 	"strings"
 	"sync/atomic"
 
@@ -15,6 +16,7 @@ type myCollyCollector struct {
 func NewCollector(s Scraper) myCollyCollector {
 	defaultColl := colly.NewCollector(
 		colly.AllowedDomains(s.Domain),
+		// colly.Async(true),
 		colly.UserAgent(""),
 		// colly.Debugger(&debug.LogDebugger{}),
 	)
@@ -27,13 +29,20 @@ func NewCollector(s Scraper) myCollyCollector {
 	var atomicBool atomic.Bool
 	atomicBool.Store(false)
 
+	v := myCollyCollector{defaultColl, &atomicBool}
 	defaultColl.OnRequest(func(r *colly.Request) {
-		if atomicBool.Load() {
+		if v.Stopped() {
+			slog.Debug("Aborting request", "url", r.URL)
 			r.Abort()
 		}
+		slog.Debug("Request", "url", r.URL)
 	})
 
-	v := myCollyCollector{defaultColl, &atomicBool}
+	defaultColl.OnResponse(func(r *colly.Response) {
+		slog.Debug("Response", "url", r.Request.URL)
+	})
+
+	slog.Debug("Created new collector", "throttle", s.Throttle, "domain", s.Domain, "stopped", v.Stopped())
 	return v
 }
 
@@ -42,6 +51,7 @@ func (c myCollyCollector) Stopped() bool {
 }
 
 func (c myCollyCollector) Stop() {
+	slog.Debug("Stopping collector")
 	c.stopped.Store(true)
 }
 

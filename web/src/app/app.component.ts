@@ -1,5 +1,5 @@
 import { Component, OnInit, computed } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { Router, RouterOutlet } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { initFlowbite } from 'flowbite';
 import { NavbarComponent } from './components/navbar/navbar.component';
@@ -16,6 +16,6 @@ import { JobsService } from './services/jobs.service';
 })
 export class AppComponent implements OnInit {
   ngOnInit(): void {
-    initFlowbite();
+    // initFlowbite();
   }
 }

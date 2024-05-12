@@ -1,10 +1,10 @@
 <app-modal-container #modal>
-  <app-modal-layout [title]="'Reference pictures'" (closeModal)="closeModal()">
+  <app-modal-layout [title]="'Default filter'" (closeModal)="closeModal()">
     @if(referencesUrls()?.length !== 0) {
     <ul class="flex flex-row flex-wrap gap-4 mb-3">
       @for (item of referencesUrls(); track item) {
       <li>
-        <img class="w-28" [src]="item" alt="image" />
+        <img class="object-contain w-32 h-32" [src]="item" alt="image" />
       </li>
       }
     </ul>

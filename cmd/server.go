@@ -44,7 +44,8 @@ func run(ctx context.Context, w io.Writer, args []string, programConfig config.P
 		return err
 	}
 
-	dbconn, err := sql.Open("sqlite3", path)
+	dbPath := fmt.Sprintf("%s/db.sqlite3", path)
+	dbconn, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return err
 	}

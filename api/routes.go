@@ -34,6 +34,9 @@ func NewRouter(
 		r.Get("/references", HandleGetReferences(queries))
 		r.Delete("/references", HandleDeleteAllReferences(queries))
 
+		r.Get("/filters", HandleGetFilters(queries))
+		r.Get("/filters/{id}", HandleGetFilter(queries))
+
 		r.Get("/images", HandleImages(queries))
 
 		r.Get("/files/{id}", HandleFileServeById(queries))

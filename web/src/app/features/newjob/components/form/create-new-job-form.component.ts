@@ -1,4 +1,12 @@
-import { Component, EventEmitter, Output } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Output,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import {
   FormBuilder,
   FormControl,
@@ -8,6 +16,14 @@ import {
   Validators,
 } from '@angular/forms';
 import { CreateJob } from '../../../../models/CreateJob';
+import { FilterService } from '../../../../services/filter.service';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { injectQuery } from '@ngneat/query';
+import { DefaultHttpProxyService } from '../../../../services/http/default-http-proxy.service';
+import { Observable } from 'rxjs';
+import { Filter } from '../../../../models/Filter';
+import enviroment from '../../../../../enviroments/enviroment';
+import { UndefinedInitialDataOptions } from '@ngneat/query/lib/query-options';
 
 @Component({
   selector: 'app-create-new-job-form',
@@ -31,21 +47,57 @@ export class CreateNewJobFormComponent {
         Validators.min(1),
         Validators.max(1000),
       ]),
+      filter: new FormControl<string | null>('', [
+        Validators.required,
+        Validators.minLength(1),
+      ]),
     },
     { updateOn: 'change' }
   );
 
-  constructor(private fb: FormBuilder) {}
+  filters = this.filterService.getFilters().result;
+  filterOptions = computed(() =>
+    this.filters().data?.map((f) => ({ label: f.name, value: f.id }))
+  );
 
-  reset() {
-    this.form.reset();
-  }
+  selectedFilterIdOrUndefined = toSignal(
+    this.form.controls.filter.valueChanges
+  );
+  selectedFilterId = computed(
+    () => this.selectedFilterIdOrUndefined() ?? undefined
+  );
+
+  selectedFiltersQuery = this.filterService.getFilter(this.selectedFilterId());
+
+  selectedFilterEffect = effect(() =>
+    this.selectedFiltersQuery.updateOptions(
+      this.filterService.selectedFiltersQueryOptions(this.selectedFilterId())
+    )
+  );
+
+  selectedFiltersQueryResult = this.selectedFiltersQuery.result;
+
+  selectedFilterPictures = computed(() => {
+    if (!this.selectedFilterId()) {
+      return null;
+    }
+
+    return this.selectedFiltersQueryResult().data?.filter_images.map((id) => ({
+      url: `${enviroment.api}/files/${id.blob_id}`,
+    }));
+  });
+
+  constructor(private fb: FormBuilder, private filterService: FilterService) {}
 
   public get searchQuery() {
     return this.form.get('searchQuery');
   }
   public get limit() {
     return this.form.get('limit');
+  }
+
+  touchAll() {
+    this.form.markAllAsTouched();
   }
 
   ngOnInit() {

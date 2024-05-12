@@ -1,12 +1,12 @@
 package jobs
 
 import (
+	"context"
 	"log/slog"
 	"time"
 
 	"github.com/vkhobor/go-opencv/domain"
 	"github.com/vkhobor/go-opencv/scraper"
-	"github.com/vkhobor/go-opencv/youtube"
 )
 
 type Scraper func()
@@ -17,9 +17,6 @@ func NewScraper(queries *domain.JobQueries, throttle time.Duration) Scraper {
 		Throttle: throttle,
 		Domain:   "yewtu.be",
 	}
-	scraperFunc := func(args domain.ScrapeArgs) []youtube.YoutubeVideo {
-		return scraper.Scrape(args.Limit, args.SearchQuery)
-	}
 
 	return func() {
 		toScrape := queries.GetToScrapeVideos()
@@ -29,19 +26,44 @@ func NewScraper(queries *domain.JobQueries, throttle time.Duration) Scraper {
 		}
 
 		slog.Info("Running scrape job", "needed_to_scrape", toScrape)
-		for _, scrapeArgs := range toScrape {
-			toFind := scrapeArgs.Limit
+		for _, args := range toScrape {
+			toFind := args.Limit
 
 			if toFind <= 0 {
 				continue
 			}
 
-			scrapeChan := scraperFunc(domain.ScrapeArgs{SearchQuery: scrapeArgs.SearchQuery, Limit: scrapeArgs.Limit})
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
 
-			for _, item := range scrapeChan {
-				queries.SaveSraped(domain.ScrapedVideo{
+			// This is chan so later we can test not to save already saved videos
+			scrapeChan, err := scraper.Scrape(ctx, args.SearchQuery)
+			if err != nil {
+				slog.Error("Error scraping", "error", err)
+				continue
+			}
+
+			saved := 0
+			scraped := 0
+			for item := range scrapeChan {
+				slog.Debug("Scraped", "scraped", item)
+				scraped++
+
+				if saved >= toFind {
+					break
+				}
+
+				if scraped >= 50 {
+					break
+				}
+
+				// TODO if already saved, only attach the job's filter request if not attached already to video
+				ok := queries.SaveSraped(domain.ScrapedVideo{
 					ID: item.String(),
-				}, scrapeArgs.JobId)
+				}, args.JobId)
+				if ok {
+					saved++
+				}
 			}
 		}
 	}

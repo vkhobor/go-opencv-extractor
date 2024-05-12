@@ -36,7 +36,8 @@ export class AddModalComponent implements Modal {
   }
 
   save(): void {
-    if (this.data) {
+    this.form.touchAll();
+    if (this.data && this.form.valid) {
       this.jobsService.addJob
         .mutateAsync(this.data)
         .then(() => this.closeModal());
@@ -44,7 +45,6 @@ export class AddModalComponent implements Modal {
   }
 
   closeModal(): void {
-    this.form.reset();
     this.modal.closeModal();
   }
 }

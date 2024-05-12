@@ -54,4 +54,29 @@
     </p>
     } }
   </div>
+  <select
+    id="filter"
+    formControlName="filter"
+    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+  >
+    <option value="" selected>Choose a filter to use</option>
+    @for (item of filterOptions(); track item.value) {
+    <option value="{{ item.value }}">{{ item.label }}</option>
+    }
+  </select>
+
+  @if(selectedFilterPictures()!= null) {
+  <div class="mt-4 mb-2">
+    <span class="text-base font-semibold text-gray-900 dark:text-white">
+      Chosen filter:
+    </span>
+  </div>
+  <ul class="flex flex-row flex-wrap gap-4 mb-3">
+    @for (item of selectedFilterPictures(); track item) {
+    <li>
+      <img class="object-contain w-32 h-32" [src]="item.url" alt="image" />
+    </li>
+    }
+  </ul>
+  }
 </form>

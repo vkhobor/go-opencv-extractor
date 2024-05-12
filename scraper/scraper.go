@@ -1,16 +1,25 @@
 package scraper
 
 import (
+	"context"
+	"log/slog"
 	"net/url"
 	"time"
 
 	"github.com/vkhobor/go-opencv/youtube"
 )
 
-const apiForQuery = "search?q="
+func apiForSearchQuery(host string, search string) (string, error) {
+	params := url.Values{}
+	params.Add("q", search)
 
-func apiForSearchQuery(baseUrl string, search string) string {
-	return baseUrl + apiForQuery + url.QueryEscape(search)
+	u := url.URL{
+		Scheme:   "https",
+		Host:     host,
+		RawQuery: params.Encode(),
+		Path:     "search",
+	}
+	return u.String(), nil
 }
 
 type Scraper struct {
@@ -18,17 +27,14 @@ type Scraper struct {
 	Domain   string
 }
 
-func (s Scraper) Scrape(limit int, query string) []youtube.YoutubeVideo {
+func (s Scraper) Scrape(ctx context.Context, query string) (<-chan youtube.YoutubeVideo, error) {
 	singlePageVisitor := NewCollector(s)
-	defer singlePageVisitor.Stop()
 
 	singlePageVisitor.MaxDepth = 1
 
 	allPagesVisitor := NewCollector(s)
-	defer allPagesVisitor.Stop()
 
-	youtubeIDs := make(chan youtube.YoutubeVideo, 1)
-	defer close(youtubeIDs)
+	youtubeIDsChan := make(chan youtube.YoutubeVideo)
 
 	allPagesVisitor.OnVideoDetailLink(func(link string) {
 		singlePageVisitor.Visit(link)
@@ -39,22 +45,25 @@ func (s Scraper) Scrape(limit int, query string) []youtube.YoutubeVideo {
 		if err != nil {
 			return
 		}
-		youtubeIDs <- id
+
+		select {
+		case <-ctx.Done():
+			allPagesVisitor.Stop()
+			singlePageVisitor.Stop()
+			close(youtubeIDsChan)
+		default:
+			youtubeIDsChan <- id
+		}
 	})
 
 	urlEncoded := url.QueryEscape(query)
-	allPagesVisitor.Visit(apiForSearchQuery(s.Domain, urlEncoded))
-
-	youtubeIDsSlice := []youtube.YoutubeVideo{}
-	for item := range youtubeIDs {
-		if limit > 0 {
-			youtubeIDsSlice = append(youtubeIDsSlice, item)
-			limit--
-		} else {
-
-			break
-		}
+	urlToScrape, err := apiForSearchQuery(s.Domain, urlEncoded)
+	if err != nil {
+		return nil, err
 	}
 
-	return youtubeIDsSlice
+	slog.Debug("Start scraping", "url", urlToScrape)
+	go allPagesVisitor.Visit(urlToScrape)
+
+	return youtubeIDsChan, nil
 }

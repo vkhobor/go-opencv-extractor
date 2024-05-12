@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { SettingsToggleComponent } from './settings-toggle.component';
+import { ActionsComponent } from './actions.component';
 
-describe('SettingsToggleComponent', () => {
-  let component: SettingsToggleComponent;
-  let fixture: ComponentFixture<SettingsToggleComponent>;
+describe('ActionsComponent', () => {
+  let component: ActionsComponent;
+  let fixture: ComponentFixture<ActionsComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [SettingsToggleComponent]
+      imports: [ActionsComponent]
     })
     .compileComponents();
     
-    fixture = TestBed.createComponent(SettingsToggleComponent);
+    fixture = TestBed.createComponent(ActionsComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });
