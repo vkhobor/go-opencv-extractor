@@ -15,17 +15,16 @@ FROM ghcr.io/hybridgroup/opencv:4.9.0 as server-builder
 
 ENV GOPATH /go
 
-WORKDIR /app
-
-COPY . /go/src/go-opencv-extractor
-
 WORKDIR /go/src/go-opencv-extractor
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . ./
 
 ARG TARGETARCH TARGETOS
 
-RUN go mod download
-
-COPY --from=web-builder /web/dist /go/src/go-opencv-extractor/web/dist
+COPY --from=web-builder /web/dist ./web/dist
 
 RUN CGO_ENABLED=1 GO111MODULE=on GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -a -o /build/extractor main.go
 
@@ -34,12 +33,11 @@ FROM ghcr.io/hybridgroup/opencv:4.9.0 as server-runner
 
 RUN apt-get update -qq && apt-get install ffmpeg -y
 
-COPY --from=server-builder /build/extractor /build/extractor
-COPY --from=server-builder /go/src/go-opencv-extractor/db/migrations /build/db/migrations
-
 WORKDIR /build
+COPY --from=server-builder /build/extractor ./
+COPY --from=server-builder /go/src/go-opencv-extractor/db/migrations ./db/migrations
 
-EXPOSE 80
+EXPOSE 7000
 
 ENTRYPOINT ["/build/extractor"]
-CMD ["serve", "--port", "80", "--db", "/DATA/db.sqlite3","--blob-storage", "/DATA/blobs"]
+CMD ["serve", "--port", "7000", "--db", "/DATA/db.sqlite3","--blob-storage", "/DATA/blobs"]"--db", "/DATA/db.sqlite3","--blob-storage", "/DATA/blobs"

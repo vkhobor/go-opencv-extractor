@@ -38,14 +38,13 @@ func run(ctx context.Context, w io.Writer, args []string, programConfig config.P
 	slog.SetLogLoggerLevel(slog.LevelDebug)
 	slog.SetDefault(logger)
 
-	slog.Info("Opening database", "file", programConfig.Db)
-	path, err := pathutils.EnsurePath(programConfig.BlobStorage)
+	path, err := pathutils.EnsurePath(programConfig.Db)
 	if err != nil {
 		return err
 	}
 
-	dbPath := fmt.Sprintf("%s/db.sqlite3", path)
-	dbconn, err := sql.Open("sqlite3", dbPath)
+	slog.Info("Opening database", "file", path)
+	dbconn, err := sql.Open("sqlite3", path)
 	if err != nil {
 		return err
 	}

@@ -10,4 +10,7 @@ bin
 *.mp4
 *.png
 /db.sqlite3
+taskfile.yaml
+*.md
+**/*.sqlite3
 
