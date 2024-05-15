@@ -6,6 +6,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func urlParse(url string) (string, error) {
+	id, err := NewYoutubeIDFromUrl(url)
+	if err != nil {
+		return "", err
+	}
+	return id.String(), nil
+}
+
 func TestUrlParse_ValidURL(t *testing.T) {
 	url := "https://www.youtube.com/watch?v=abcdefghijk"
 	expected := "abcdefghijk"

@@ -10,61 +10,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kkdai/youtube/v2"
-	"github.com/vkhobor/go-opencv/domain"
 )
 
-func downloadVideo(videoID string, folderPath string) (path string, title string, err error) {
-
-	youtube.DefaultClient = youtube.AndroidClient
-	client := youtube.Client{}
-
-	video, err := client.GetVideo(videoID)
-	if err != nil {
-		return "", "", err
-	}
-
-	video.FilterQuality("720p")
-
-	if len(video.Formats) == 0 {
-		return "", "", errors.New("no matching formats found")
-	}
-
-	stream, _, err := client.GetStream(video, &video.Formats[0])
-	if err != nil {
-		return "", "", err
-	}
-	defer stream.Close()
-
-	err = os.MkdirAll(folderPath, os.ModePerm)
-	if err != nil {
-		return "", "", err
-	}
-	id := uuid.New()
-	fileName := fmt.Sprintf("%v_%v.mp4", id.String(), videoID)
-	filePath := filepath.Join(folderPath, fileName)
-	file, err := os.Create(filePath)
-	if err != nil {
-		return "", "", err
-	}
-	defer file.Close()
-
-	_, err = io.Copy(file, stream)
-	if err != nil {
-		return "", "", err
-	}
-	return filePath, video.Title, nil
-}
-
 var youtubeRegexp = regexp.MustCompile(`^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*`)
-
-func urlParse(url string) (string, error) {
-	match := youtubeRegexp.FindStringSubmatch(url)
-	if len(match) > 7 && len(match[7]) == 11 {
-		return match[7], nil
-	}
-
-	return "", errors.New("cannot parse url")
-}
 
 type YoutubeVideo string
 
@@ -73,23 +21,74 @@ func (y YoutubeVideo) String() string {
 }
 
 func NewYoutubeIDFromUrl(url string) (YoutubeVideo, error) {
-	id, err := urlParse(url)
+	match := youtubeRegexp.FindStringSubmatch(url)
+	if len(match) > 7 && len(match[7]) == 11 {
+		return YoutubeVideo(match[7]), nil
+	}
+
+	return "", errors.New("cannot parse url")
+}
+
+func (y YoutubeVideo) DownloadToFolder(folderPath string, progress chan<- float64) (string, error) {
+	youtube.DefaultClient = youtube.WebClient
+	client := youtube.Client{}
+
+	video, err := client.GetVideo(y.String())
 	if err != nil {
 		return "", err
 	}
 
-	return YoutubeVideo(id), nil
-}
+	video.FilterQuality("720p")
 
-func NewYoutubeIdFromScrapedVideo(video domain.ScrapedVideo) YoutubeVideo {
-	return YoutubeVideo(video.ID)
-}
-
-func (y YoutubeVideo) DownloadToFolder(path string) domain.DownlodedVideo {
-	outPath, _, err := downloadVideo(y.String(), path)
-	return domain.DownlodedVideo{
-		ScrapedVideo: domain.ScrapedVideo{ID: y.String()},
-		SavePath:     outPath,
-		Error:        err,
+	if len(video.Formats) == 0 {
+		return "", errors.New("no matching formats found")
 	}
+
+	stream, size, err := client.GetStream(video, &video.Formats[0])
+	if err != nil {
+		return "", err
+	}
+	defer stream.Close()
+
+	err = os.MkdirAll(folderPath, os.ModePerm)
+	if err != nil {
+		return "", err
+	}
+	id := uuid.New()
+	fileName := fmt.Sprintf("%v_%v.mp4", id.String(), y.String())
+	filePath := filepath.Join(folderPath, fileName)
+	file, err := os.Create(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	progressReporter := &WriteReporter{
+		Total:    size,
+		Progress: progress,
+	}
+	_, err = io.Copy(io.MultiWriter(file, progressReporter), stream)
+	if err != nil {
+		return "", err
+	}
+
+	return filePath, nil
+}
+
+type WriteReporter struct {
+	Total    int64
+	current  int64
+	Progress chan<- float64
+}
+
+func (w *WriteReporter) Write(p []byte) (n int, err error) {
+	n = len(p)
+	w.current += int64(n)
+
+	select {
+	case w.Progress <- float64(w.current) / float64(w.Total) * 100:
+	default:
+	}
+
+	return
 }

@@ -42,6 +42,7 @@ export class JobsService {
   getJobDetails(id: string) {
     return this.#query({
       queryKey: ['jobs', id] as const,
+      refetchInterval: 5000,
       queryFn: () => {
         return this.#http.get(`/jobs/${id}`) as Observable<JobDetails>;
       },
@@ -51,6 +52,7 @@ export class JobsService {
   getJobVideos(id: string) {
     return this.#query({
       queryKey: ['jobs', id, 'videos'] as const,
+      refetchInterval: 5000,
       queryFn: () => {
         return this.#http.get(
           `/jobs/${id}/videos`
@@ -62,6 +64,7 @@ export class JobsService {
   getJobProgress(id: string) {
     return this.#query({
       queryKey: ['jobs', id, 'progress'] as const,
+      refetchInterval: 5000,
       queryFn: () => {
         return this.#http.get(`/jobs/${id}/progress`) as Observable<Progress>;
       },

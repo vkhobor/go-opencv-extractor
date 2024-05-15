@@ -23,9 +23,11 @@ import (
 	"github.com/vkhobor/go-opencv/api"
 	"github.com/vkhobor/go-opencv/config"
 	pathutils "github.com/vkhobor/go-opencv/path"
+	"github.com/vkhobor/go-opencv/scraper"
 
 	database "github.com/vkhobor/go-opencv/db"
-	"github.com/vkhobor/go-opencv/domain"
+	"github.com/vkhobor/go-opencv/download"
+	"github.com/vkhobor/go-opencv/imgimport"
 	"github.com/vkhobor/go-opencv/jobs"
 
 	"github.com/spf13/cobra"
@@ -68,7 +70,13 @@ func run(ctx context.Context, w io.Writer, args []string, programConfig config.P
 
 	slog.Info("Setup dependencies")
 	queries := database.New(dbconn)
-	domainQueries := domain.JobQueries{
+	scrapeQueries := scraper.Queries{
+		Queries: queries,
+	}
+	downoadQueries := download.Queries{
+		Queries: queries,
+	}
+	importQueries := imgimport.Queries{
 		Queries: queries,
 	}
 
@@ -77,21 +85,59 @@ func run(ctx context.Context, w io.Writer, args []string, programConfig config.P
 		return err
 	}
 
-	wake := make(chan struct{}, 1)
-	jobManager := jobs.JobManager{
-		Wake:           wake,
-		AutoWakePeriod: time.Minute * 2,
-		Scraper:        jobs.NewScraper(&domainQueries, time.Second*5),
-		Importer:       jobs.NewImporter(&domainQueries, time.Second*0, dirConfig),
-		Downloader:     jobs.NewDownloader(&domainQueries, time.Second*15),
+	scrapeArgsChan := make(chan scraper.ScrapeArgs, 1)
+	scrapedVideoChan := make(chan scraper.ScrapedVideo, 1)
+	downloadedChan := make(chan download.DownlodedVideo, 1)
+	importedChan := make(chan imgimport.ImportedVideo, 1)
+
+	downloader := download.Downloader{
+		Queries:  &downoadQueries,
+		Throttle: time.Second * 5,
+		Config:   dirConfig,
+		Input:    scrapedVideoChan,
+		Output:   downloadedChan,
 	}
 
-	slog.Info("Starting job manager")
+	importer := imgimport.Importer{
+		Queries:  &importQueries,
+		Throttle: time.Second * 5,
+		Config:   dirConfig,
+		Input:    downloadedChan,
+		Output:   importedChan,
+	}
+
+	scraperJob := scraper.ScraperJob{
+		Scraper: scraper.Scraper{
+			Throttle: time.Second * 5,
+			Domain:   "yewtu.be",
+		},
+		Queries: &scrapeQueries,
+		Input:   scrapeArgsChan,
+		Output:  scrapedVideoChan,
+		Config:  dirConfig,
+	}
+
+	jobManager := jobs.JobManager{
+		Wake:            make(chan struct{}, 1),
+		AutoWakePeriod:  time.Minute * 2,
+		ScrapeQueries:   &scrapeQueries,
+		DownloadQueries: &downoadQueries,
+		ScrapeInput:     scrapeArgsChan,
+		DownloadInput:   scrapedVideoChan,
+		ImportInput:     downloadedChan,
+	}
+
+	slog.Info("Starting jobs")
+
+	go scraperJob.Start()
+	go downloader.Start()
+	go importer.Start()
+
 	go jobManager.Start()
-	wake <- struct{}{}
+	jobManager.Wake <- struct{}{}
 
 	portString := fmt.Sprintf(":%d", programConfig.Port)
-	srv := &http.Server{Addr: portString, Handler: api.NewRouter(queries, wake, dirConfig)}
+	srv := &http.Server{Addr: portString, Handler: api.NewRouter(queries, jobManager.Wake, dirConfig)}
 	slog.Info("Server started", "port", programConfig.Port)
 
 	go func() {
