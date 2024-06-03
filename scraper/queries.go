@@ -12,18 +12,19 @@ type Queries struct {
 	Queries *db.Queries
 }
 
-func (jc *Queries) GetToScrapeVideos() []ScrapeArgs {
-	dbVal, err := jc.Queries.GetToScrapeVideos(context.Background())
+func (jc *Queries) GetToScrapeVideos() []Job {
+	dbVal, err := jc.Queries.GetJobs(context.Background())
 
 	if err != nil {
-		return []ScrapeArgs{}
+		return []Job{}
 	}
 
-	return lo.FilterMap(dbVal, func(item db.GetToScrapeVideosRow, i int) (ScrapeArgs, bool) {
-		return ScrapeArgs{
+	return lo.FilterMap(dbVal, func(item db.GetJobsRow, i int) (Job, bool) {
+		return Job{
+			FilterID:    item.FilterID.String,
 			SearchQuery: item.SearchQuery.String,
 			Limit:       int(item.Limit.Int64 - item.FoundVideos),
-			JobId:       item.ID,
+			JobID:       item.ID,
 		}, item.Limit.Int64-item.FoundVideos > 0
 	})
 }
@@ -47,10 +48,6 @@ func (jc *Queries) SaveSraped(video ScrapedVideo, jobId string) bool {
 		ID: video.ID,
 		JobID: sql.NullString{
 			String: jobId,
-			Valid:  true,
-		},
-		Status: sql.NullString{
-			String: "scraped",
 			Valid:  true,
 		},
 	})

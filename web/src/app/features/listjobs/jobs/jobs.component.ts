@@ -1,6 +1,5 @@
 import { Component, ViewChild, computed } from '@angular/core';
 import { JobsService } from '../../../services/jobs.service';
-import { JobCardComponent } from '../job-card/job-card.component';
 import { RouterLink } from '@angular/router';
 import { LayoutComponent } from '../../../components/layout/layout.component';
 import { AddModalComponent } from '../../newjob/components/modal/add-modal.component';
@@ -16,7 +15,6 @@ import { initFlowbite } from 'flowbite';
   standalone: true,
   imports: [
     ActionsComponent,
-    JobCardComponent,
     SettingsModalComponent,
     RouterLink,
     LayoutComponent,
@@ -59,11 +57,6 @@ export class JobsComponent {
 
     return sorted.map((job) => ({
       ...job,
-      progress_simple:
-        (job.progress.downloaded +
-          job.progress.imported +
-          job.progress.scraped) /
-        (3 * job.limit),
     }));
   });
 }

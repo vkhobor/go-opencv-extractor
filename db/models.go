@@ -13,29 +13,47 @@ type BlobStorage struct {
 	Path string
 }
 
+type DownloadAttempt struct {
+	ID            string
+	YtVideoID     sql.NullString
+	Progress      sql.NullInt64
+	BlobStorageID sql.NullString
+	Error         sql.NullString
+}
+
+type Filter struct {
+	ID   string
+	Name sql.NullString
+}
+
+type FilterImage struct {
+	FilterID      sql.NullString
+	BlobStorageID sql.NullString
+}
+
+type ImportAttempt struct {
+	ID        string
+	YtVideoID sql.NullString
+	FilterID  sql.NullString
+	Progress  sql.NullInt64
+	Error     sql.NullString
+}
+
 type Job struct {
 	ID          string
 	SearchQuery sql.NullString
+	FilterID    sql.NullString
 	Limit       sql.NullInt64
 }
 
 type Picture struct {
-	ID            string
-	YtVideoID     sql.NullString
-	FrameNumber   sql.NullInt64
-	BlobStorageID sql.NullString
-	Foreign       interface{}
-}
-
-type ReferenceImage struct {
-	BlobStorageID string
+	ID              string
+	ImportAttemptID sql.NullString
+	FrameNumber     sql.NullInt64
+	BlobStorageID   sql.NullString
 }
 
 type YtVideo struct {
-	ID            string
-	JobID         sql.NullString
-	Status        sql.NullString
-	Error         sql.NullString
-	BlobStorageID sql.NullString
-	Foreign       interface{}
+	ID    string
+	JobID sql.NullString
 }

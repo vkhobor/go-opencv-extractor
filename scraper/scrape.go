@@ -8,20 +8,22 @@ import (
 	"github.com/vkhobor/go-opencv/config"
 )
 
-type ScrapeArgs struct {
+type Job struct {
 	Limit       int
-	JobId       string
+	JobID       string
 	SearchQuery string
+	FilterID    string
 }
 
 type ScrapedVideo struct {
+	Job
 	ID string
 }
 
 type ScraperJob struct {
 	Scraper
 	Queries *Queries
-	Input   <-chan ScrapeArgs
+	Input   <-chan Job
 	Output  chan<- ScrapedVideo
 	Config  config.DirectoryConfig
 }
@@ -36,7 +38,7 @@ func (d *ScraperJob) Start() {
 	}
 }
 
-func (d *ScraperJob) scrapeSingle(args ScrapeArgs) error {
+func (d *ScraperJob) scrapeSingle(args Job) error {
 	if args.Limit <= 0 {
 		return errors.New("limit is less than or equal to 0")
 	}
@@ -66,9 +68,10 @@ func (d *ScraperJob) scrapeSingle(args ScrapeArgs) error {
 
 		// TODO if already saved, only attach the job's filter request if not attached already to video
 		scraped := ScrapedVideo{
-			ID: item.String(),
+			Job: args,
+			ID:  item.String(),
 		}
-		ok := d.Queries.SaveSraped(scraped, args.JobId)
+		ok := d.Queries.SaveSraped(scraped, args.JobID)
 		if ok {
 			saved++
 			d.Output <- scraped

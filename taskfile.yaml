@@ -17,7 +17,7 @@ tasks:
 
   server:dev:
     cmds:
-    - go run . serve -p {{.GO_EXTRACTOR_DEV_SERVER_PORT}}
+    - go run . serve -p {{.GO_EXTRACTOR_DEV_SERVER_PORT}} --blob-storage ./.tmp/blob --db ./.tmp/db.sqlite3
 
   client:dev:
     dir: web
@@ -52,7 +52,7 @@ tasks:
   install-dev-deps:
     deps: [install-sqlc, install-migrate]
 
-  sql-watch:
+  sql:
     deps: [install-sqlc]
     watch: true
     sources:

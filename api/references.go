@@ -1,8 +1,11 @@
 package api
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 
@@ -16,6 +19,8 @@ import (
 const (
 	megabyte = 1 << 20 // 1 megabyte = 2^20 bytes
 )
+
+var defaultFilterId = "1fed33d4-0ea3-4b84-909c-261e4b2a3d43"
 
 func HandleReferenceUpload(queries *db.Queries, config config.DirectoryConfig) http.HandlerFunc {
 
@@ -32,36 +37,13 @@ func HandleReferenceUpload(queries *db.Queries, config config.DirectoryConfig) h
 					}
 					defer file.Close()
 
-					err = os.MkdirAll(config.GetReferencesDir(), os.ModePerm)
+					path, err := saveToDisk(file, config, header.Filename)
 					if err != nil {
 						http.Error(w, err.Error(), http.StatusInternalServerError)
 						return
 					}
 
-					dst, err := os.Create(fmt.Sprintf("%s/%s", config.GetReferencesDir(), header.Filename))
-					if err != nil {
-						http.Error(w, err.Error(), http.StatusInternalServerError)
-						return
-					}
-					defer dst.Close()
-
-					if _, err := io.Copy(dst, file); err != nil {
-						http.Error(w, err.Error(), http.StatusInternalServerError)
-						return
-					}
-
-					path := fmt.Sprintf("%s/%s", config.GetReferencesDir(), header.Filename)
-					id := uuid.NewString()
-					err = queries.AddReference(r.Context(), id)
-					if err != nil {
-						http.Error(w, err.Error(), http.StatusInternalServerError)
-						return
-					}
-
-					_, err = queries.AddBlob(r.Context(), db.AddBlobParams{
-						ID:   id,
-						Path: path,
-					})
+					err = saveToDb(r.Context(), queries, path)
 					if err != nil {
 						http.Error(w, err.Error(), http.StatusInternalServerError)
 						return
@@ -73,6 +55,76 @@ func HandleReferenceUpload(queries *db.Queries, config config.DirectoryConfig) h
 	)
 }
 
+func saveToDb(ctx context.Context, queries *db.Queries, path string) error {
+	id := defaultFilterId
+
+	filters, err := queries.GetFilters(ctx)
+	if err != nil {
+		return err
+	}
+
+	exists := lo.SomeBy(filters, func(item db.GetFiltersRow) bool {
+		return item.ID == id
+	})
+	slog.Debug("Filter exists", "exists", exists, "filters", filters, "id", id)
+
+	if !exists {
+		_, err := queries.AddFilter(ctx, db.AddFilterParams{
+			ID: id,
+			Name: sql.NullString{
+				String: "Default",
+				Valid:  true,
+			}})
+
+		if err != nil {
+			return err
+		}
+	}
+
+	blob, err := queries.AddBlob(ctx, db.AddBlobParams{
+		ID:   uuid.NewString(),
+		Path: path,
+	})
+	if err != nil {
+		return err
+	}
+
+	_, err = queries.AttachImageToFilter(ctx, db.AttachImageToFilterParams{
+		FilterID: sql.NullString{
+			String: id,
+			Valid:  true,
+		},
+		BlobStorageID: sql.NullString{
+			String: blob.ID,
+			Valid:  true,
+		},
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func saveToDisk(file io.Reader, config config.DirectoryConfig, fileName string) (string, error) {
+	err := os.MkdirAll(config.GetReferencesDir(), os.ModePerm)
+	if err != nil {
+		return "", err
+	}
+
+	dst, err := os.Create(fmt.Sprintf("%s/%s", config.GetReferencesDir(), fileName))
+	if err != nil {
+		return "", err
+	}
+	defer dst.Close()
+
+	if _, err := io.Copy(dst, file); err != nil {
+		return "", err
+	}
+
+	path := fmt.Sprintf("%s/%s", config.GetReferencesDir(), fileName)
+	return path, nil
+}
+
 func HandleGetReferences(queries *db.Queries) http.HandlerFunc {
 	type reference struct {
 		ID string `json:"id"`
@@ -80,16 +132,16 @@ func HandleGetReferences(queries *db.Queries) http.HandlerFunc {
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			res, err := queries.GetReferences(r.Context())
+			res, err := queries.GetFilters(r.Context())
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
-			response := lo.Map(res, func(item db.GetReferencesRow, index int) reference {
+			response := lo.FilterMap(res, func(item db.GetFiltersRow, index int) (reference, bool) {
 				return reference{
-					ID: item.BlobStorageID,
-				}
+					ID: item.BlobID.String,
+				}, item.BlobID.Valid
 			})
 
 			render.JSON(w, r, response)
@@ -100,7 +152,10 @@ func HandleGetReferences(queries *db.Queries) http.HandlerFunc {
 func HandleDeleteAllReferences(queries *db.Queries) http.HandlerFunc {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			err := queries.DeleteReferences(r.Context())
+			err := queries.DeleteImagesOnFilter(r.Context(), sql.NullString{
+				String: defaultFilterId,
+				Valid:  true,
+			})
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return

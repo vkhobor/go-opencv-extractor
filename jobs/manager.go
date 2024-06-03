@@ -7,31 +7,31 @@ import (
 	"github.com/vkhobor/go-opencv/scraper"
 )
 
-type JobManager struct {
+type DbMonitor struct {
 	Wake            chan struct{}
 	AutoWakePeriod  time.Duration
 	ScrapeQueries   *scraper.Queries
 	DownloadQueries *download.Queries
-	ScrapeInput     chan<- scraper.ScrapeArgs
+	ScrapeInput     chan<- scraper.Job
 	DownloadInput   chan<- scraper.ScrapedVideo
 	ImportInput     chan<- download.DownlodedVideo
 }
 
-func (jm *JobManager) Start() {
+func (jm *DbMonitor) Start() {
 
 	ticker := time.NewTicker(jm.AutoWakePeriod)
 
 	for {
 		select {
 		case <-jm.Wake:
-			jm.RunPipelineOnce()
+			jm.PullWorkItemsFromDb()
 		case <-ticker.C:
-			jm.RunPipelineOnce()
+			jm.PullWorkItemsFromDb()
 		}
 	}
 }
 
-func (jm *JobManager) RunPipelineOnce() {
+func (jm *DbMonitor) PullWorkItemsFromDb() {
 	go func() {
 		scrapeArgs := jm.ScrapeQueries.GetToScrapeVideos()
 		for _, args := range scrapeArgs {

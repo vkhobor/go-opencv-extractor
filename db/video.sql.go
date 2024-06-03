@@ -10,83 +10,73 @@ import (
 	"database/sql"
 )
 
-const addBlobToVideo = `-- name: AddBlobToVideo :one
-UPDATE yt_videos
-SET
- blob_storage_id = ?
-WHERE id = ?
-RETURNING id, job_id, status, error, blob_storage_id, "foreign"
-`
-
-type AddBlobToVideoParams struct {
-	BlobStorageID sql.NullString
-	ID            string
-}
-
-func (q *Queries) AddBlobToVideo(ctx context.Context, arg AddBlobToVideoParams) (YtVideo, error) {
-	row := q.db.QueryRowContext(ctx, addBlobToVideo, arg.BlobStorageID, arg.ID)
-	var i YtVideo
-	err := row.Scan(
-		&i.ID,
-		&i.JobID,
-		&i.Status,
-		&i.Error,
-		&i.BlobStorageID,
-		&i.Foreign,
-	)
-	return i, err
-}
-
 const addYtVideo = `-- name: AddYtVideo :one
-INSERT INTO yt_videos (
-  id, job_id, status
-
-) VALUES (
-  ?, ?, ?
-)
-RETURNING id, job_id, status, error, blob_storage_id, "foreign"
+INSERT INTO
+  yt_videos (id, job_id)
+VALUES
+  (?, ?) RETURNING id, job_id
 `
 
 type AddYtVideoParams struct {
-	ID     string
-	JobID  sql.NullString
-	Status sql.NullString
+	ID    string
+	JobID sql.NullString
 }
 
 func (q *Queries) AddYtVideo(ctx context.Context, arg AddYtVideoParams) (YtVideo, error) {
-	row := q.db.QueryRowContext(ctx, addYtVideo, arg.ID, arg.JobID, arg.Status)
+	row := q.db.QueryRowContext(ctx, addYtVideo, arg.ID, arg.JobID)
 	var i YtVideo
-	err := row.Scan(
-		&i.ID,
-		&i.JobID,
-		&i.Status,
-		&i.Error,
-		&i.BlobStorageID,
-		&i.Foreign,
-	)
+	err := row.Scan(&i.ID, &i.JobID)
 	return i, err
 }
 
-const getScrapedVideos = `-- name: GetScrapedVideos :many
-SELECT id, job_id, status, error, blob_storage_id, "foreign" FROM yt_videos WHERE status = "scraped"
+const getJobVideosWithProgress = `-- name: GetJobVideosWithProgress :many
+SELECT
+  yt_videos.id, job_id, download_attempts.id, download_attempts.yt_video_id, download_attempts.progress, blob_storage_id, download_attempts.error, import_attempts.id, import_attempts.yt_video_id, filter_id, import_attempts.progress, import_attempts.error
+FROM
+  yt_videos
+  LEFT JOIN download_attempts ON yt_videos.id = download_attempts.yt_video_id
+  LEFT JOIN import_attempts ON yt_videos.id = import_attempts.yt_video_id
+WHERE
+  yt_videos.job_id = ?
 `
 
-func (q *Queries) GetScrapedVideos(ctx context.Context) ([]YtVideo, error) {
-	rows, err := q.db.QueryContext(ctx, getScrapedVideos)
+type GetJobVideosWithProgressRow struct {
+	ID            string
+	JobID         sql.NullString
+	ID_2          sql.NullString
+	YtVideoID     sql.NullString
+	Progress      sql.NullInt64
+	BlobStorageID sql.NullString
+	Error         sql.NullString
+	ID_3          sql.NullString
+	YtVideoID_2   sql.NullString
+	FilterID      sql.NullString
+	Progress_2    sql.NullInt64
+	Error_2       sql.NullString
+}
+
+func (q *Queries) GetJobVideosWithProgress(ctx context.Context, jobID sql.NullString) ([]GetJobVideosWithProgressRow, error) {
+	rows, err := q.db.QueryContext(ctx, getJobVideosWithProgress, jobID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []YtVideo
+	var items []GetJobVideosWithProgressRow
 	for rows.Next() {
-		var i YtVideo
+		var i GetJobVideosWithProgressRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.JobID,
-			&i.Status,
-			&i.Error,
+			&i.ID_2,
+			&i.YtVideoID,
+			&i.Progress,
 			&i.BlobStorageID,
-			&i.Foreign,
+			&i.Error,
+			&i.ID_3,
+			&i.YtVideoID_2,
+			&i.FilterID,
+			&i.Progress_2,
+			&i.Error_2,
 		); err != nil {
 			return nil, err
 		}
@@ -101,19 +91,53 @@ func (q *Queries) GetScrapedVideos(ctx context.Context) ([]YtVideo, error) {
 	return items, nil
 }
 
+const getScrapedVideos = `-- name: GetScrapedVideos :many
+SELECT
+  id, job_id
+FROM
+  yt_videos
+WHERE
+  status = "scraped"
+`
+
+func (q *Queries) GetScrapedVideos(ctx context.Context) ([]YtVideo, error) {
+	rows, err := q.db.QueryContext(ctx, getScrapedVideos)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []YtVideo
+	for rows.Next() {
+		var i YtVideo
+		if err := rows.Scan(&i.ID, &i.JobID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getVideosDownloaded = `-- name: GetVideosDownloaded :many
-SELECT yt_videos.id, job_id, status, error, blob_storage_id, "foreign", blob_storage.id, path FROM yt_videos JOIN blob_storage ON yt_videos.blob_storage_id = blob_storage.id WHERE status = "downloaded"
+SELECT
+  yt_videos.id, job_id, blob_storage.id, path
+FROM
+  yt_videos
+  JOIN blob_storage ON yt_videos.blob_storage_id = blob_storage.id
+WHERE
+  status = "downloaded"
 `
 
 type GetVideosDownloadedRow struct {
-	ID            string
-	JobID         sql.NullString
-	Status        sql.NullString
-	Error         sql.NullString
-	BlobStorageID sql.NullString
-	Foreign       interface{}
-	ID_2          string
-	Path          string
+	ID    string
+	JobID sql.NullString
+	ID_2  string
+	Path  string
 }
 
 func (q *Queries) GetVideosDownloaded(ctx context.Context) ([]GetVideosDownloadedRow, error) {
@@ -128,10 +152,6 @@ func (q *Queries) GetVideosDownloaded(ctx context.Context) ([]GetVideosDownloade
 		if err := rows.Scan(
 			&i.ID,
 			&i.JobID,
-			&i.Status,
-			&i.Error,
-			&i.BlobStorageID,
-			&i.Foreign,
 			&i.ID_2,
 			&i.Path,
 		); err != nil {
@@ -149,48 +169,17 @@ func (q *Queries) GetVideosDownloaded(ctx context.Context) ([]GetVideosDownloade
 }
 
 const getYtVideo = `-- name: GetYtVideo :one
-SELECT id, job_id, status, error, blob_storage_id, "foreign" FROM yt_videos WHERE id = ?
+SELECT
+  id, job_id
+FROM
+  yt_videos
+WHERE
+  id = ?
 `
 
 func (q *Queries) GetYtVideo(ctx context.Context, id string) (YtVideo, error) {
 	row := q.db.QueryRowContext(ctx, getYtVideo, id)
 	var i YtVideo
-	err := row.Scan(
-		&i.ID,
-		&i.JobID,
-		&i.Status,
-		&i.Error,
-		&i.BlobStorageID,
-		&i.Foreign,
-	)
-	return i, err
-}
-
-const updateStatus = `-- name: UpdateStatus :one
-UPDATE yt_videos
-SET
-  status = ?
-,error = ?
-WHERE id = ?
-RETURNING id, job_id, status, error, blob_storage_id, "foreign"
-`
-
-type UpdateStatusParams struct {
-	Status sql.NullString
-	Error  sql.NullString
-	ID     string
-}
-
-func (q *Queries) UpdateStatus(ctx context.Context, arg UpdateStatusParams) (YtVideo, error) {
-	row := q.db.QueryRowContext(ctx, updateStatus, arg.Status, arg.Error, arg.ID)
-	var i YtVideo
-	err := row.Scan(
-		&i.ID,
-		&i.JobID,
-		&i.Status,
-		&i.Error,
-		&i.BlobStorageID,
-		&i.Foreign,
-	)
+	err := row.Scan(&i.ID, &i.JobID)
 	return i, err
 }

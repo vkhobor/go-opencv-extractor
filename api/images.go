@@ -65,7 +65,7 @@ func HandleImages(queries *db.Queries) http.HandlerFunc {
 
 			resp := response{
 				Total: int(count),
-				Pictures: lo.Map(res, func(row db.Picture, index int) picture {
+				Pictures: lo.Map(res, func(row db.GetPicturesRow, index int) picture {
 					return picture{
 						ID:        row.ID,
 						BlobId:    row.BlobStorageID.String,

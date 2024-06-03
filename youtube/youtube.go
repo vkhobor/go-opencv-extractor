@@ -7,18 +7,19 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sync"
 
 	"github.com/google/uuid"
 	"github.com/kkdai/youtube/v2"
 )
-
-var youtubeRegexp = regexp.MustCompile(`^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*`)
 
 type YoutubeVideo string
 
 func (y YoutubeVideo) String() string {
 	return string(y)
 }
+
+var youtubeRegexp = regexp.MustCompile(`^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*`)
 
 func NewYoutubeIDFromUrl(url string) (YoutubeVideo, error) {
 	match := youtubeRegexp.FindStringSubmatch(url)
@@ -29,11 +30,36 @@ func NewYoutubeIDFromUrl(url string) (YoutubeVideo, error) {
 	return "", errors.New("cannot parse url")
 }
 
-func (y YoutubeVideo) DownloadToFolder(folderPath string, progress chan<- float64) (string, error) {
-	youtube.DefaultClient = youtube.WebClient
-	client := youtube.Client{}
+type youtubeClient string
 
+const (
+	AndroidClient  = youtubeClient("android")
+	WebClient      = youtubeClient("web")
+	EmbeddedClient = youtubeClient("embedded")
+)
+
+// Setting clients is based on a global variable, which is not thread-safe.
+var m sync.Mutex
+
+func (y YoutubeVideo) DownloadToFolder(clientType youtubeClient, folderPath string, progress chan<- float64) (string, error) {
+	m.Lock()
+
+	switch clientType {
+	case AndroidClient:
+		youtube.DefaultClient = youtube.AndroidClient
+	case WebClient:
+		youtube.DefaultClient = youtube.WebClient
+	case EmbeddedClient:
+		youtube.DefaultClient = youtube.EmbeddedClient
+	default:
+		youtube.DefaultClient = youtube.AndroidClient
+	}
+
+	client := youtube.Client{}
 	video, err := client.GetVideo(y.String())
+
+	m.Unlock()
+
 	if err != nil {
 		return "", err
 	}

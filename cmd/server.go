@@ -23,6 +23,7 @@ import (
 	"github.com/vkhobor/go-opencv/api"
 	"github.com/vkhobor/go-opencv/config"
 	pathutils "github.com/vkhobor/go-opencv/path"
+	"github.com/vkhobor/go-opencv/progress"
 	"github.com/vkhobor/go-opencv/scraper"
 
 	database "github.com/vkhobor/go-opencv/db"
@@ -85,7 +86,7 @@ func run(ctx context.Context, w io.Writer, args []string, programConfig config.P
 		return err
 	}
 
-	scrapeArgsChan := make(chan scraper.ScrapeArgs, 1)
+	scrapeArgsChan := make(chan scraper.Job, 1)
 	scrapedVideoChan := make(chan scraper.ScrapedVideo, 1)
 	downloadedChan := make(chan download.DownlodedVideo, 1)
 	importedChan := make(chan imgimport.ImportedVideo, 1)
@@ -117,7 +118,7 @@ func run(ctx context.Context, w io.Writer, args []string, programConfig config.P
 		Config:  dirConfig,
 	}
 
-	jobManager := jobs.JobManager{
+	jobManager := jobs.DbMonitor{
 		Wake:            make(chan struct{}, 1),
 		AutoWakePeriod:  time.Minute * 2,
 		ScrapeQueries:   &scrapeQueries,
@@ -137,7 +138,11 @@ func run(ctx context.Context, w io.Writer, args []string, programConfig config.P
 	jobManager.Wake <- struct{}{}
 
 	portString := fmt.Sprintf(":%d", programConfig.Port)
-	srv := &http.Server{Addr: portString, Handler: api.NewRouter(queries, jobManager.Wake, dirConfig)}
+	progressQueries := &progress.Queries{
+		Queries: queries,
+	}
+	router := api.NewRouter(progressQueries, queries, jobManager.Wake, dirConfig)
+	srv := &http.Server{Addr: portString, Handler: router}
 	slog.Info("Server started", "port", programConfig.Port)
 
 	go func() {

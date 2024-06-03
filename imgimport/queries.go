@@ -7,48 +7,69 @@ import (
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/vkhobor/go-opencv/db"
+	"github.com/vkhobor/go-opencv/download"
 )
 
 type Queries struct {
 	Queries *db.Queries
 }
 
-func (jc *Queries) GetRefImages() ([]string, error) {
-	val, err := jc.Queries.GetReferences(context.Background())
+func (jc *Queries) GetRefImages(video download.DownlodedVideo) ([]string, error) {
+	res, err := jc.Queries.GetFilterForJob(context.Background(), video.JobID)
 	if err != nil {
-		return nil, err
+		return []string{}, err
 	}
 
-	return lo.Map(val, func(item db.GetReferencesRow, i int) string {
+	return lo.Map(res, func(item db.GetFilterForJobRow, i int) string {
 		return item.Path
 	}), nil
 }
 
-func (jc *Queries) SaveImported(video ImportedVideo) {
-	if video.Error != nil {
-		jc.Queries.UpdateStatus(context.Background(), db.UpdateStatusParams{
-			ID: video.ID,
-			Status: sql.NullString{
-				String: "errored",
-				Valid:  true,
-			},
-		})
-		return
+func (jc *Queries) StartImportAttempt(video download.DownlodedVideo) (string, error) {
+	importAttemptId := uuid.New().String()
+	_, err := jc.Queries.AddImportAttempt(context.Background(), db.AddImportAttemptParams{
+		ID: importAttemptId,
+		YtVideoID: sql.NullString{
+			String: video.ID,
+			Valid:  true,
+		},
+		FilterID: sql.NullString{
+			String: video.FilterID,
+			Valid:  true,
+		},
+		Progress: sql.NullInt64{
+			Int64: 0,
+			Valid: true,
+		},
+		Error: sql.NullString{
+			String: "",
+			Valid:  false,
+		},
+	})
+
+	if err != nil {
+		return "", err
 	}
 
-	paths := []string{}
-	for _, frame := range video.ExtractedFrames {
-		paths = append(paths, frame.Path)
+	return importAttemptId, nil
+}
 
+func (jc *Queries) UpdateProgress(id string, progress int) {
+	// TODO: Implement
+	return
+}
+
+func (jc *Queries) SaveFrames(video ImportedVideo, importAttemptId string) {
+	for _, frame := range video.ExtractedFrames {
 		blobID := uuid.New()
-		jc.Queries.AddBlob(context.Background(), db.AddBlobParams{
+		_, _ = jc.Queries.AddBlob(context.Background(), db.AddBlobParams{
 			ID:   blobID.String(),
 			Path: frame.Path,
 		})
-		jc.Queries.AddPicture(context.Background(), db.AddPictureParams{
+		_, _ = jc.Queries.AddPicture(context.Background(), db.AddPictureParams{
 			ID: uuid.New().String(),
-			YtVideoID: sql.NullString{
-				String: video.ID,
+			ImportAttemptID: sql.NullString{
+				String: importAttemptId,
 				Valid:  true,
 			},
 			FrameNumber: sql.NullInt64{
@@ -61,16 +82,4 @@ func (jc *Queries) SaveImported(video ImportedVideo) {
 			},
 		})
 	}
-
-	jc.Queries.UpdateStatus(
-		context.Background(),
-		db.UpdateStatusParams{
-			Status: sql.NullString{
-				String: "imported",
-				Valid:  true,
-			},
-			ID: video.ID,
-		})
-
-	return
 }

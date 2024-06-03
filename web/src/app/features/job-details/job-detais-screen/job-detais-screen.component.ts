@@ -37,8 +37,8 @@ export class JobDetaisScreenComponent {
   details = this.jobService.getJobDetails(this.route.snapshot.params['id'])
     .result;
 
-  progress = this.jobService.getJobProgress(this.route.snapshot.params['id'])
-    .result;
+  // progress = this.jobService.getJobProgress(this.route.snapshot.params['id'])
+  //   .result;
 
   videos = this.jobService.getJobVideos(this.route.snapshot.params['id'])
     .result;

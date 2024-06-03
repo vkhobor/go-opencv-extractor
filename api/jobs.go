@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/vkhobor/go-opencv/db"
+	"github.com/vkhobor/go-opencv/progress"
 )
 
 func HandleCreateJob(queries *db.Queries, wakeJobs chan<- struct{}) http.HandlerFunc {
@@ -62,19 +63,10 @@ func HandleCreateJob(queries *db.Queries, wakeJobs chan<- struct{}) http.Handler
 }
 
 func HandleListJobs(queries *db.Queries) http.HandlerFunc {
-	type jobProgress struct {
-		Imported         int      `json:"imported"`
-		Scraped          int      `json:"scraped"`
-		Downloaded       int      `json:"downloaded"`
-		VideoIds         []string `json:"video_ids"`
-		NumberOfPictures int      `json:"number_of_pictures"`
-	}
-
 	type jobResponse struct {
-		ID          string      `json:"id"`
-		SearchQuery string      `json:"search_query"`
-		Limit       int         `json:"limit"`
-		Progesss    jobProgress `json:"progress"`
+		ID          string `json:"id"`
+		SearchQuery string `json:"search_query"`
+		Limit       int    `json:"limit"`
 	}
 
 	return http.HandlerFunc(
@@ -98,60 +90,14 @@ func HandleListJobs(queries *db.Queries) http.HandlerFunc {
 						SearchQuery: value[0].SearchQuery.String,
 						ID:          key,
 						Limit:       int(value[0].Limit.Int64),
-						Progesss: jobProgress{
-							Imported:         0,
-							Scraped:          0,
-							Downloaded:       0,
-							VideoIds:         []string{},
-							NumberOfPictures: 0,
-						},
 					})
 					continue
 				}
-
-				downloaded := lo.Filter(value,
-					func(row db.ListJobsWithProgressRow, index int) bool {
-						return row.BlobStorageID.Valid
-					})
-				downloaded = lo.UniqBy(downloaded, func(item db.ListJobsWithProgressRow) string {
-					return item.BlobStorageID.String
-				})
-
-				imported := lo.Filter(value,
-					func(row db.ListJobsWithProgressRow, index int) bool {
-						return row.Status.String == "imported"
-					})
-				imported = lo.UniqBy(imported, func(item db.ListJobsWithProgressRow) string {
-					return item.ID_2.String
-				})
-
-				pictures := lo.Filter(value, func(item db.ListJobsWithProgressRow, i int) bool {
-					return item.ID_3.Valid
-				})
-				pictures = lo.UniqBy(pictures, func(item db.ListJobsWithProgressRow) string {
-					return item.ID_3.String
-				})
-
-				allVideoIds := lo.Map(
-					lo.Filter(value, func(item db.ListJobsWithProgressRow, index int) bool {
-						return item.ID_2.Valid
-					}), func(item db.ListJobsWithProgressRow, i int) string {
-						return item.ID_2.String
-					})
-
-				uniqueVideoIds := lo.Uniq(allVideoIds)
 
 				jobsResponse = append(jobsResponse, jobResponse{
 					SearchQuery: value[0].SearchQuery.String,
 					ID:          key,
 					Limit:       int(value[0].Limit.Int64),
-					Progesss: jobProgress{
-						Imported:         len(imported),
-						Scraped:          len(uniqueVideoIds),
-						Downloaded:       len(downloaded),
-						NumberOfPictures: len(pictures),
-						VideoIds:         uniqueVideoIds,
-					},
 				})
 			}
 
@@ -187,12 +133,10 @@ func HandleJobDetails(queries *db.Queries) http.HandlerFunc {
 			}
 
 			resp := jobResponse{
-				ID:            res.ID,
-				SearchQuery:   res.SearchQuery.String,
-				VideoTarget:   int(res.Limit.Int64),
-				PicturesFound: int(res.PicturesFound),
-				VideosFound:   int(res.VideosFound),
-				VideosInError: int(res.VideosInError),
+				ID:          res.ID,
+				SearchQuery: res.SearchQuery.String,
+				VideoTarget: int(res.Limit.Int64),
+				VideosFound: int(res.VideosFound),
 			}
 
 			render.JSON(w, r, resp)
@@ -200,11 +144,14 @@ func HandleJobDetails(queries *db.Queries) http.HandlerFunc {
 	)
 }
 
-func HandleJobVideosFound(queries *db.Queries) http.HandlerFunc {
+func HandleJobVideosFound(queries *progress.Queries) http.HandlerFunc {
 	type video struct {
-		YoutubeId     string `json:"youtube_id"`
-		Status        string `json:"status"`
-		PicturesFound int    `json:"pictures_found"`
+		YoutubeId        string `json:"youtube_id"`
+		PicturesFound    int    `json:"pictures_found"`
+		ImportProgress   int    `json:"import_progress"`
+		DownloadProgress int    `json:"download_progress"`
+		ImportError      string `json:"import_error"`
+		DownloadError    string `json:"download_error"`
 	}
 
 	type jobResponse struct {
@@ -221,64 +168,29 @@ func HandleJobVideosFound(queries *db.Queries) http.HandlerFunc {
 				return
 			}
 
-			res, err := queries.GetOneWithVideos(r.Context(), jobId)
+			res, err := queries.VideoProgresses(r.Context(), jobId)
 			if err != nil {
 				render.Status(r, http.StatusInternalServerError)
 				render.PlainText(w, r, err.Error())
 				return
 			}
+			slog.Debug("res", "res", res)
 
-			videos := lo.Map(res, func(row db.GetOneWithVideosRow, index int) video {
+			videos := lo.Map(res, func(row progress.VideoProgress, index int) video {
 				return video{
-					YoutubeId:     row.VideoYoutubeID.String,
-					Status:        row.VideoStatus.String,
-					PicturesFound: int(row.PicturesFound),
+					YoutubeId: row.VideoId,
+					// TODO fix this
+					PicturesFound:    0,
+					ImportProgress:   row.ImportProgress,
+					DownloadProgress: row.DownloadProgress,
+					ImportError:      row.ImportError,
+					DownloadError:    row.DownloadError,
 				}
 			})
 
 			resp := jobResponse{
-				ID:     res[0].ID,
+				ID:     res[0].VideoId,
 				Videos: videos,
-			}
-
-			render.JSON(w, r, resp)
-		},
-	)
-}
-
-func HandleJobProgress(queries *db.Queries) http.HandlerFunc {
-	type jobResponse struct {
-		ID               string `json:"id"`
-		Imported         int    `json:"imported"`
-		Scraped          int    `json:"scraped"`
-		Downloaded       int    `json:"downloaded"`
-		NumberOfPictures int    `json:"number_of_pictures"`
-		Limit            int    `json:"limit"`
-	}
-
-	return http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
-			jobId := chi.URLParam(r, "id")
-			if jobId == "" {
-				render.Status(r, http.StatusBadRequest)
-				render.PlainText(w, r, "No file id provided")
-				return
-			}
-
-			res, err := queries.GetJobWithProgress(r.Context(), jobId)
-			if err != nil {
-				render.Status(r, http.StatusInternalServerError)
-				render.PlainText(w, r, err.Error())
-				return
-			}
-
-			resp := jobResponse{
-				ID:               res.ID,
-				Imported:         int(res.VideosImported),
-				Scraped:          int(res.VideosScraped) + int(res.VideosDownloaded) + int(res.VideosImported),
-				Downloaded:       int(res.VideosDownloaded) + int(res.VideosImported),
-				NumberOfPictures: int(res.PicturesFound),
-				Limit:            int(res.Limit.Int64),
 			}
 
 			render.JSON(w, r, resp)

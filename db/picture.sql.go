@@ -11,39 +11,46 @@ import (
 )
 
 const addPicture = `-- name: AddPicture :one
-INSERT into pictures
-    (id, yt_video_id, frame_number, blob_storage_id)
-    VALUES (?,?,?,?)
-RETURNING id, yt_video_id, frame_number, blob_storage_id, "foreign"
+INSERT into
+    pictures (
+        id,
+        import_attempt_id,
+        frame_number,
+        blob_storage_id
+    )
+VALUES
+    (?, ?, ?, ?) RETURNING id, import_attempt_id, frame_number, blob_storage_id
 `
 
 type AddPictureParams struct {
-	ID            string
-	YtVideoID     sql.NullString
-	FrameNumber   sql.NullInt64
-	BlobStorageID sql.NullString
+	ID              string
+	ImportAttemptID sql.NullString
+	FrameNumber     sql.NullInt64
+	BlobStorageID   sql.NullString
 }
 
 func (q *Queries) AddPicture(ctx context.Context, arg AddPictureParams) (Picture, error) {
 	row := q.db.QueryRowContext(ctx, addPicture,
 		arg.ID,
-		arg.YtVideoID,
+		arg.ImportAttemptID,
 		arg.FrameNumber,
 		arg.BlobStorageID,
 	)
 	var i Picture
 	err := row.Scan(
 		&i.ID,
-		&i.YtVideoID,
+		&i.ImportAttemptID,
 		&i.FrameNumber,
 		&i.BlobStorageID,
-		&i.Foreign,
 	)
 	return i, err
 }
 
 const allPicturesCount = `-- name: AllPicturesCount :one
-SELECT COUNT(*) as count_all FROM pictures
+SELECT
+    COUNT(*) as count_all
+FROM
+    pictures
 `
 
 func (q *Queries) AllPicturesCount(ctx context.Context) (int64, error) {
@@ -54,8 +61,15 @@ func (q *Queries) AllPicturesCount(ctx context.Context) (int64, error) {
 }
 
 const getPictures = `-- name: GetPictures :many
-SELECT id, yt_video_id, frame_number, blob_storage_id, "foreign" FROM pictures 
-LIMIT ? OFFSET ?
+SELECT
+    pictures.id, import_attempt_id, frame_number, blob_storage_id, import_attempts.id, yt_video_id, filter_id, progress, error
+FROM
+    pictures
+    JOIN import_attempts ON pictures.import_attempt_id = import_attempts.id
+LIMIT
+    ?
+OFFSET
+    ?
 `
 
 type GetPicturesParams struct {
@@ -63,21 +77,37 @@ type GetPicturesParams struct {
 	Offset int64
 }
 
-func (q *Queries) GetPictures(ctx context.Context, arg GetPicturesParams) ([]Picture, error) {
+type GetPicturesRow struct {
+	ID              string
+	ImportAttemptID sql.NullString
+	FrameNumber     sql.NullInt64
+	BlobStorageID   sql.NullString
+	ID_2            string
+	YtVideoID       sql.NullString
+	FilterID        sql.NullString
+	Progress        sql.NullInt64
+	Error           sql.NullString
+}
+
+func (q *Queries) GetPictures(ctx context.Context, arg GetPicturesParams) ([]GetPicturesRow, error) {
 	rows, err := q.db.QueryContext(ctx, getPictures, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Picture
+	var items []GetPicturesRow
 	for rows.Next() {
-		var i Picture
+		var i GetPicturesRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.YtVideoID,
+			&i.ImportAttemptID,
 			&i.FrameNumber,
 			&i.BlobStorageID,
-			&i.Foreign,
+			&i.ID_2,
+			&i.YtVideoID,
+			&i.FilterID,
+			&i.Progress,
+			&i.Error,
 		); err != nil {
 			return nil, err
 		}
