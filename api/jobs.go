@@ -17,6 +17,7 @@ func HandleCreateJob(queries *db.Queries, wakeJobs chan<- struct{}) http.Handler
 	type jobRequest struct {
 		SearchQuery string `json:"search_query"`
 		Limit       int    `json:"limit"`
+		FilterId    string `json:"filter_id"`
 	}
 
 	type jobResponse struct {
@@ -34,6 +35,10 @@ func HandleCreateJob(queries *db.Queries, wakeJobs chan<- struct{}) http.Handler
 			}
 
 			res, err := queries.CreateJob(r.Context(), db.CreateJobParams{
+				FilterID: sql.NullString{
+					String: articleRequest.FilterId,
+					Valid:  true,
+				},
 				SearchQuery: sql.NullString{
 					String: articleRequest.SearchQuery,
 					Valid:  true,

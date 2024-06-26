@@ -81,8 +81,9 @@ func saveToDb(ctx context.Context, queries *db.Queries, path string) error {
 		}
 	}
 
-	blob, err := queries.AddBlob(ctx, db.AddBlobParams{
-		ID:   uuid.NewString(),
+	blobId := uuid.NewString()
+	err = queries.AddBlob(ctx, db.AddBlobParams{
+		ID:   blobId,
 		Path: path,
 	})
 	if err != nil {
@@ -95,7 +96,7 @@ func saveToDb(ctx context.Context, queries *db.Queries, path string) error {
 			Valid:  true,
 		},
 		BlobStorageID: sql.NullString{
-			String: blob.ID,
+			String: blobId,
 			Valid:  true,
 		},
 	})

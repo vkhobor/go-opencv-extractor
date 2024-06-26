@@ -62,11 +62,11 @@ func (jc *Queries) UpdateProgress(id string, progress int) {
 func (jc *Queries) SaveFrames(video ImportedVideo, importAttemptId string) {
 	for _, frame := range video.ExtractedFrames {
 		blobID := uuid.New()
-		_, _ = jc.Queries.AddBlob(context.Background(), db.AddBlobParams{
+		_ = jc.Queries.AddBlob(context.Background(), db.AddBlobParams{
 			ID:   blobID.String(),
 			Path: frame.Path,
 		})
-		_, _ = jc.Queries.AddPicture(context.Background(), db.AddPictureParams{
+		_ = jc.Queries.AddPicture(context.Background(), db.AddPictureParams{
 			ID: uuid.New().String(),
 			ImportAttemptID: sql.NullString{
 				String: importAttemptId,

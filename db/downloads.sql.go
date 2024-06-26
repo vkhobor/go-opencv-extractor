@@ -10,37 +10,28 @@ import (
 	"database/sql"
 )
 
-const addDownloadAttempt = `-- name: AddDownloadAttempt :one
-
-INSERT INTO download_attempts (
-  yt_video_id, error, blob_storage_id, progress
-) VALUES (
-  ?, ?,?,?
-)
-RETURNING id, yt_video_id, progress, blob_storage_id, error
+const addDownloadAttempt = `-- name: AddDownloadAttempt :exec
+INSERT INTO
+  download_attempts (id, yt_video_id, error, blob_storage_id, progress)
+VALUES
+  (?, ?, ?, ?, ?)
 `
 
 type AddDownloadAttemptParams struct {
+	ID            string
 	YtVideoID     sql.NullString
 	Error         sql.NullString
 	BlobStorageID sql.NullString
 	Progress      sql.NullInt64
 }
 
-func (q *Queries) AddDownloadAttempt(ctx context.Context, arg AddDownloadAttemptParams) (DownloadAttempt, error) {
-	row := q.db.QueryRowContext(ctx, addDownloadAttempt,
+func (q *Queries) AddDownloadAttempt(ctx context.Context, arg AddDownloadAttemptParams) error {
+	_, err := q.db.ExecContext(ctx, addDownloadAttempt,
+		arg.ID,
 		arg.YtVideoID,
 		arg.Error,
 		arg.BlobStorageID,
 		arg.Progress,
 	)
-	var i DownloadAttempt
-	err := row.Scan(
-		&i.ID,
-		&i.YtVideoID,
-		&i.Progress,
-		&i.BlobStorageID,
-		&i.Error,
-	)
-	return i, err
+	return err
 }

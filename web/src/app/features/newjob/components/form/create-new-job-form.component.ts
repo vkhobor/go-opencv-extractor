@@ -108,6 +108,7 @@ export class CreateNewJobFormComponent {
         this.data.emit({
           search_query: data.searchQuery!,
           limit: data.limit!,
+          filter_id: data.filter!,
         });
       } else {
         this.data.emit(undefined);

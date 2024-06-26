@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"log/slog"
 	"time"
 
 	"github.com/vkhobor/go-opencv/download"
@@ -34,6 +35,7 @@ func (jm *DbMonitor) Start() {
 func (jm *DbMonitor) PullWorkItemsFromDb() {
 	go func() {
 		scrapeArgs := jm.ScrapeQueries.GetToScrapeVideos()
+		slog.Debug("PullWorkItemsFromDb", "scrapeArgs", scrapeArgs)
 		for _, args := range scrapeArgs {
 			jm.ScrapeInput <- args
 		}
@@ -41,6 +43,7 @@ func (jm *DbMonitor) PullWorkItemsFromDb() {
 
 	go func() {
 		scrapedVideos := jm.ScrapeQueries.GetScrapedVideos()
+		slog.Debug("PullWorkItemsFromDb", "scrapedVideos", scrapedVideos)
 		for _, video := range scrapedVideos {
 			jm.DownloadInput <- video
 		}
@@ -48,6 +51,7 @@ func (jm *DbMonitor) PullWorkItemsFromDb() {
 
 	go func() {
 		downloadedVideos := jm.DownloadQueries.GetDownloadedVideos()
+		slog.Debug("PullWorkItemsFromDb", "downloadedVideos", downloadedVideos)
 		for _, video := range downloadedVideos {
 			jm.ImportInput <- video
 		}

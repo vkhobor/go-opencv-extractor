@@ -10,7 +10,7 @@ import (
 	"database/sql"
 )
 
-const addPicture = `-- name: AddPicture :one
+const addPicture = `-- name: AddPicture :exec
 INSERT into
     pictures (
         id,
@@ -19,7 +19,7 @@ INSERT into
         blob_storage_id
     )
 VALUES
-    (?, ?, ?, ?) RETURNING id, import_attempt_id, frame_number, blob_storage_id
+    (?, ?, ?, ?)
 `
 
 type AddPictureParams struct {
@@ -29,21 +29,14 @@ type AddPictureParams struct {
 	BlobStorageID   sql.NullString
 }
 
-func (q *Queries) AddPicture(ctx context.Context, arg AddPictureParams) (Picture, error) {
-	row := q.db.QueryRowContext(ctx, addPicture,
+func (q *Queries) AddPicture(ctx context.Context, arg AddPictureParams) error {
+	_, err := q.db.ExecContext(ctx, addPicture,
 		arg.ID,
 		arg.ImportAttemptID,
 		arg.FrameNumber,
 		arg.BlobStorageID,
 	)
-	var i Picture
-	err := row.Scan(
-		&i.ID,
-		&i.ImportAttemptID,
-		&i.FrameNumber,
-		&i.BlobStorageID,
-	)
-	return i, err
+	return err
 }
 
 const allPicturesCount = `-- name: AllPicturesCount :one

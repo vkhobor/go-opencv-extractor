@@ -18,46 +18,60 @@ type Queries struct {
 func (jc *Queries) GetDownloadedVideos() []DownlodedVideo {
 	val, err := jc.Queries.GetVideosDownloaded(context.Background())
 	if err != nil {
+		slog.Error("GetDownloadedVideos: Error while getting downloaded videos", "error", err)
 		return []DownlodedVideo{}
 	}
 	result := make([]DownlodedVideo, len(val))
 	for i, v := range val {
-		result[i] = DownlodedVideo{ScrapedVideo: scraper.ScrapedVideo{ID: v.ID}, SavePath: v.Path}
+		result[i] = DownlodedVideo{ScrapedVideo: scraper.ScrapedVideo{ID: v.YtVideoID}, SavePath: v.Path}
 	}
 	return result
 }
 
-func (jc *Queries) SaveDownloadAttempt(video DownlodedVideo) {
-	slog.Debug("Saving downloaded", "video", video)
+func (jc *Queries) SaveDownloadAttempt(video DownlodedVideo) error {
 	if video.Error != nil {
-
+		err := jc.Queries.AddDownloadAttempt(context.Background(), db.AddDownloadAttemptParams{
+			ID: uuid.New().String(),
+			YtVideoID: sql.NullString{
+				String: video.ID,
+				Valid:  true,
+			},
+			Error: sql.NullString{
+				String: video.Error.Error(),
+				Valid:  true,
+			},
+			BlobStorageID: sql.NullString{
+				Valid: false,
+			},
+		})
+		return err
 	}
+
+	// TODO transaction
 	blobId := uuid.New()
-	_, errAddBlob := jc.Queries.AddBlob(context.Background(), db.AddBlobParams{
+	err := jc.Queries.AddBlob(context.Background(), db.AddBlobParams{
 		ID:   blobId.String(),
 		Path: video.SavePath,
 	})
+	if err != nil {
+		return err
+	}
 
-	_, errUpdateStatus := jc.Queries.AddDownloadAttempt(context.Background(), db.AddDownloadAttemptParams{
+	err = jc.Queries.AddDownloadAttempt(context.Background(), db.AddDownloadAttemptParams{
+		ID: uuid.New().String(),
 		YtVideoID: sql.NullString{
 			String: video.ID,
 			Valid:  true,
 		},
 		Error: sql.NullString{
-			String: video.Error.Error(),
-			Valid:  video.Error != nil,
+			Valid: false,
 		},
 		BlobStorageID: sql.NullString{
 			String: blobId.String(),
 			Valid:  true,
 		},
 	})
-
-	if errAddBlob != nil || errUpdateStatus != nil {
-		slog.Error("Error while updating status", "error", errAddBlob, "error2", errUpdateStatus)
-		RemoveAllPaths(video.SavePath)
-		return
-	}
+	return err
 }
 
 func RemoveAllPaths(files ...string) {

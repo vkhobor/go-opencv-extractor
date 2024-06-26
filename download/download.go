@@ -35,21 +35,22 @@ func (d *Downloader) downloadVideo(video scraper.ScrapedVideo) DownlodedVideo {
 	youtubeVideo := youtube.YoutubeVideo(video.ID)
 
 	savePath, err := d.RetryDownloadWithAllClients(youtubeVideo, video)
-
-	if err != nil {
-		slog.Error("Error while downloading video", "error", err, "video", video)
-
-		return DownlodedVideo{ScrapedVideo: video, Error: err}
-	}
-
 	downloaded := DownlodedVideo{
 		ScrapedVideo: video,
 		SavePath:     savePath,
-		Error:        nil,
+		Error:        err,
 	}
-	d.Queries.SaveDownloadAttempt(downloaded)
 
-	slog.Info("Downloaded video", "video", video, "downloaded", downloaded)
+	if err != nil {
+		slog.Error("Error while downloading video", "error", err, "video", video)
+	} else {
+		slog.Info("Downloaded video", "video", video, "downloaded", downloaded)
+	}
+
+	err = d.Queries.SaveDownloadAttempt(downloaded)
+	if err != nil {
+		slog.Error("Error while saving download attempt", "error", err, "video", video)
+	}
 
 	return downloaded
 }
@@ -69,7 +70,6 @@ func (d *Downloader) RetryDownloadWithAllClients(video youtube.YoutubeVideo, scr
 	if err == nil {
 		return savePath, nil
 	}
-	
 
 	savePath, err = video.DownloadToFolder(youtube.WebClient, d.Config.GetVideosDir(), progress)
 	if err == nil {

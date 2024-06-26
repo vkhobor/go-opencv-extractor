@@ -41,7 +41,7 @@ func (d *Importer) Start() {
 func (d *Importer) importVideo(video download.DownlodedVideo) (ImportedVideo, error) {
 	refs, err := d.Queries.GetRefImages(video)
 	if err != nil || len(refs) == 0 {
-		slog.Debug("No videos to import or no reference images")
+		slog.Debug("No videos to import or no reference images", "video", video, "refs", refs, "error", err)
 		return ImportedVideo{}, nil
 	}
 
@@ -92,7 +92,7 @@ func (d *Importer) importProgressHandler(progressChan <-chan float64, video down
 		select {
 		case <-ticker.C:
 			d.Queries.UpdateProgress(video.ID, int(item*100))
-			slog.Info("Progress", "id", video.ID, "progress", item)
+			slog.Info("importProgressHandler", "id", video.ID, "progress", item)
 		default:
 		}
 	}

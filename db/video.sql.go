@@ -93,23 +93,40 @@ func (q *Queries) GetJobVideosWithProgress(ctx context.Context, jobID sql.NullSt
 
 const getScrapedVideos = `-- name: GetScrapedVideos :many
 SELECT
-  id, job_id
+  yt_videos.id AS yt_video_id,
+  jobs.id AS job_id,
+  jobs.search_query,
+  jobs.filter_id
 FROM
   yt_videos
+  LEFT JOIN download_attempts ON yt_videos.id = download_attempts.yt_video_id
+  JOIN jobs ON jobs.id = yt_videos.job_id
 WHERE
-  status = "scraped"
+  download_attempts.yt_video_id IS NULL
 `
 
-func (q *Queries) GetScrapedVideos(ctx context.Context) ([]YtVideo, error) {
+type GetScrapedVideosRow struct {
+	YtVideoID   string
+	JobID       string
+	SearchQuery sql.NullString
+	FilterID    sql.NullString
+}
+
+func (q *Queries) GetScrapedVideos(ctx context.Context) ([]GetScrapedVideosRow, error) {
 	rows, err := q.db.QueryContext(ctx, getScrapedVideos)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []YtVideo
+	var items []GetScrapedVideosRow
 	for rows.Next() {
-		var i YtVideo
-		if err := rows.Scan(&i.ID, &i.JobID); err != nil {
+		var i GetScrapedVideosRow
+		if err := rows.Scan(
+			&i.YtVideoID,
+			&i.JobID,
+			&i.SearchQuery,
+			&i.FilterID,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -125,19 +142,27 @@ func (q *Queries) GetScrapedVideos(ctx context.Context) ([]YtVideo, error) {
 
 const getVideosDownloaded = `-- name: GetVideosDownloaded :many
 SELECT
-  yt_videos.id, job_id, blob_storage.id, path
+  yt_videos.id as yt_video_id,
+  jobs.id AS job_id,
+  jobs.search_query,
+  jobs.filter_id,
+  blob_storage.path AS path
 FROM
   yt_videos
-  JOIN blob_storage ON yt_videos.blob_storage_id = blob_storage.id
+  JOIN download_attempts ON yt_videos.id = download_attempts.yt_video_id
+  JOIN blob_storage ON download_attempts.blob_storage_id = blob_storage.id
+  LEFT JOIN import_attempts ON yt_videos.id = import_attempts.yt_video_id
+  JOIN jobs ON jobs.id = yt_videos.job_id
 WHERE
-  status = "downloaded"
+  import_attempts.yt_video_id IS NULL
 `
 
 type GetVideosDownloadedRow struct {
-	ID    string
-	JobID sql.NullString
-	ID_2  string
-	Path  string
+	YtVideoID   string
+	JobID       string
+	SearchQuery sql.NullString
+	FilterID    sql.NullString
+	Path        string
 }
 
 func (q *Queries) GetVideosDownloaded(ctx context.Context) ([]GetVideosDownloadedRow, error) {
@@ -150,9 +175,10 @@ func (q *Queries) GetVideosDownloaded(ctx context.Context) ([]GetVideosDownloade
 	for rows.Next() {
 		var i GetVideosDownloadedRow
 		if err := rows.Scan(
-			&i.ID,
+			&i.YtVideoID,
 			&i.JobID,
-			&i.ID_2,
+			&i.SearchQuery,
+			&i.FilterID,
 			&i.Path,
 		); err != nil {
 			return nil, err

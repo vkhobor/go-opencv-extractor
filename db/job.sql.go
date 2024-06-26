@@ -12,19 +12,25 @@ import (
 
 const createJob = `-- name: CreateJob :one
 INSERT INTO
-    jobs (id, search_query, "limit")
+    jobs (id, search_query, "limit", filter_id)
 VALUES
-    (?, ?, ?) RETURNING id, search_query, filter_id, "limit"
+    (?, ?, ?, ?) RETURNING id, search_query, filter_id, "limit"
 `
 
 type CreateJobParams struct {
 	ID          string
 	SearchQuery sql.NullString
 	Limit       sql.NullInt64
+	FilterID    sql.NullString
 }
 
 func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (Job, error) {
-	row := q.db.QueryRowContext(ctx, createJob, arg.ID, arg.SearchQuery, arg.Limit)
+	row := q.db.QueryRowContext(ctx, createJob,
+		arg.ID,
+		arg.SearchQuery,
+		arg.Limit,
+		arg.FilterID,
+	)
 	var i Job
 	err := row.Scan(
 		&i.ID,

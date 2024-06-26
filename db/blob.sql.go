@@ -9,11 +9,11 @@ import (
 	"context"
 )
 
-const addBlob = `-- name: AddBlob :one
-INSERT into blob_storage
-    (id, path)
-    VALUES (?, ?)
-RETURNING id, path
+const addBlob = `-- name: AddBlob :exec
+INSERT into
+    blob_storage (id, path)
+VALUES
+    (?, ?)
 `
 
 type AddBlobParams struct {
@@ -21,16 +21,18 @@ type AddBlobParams struct {
 	Path string
 }
 
-func (q *Queries) AddBlob(ctx context.Context, arg AddBlobParams) (BlobStorage, error) {
-	row := q.db.QueryRowContext(ctx, addBlob, arg.ID, arg.Path)
-	var i BlobStorage
-	err := row.Scan(&i.ID, &i.Path)
-	return i, err
+func (q *Queries) AddBlob(ctx context.Context, arg AddBlobParams) error {
+	_, err := q.db.ExecContext(ctx, addBlob, arg.ID, arg.Path)
+	return err
 }
 
 const getBlob = `-- name: GetBlob :one
-SELECT path from blob_storage
-    WHERE id = ?
+SELECT
+    path
+from
+    blob_storage
+WHERE
+    id = ?
 `
 
 func (q *Queries) GetBlob(ctx context.Context, id string) (string, error) {

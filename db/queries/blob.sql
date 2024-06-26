@@ -1,10 +1,13 @@
--- name: AddBlob :one
-INSERT into blob_storage
-    (id, path)
-    VALUES (?, ?)
-RETURNING *;
+-- name: AddBlob :exec
+INSERT into
+    blob_storage (id, path)
+VALUES
+    (?, ?);
 
 -- name: GetBlob :one
-SELECT path from blob_storage
-    WHERE id = ?;
-     
+SELECT
+    path
+from
+    blob_storage
+WHERE
+    id = ?;

@@ -23,9 +23,9 @@ GROUP BY
 
 -- name: CreateJob :one
 INSERT INTO
-    jobs (id, search_query, "limit")
+    jobs (id, search_query, "limit", filter_id)
 VALUES
-    (?, ?, ?) RETURNING *;
+    (?, ?, ?, ?) RETURNING *;
 
 -- name: GetJobs :many
 SELECT

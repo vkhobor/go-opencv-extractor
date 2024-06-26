@@ -1,4 +1,4 @@
--- name: AddPicture :one
+-- name: AddPicture :exec
 INSERT into
     pictures (
         id,
@@ -7,7 +7,7 @@ INSERT into
         blob_storage_id
     )
 VALUES
-    (?, ?, ?, ?) RETURNING *;
+    (?, ?, ?, ?);
 
 -- name: GetPictures :many
 SELECT
