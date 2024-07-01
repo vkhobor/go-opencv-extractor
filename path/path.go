@@ -6,28 +6,30 @@ import (
 	"strings"
 )
 
-func EnsurePath(path string) (string, error) {
+func MustEnsurePath(path string, isDir bool) {
+	err := EnsurePath(path, isDir)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func EnsurePath(path string, isDir bool) error {
 	if strings.HasPrefix(path, "~/") {
 		home, err := os.UserHomeDir()
 		if err != nil {
-			return "", err
+			return err
 		}
 
 		path = filepath.Join(home, path[2:])
 	}
 
-	dirPath := filepath.Dir(path)
-	err := os.MkdirAll(dirPath, 0755)
-	if err != nil {
-		return "", err
+	if !isDir {
+		path = filepath.Dir(path)
 	}
-	return path, nil
-}
 
-func IsDir(path string) (bool, error) {
-	fi, err := os.Stat(path)
+	err := os.MkdirAll(path, 0755)
 	if err != nil {
-		return false, err
+		return err
 	}
-	return fi.IsDir(), nil
+	return nil
 }

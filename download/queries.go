@@ -23,7 +23,16 @@ func (jc *Queries) GetDownloadedVideos() []DownlodedVideo {
 	}
 	result := make([]DownlodedVideo, len(val))
 	for i, v := range val {
-		result[i] = DownlodedVideo{ScrapedVideo: scraper.ScrapedVideo{ID: v.YtVideoID}, SavePath: v.Path}
+		result[i] = DownlodedVideo{
+			ScrapedVideo: scraper.ScrapedVideo{
+				ID: v.YtVideoID,
+				Job: scraper.Job{
+					JobID:       v.JobID,
+					SearchQuery: v.SearchQuery.String,
+					FilterID:    v.FilterID.String,
+				}},
+			SavePath: v.Path,
+		}
 	}
 	return result
 }

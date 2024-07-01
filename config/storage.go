@@ -15,23 +15,29 @@ type DirectoryConfig struct {
 }
 
 func NewDirectoryConfig(baseDir string) (DirectoryConfig, error) {
-	path, err := pathutils.EnsurePath(baseDir)
+	err := pathutils.EnsurePath(baseDir, true)
 
 	if err != nil {
 		return DirectoryConfig{}, err
 	}
 
 	return DirectoryConfig{
-		BaseDir: path,
+		BaseDir: baseDir,
 	}, nil
 }
 
 func (c DirectoryConfig) GetImagesDir() string {
-	return path.Join(c.BaseDir, imageFolder)
+	specific := path.Join(c.BaseDir, imageFolder)
+	pathutils.MustEnsurePath(specific, true)
+	return specific
 }
 func (c DirectoryConfig) GetVideosDir() string {
-	return path.Join(c.BaseDir, videosFolder)
+	specific := path.Join(c.BaseDir, videosFolder)
+	pathutils.MustEnsurePath(specific, true)
+	return specific
 }
 func (c DirectoryConfig) GetReferencesDir() string {
-	return path.Join(c.BaseDir, referencesFolder)
+	specific := path.Join(c.BaseDir, referencesFolder)
+	pathutils.MustEnsurePath(specific, true)
+	return specific
 }

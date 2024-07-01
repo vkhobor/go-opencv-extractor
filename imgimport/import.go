@@ -53,7 +53,8 @@ func (d *Importer) importVideo(video download.DownlodedVideo) (ImportedVideo, er
 
 	slog.Info("Running import job", "videos_waiting_for_import", d)
 	videoImported := d.handleSingle(refs, video)
-
+	
+	d.Queries.SaveFrames(videoImported, id)
 	d.Queries.UpdateProgress(id, 100)
 	return videoImported, nil
 }
