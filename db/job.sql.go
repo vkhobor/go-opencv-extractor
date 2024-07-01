@@ -140,23 +140,17 @@ func (q *Queries) GetJobs(ctx context.Context) ([]GetJobsRow, error) {
 const getOneWithVideos = `-- name: GetOneWithVideos :many
 SELECT
     j.id AS id,
-    v.id AS video_youtube_id,
-    COUNT(DISTINCT p.id) AS pictures_found
+    v.id AS video_youtube_id
 FROM
     jobs j
     LEFT JOIN yt_videos v ON j.id = v.job_id
-    LEFT JOIN pictures p ON v.id = p.yt_video_id
 WHERE
     j.id = ?
-GROUP BY
-    j.id,
-    v.id
 `
 
 type GetOneWithVideosRow struct {
 	ID             string
 	VideoYoutubeID sql.NullString
-	PicturesFound  int64
 }
 
 func (q *Queries) GetOneWithVideos(ctx context.Context, id string) ([]GetOneWithVideosRow, error) {
@@ -168,7 +162,7 @@ func (q *Queries) GetOneWithVideos(ctx context.Context, id string) ([]GetOneWith
 	var items []GetOneWithVideosRow
 	for rows.Next() {
 		var i GetOneWithVideosRow
-		if err := rows.Scan(&i.ID, &i.VideoYoutubeID, &i.PicturesFound); err != nil {
+		if err := rows.Scan(&i.ID, &i.VideoYoutubeID); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -182,7 +176,7 @@ func (q *Queries) GetOneWithVideos(ctx context.Context, id string) ([]GetOneWith
 	return items, nil
 }
 
-const listJobsWithProgress = `-- name: ListJobsWithProgress :many
+const listJobsWithVideos = `-- name: ListJobsWithVideos :many
 SELECT
     jobs.id, search_query, filter_id, "limit", yt_videos.id, job_id
 FROM
@@ -190,7 +184,7 @@ FROM
     LEFT JOIN yt_videos ON jobs.id = yt_videos.job_id
 `
 
-type ListJobsWithProgressRow struct {
+type ListJobsWithVideosRow struct {
 	ID          string
 	SearchQuery sql.NullString
 	FilterID    sql.NullString
@@ -199,15 +193,15 @@ type ListJobsWithProgressRow struct {
 	JobID       sql.NullString
 }
 
-func (q *Queries) ListJobsWithProgress(ctx context.Context) ([]ListJobsWithProgressRow, error) {
-	rows, err := q.db.QueryContext(ctx, listJobsWithProgress)
+func (q *Queries) ListJobsWithVideos(ctx context.Context) ([]ListJobsWithVideosRow, error) {
+	rows, err := q.db.QueryContext(ctx, listJobsWithVideos)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListJobsWithProgressRow
+	var items []ListJobsWithVideosRow
 	for rows.Next() {
-		var i ListJobsWithProgressRow
+		var i ListJobsWithVideosRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.SearchQuery,

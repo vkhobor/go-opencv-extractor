@@ -33,7 +33,7 @@ type ExtractIterator struct {
 	videoCapture      *gocv.VideoCapture
 	currentFrame      gocv.Mat
 	cfg               Config
-	progressChan      chan<- struct{}
+	onProgress        func(*ExtractIterator)
 	Close             func()
 }
 
@@ -58,7 +58,7 @@ func GetDescriptorsFromImages(images []gocv.Mat) ([]gocv.Mat, error) {
 	return descriptors, nil
 }
 
-func NewExtractIterator(cfg Config, progress chan<- struct{}) (*ExtractIterator, error) {
+func NewExtractIterator(cfg Config, onProgress func(*ExtractIterator)) (*ExtractIterator, error) {
 	refImages, _ := GetImagesFromPaths(cfg.PathsToRefImages)
 	GetDescriptorsFromImages(refImages)
 
@@ -86,7 +86,7 @@ func NewExtractIterator(cfg Config, progress chan<- struct{}) (*ExtractIterator,
 		descriptors:       descriptors,
 		currentFrame:      frame,
 		memoizedallowMask: memoizedAllowMask,
-		progressChan:      progress,
+		onProgress:        onProgress,
 		cfg:               cfg,
 		Close: func() {
 			closeMemo()
@@ -114,7 +114,7 @@ func (e *ExtractIterator) Next() bool {
 		if !success || e.currentFrame.Empty() {
 			return false
 		}
-		e.progressChan <- struct{}{}
+		e.onProgress(e)
 
 		frameNum := int(e.videoCapture.Get(gocv.VideoCapturePosFrames))
 		if frameNum%e.modFPS != 0 {

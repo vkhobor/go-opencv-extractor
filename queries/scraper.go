@@ -1,4 +1,4 @@
-package scraper
+package queries
 
 import (
 	"context"
@@ -7,10 +7,6 @@ import (
 	"github.com/samber/lo"
 	"github.com/vkhobor/go-opencv/db"
 )
-
-type Queries struct {
-	Queries *db.Queries
-}
 
 func (jc *Queries) GetToScrapeVideos() []Job {
 	dbVal, err := jc.Queries.GetJobs(context.Background())
@@ -43,7 +39,7 @@ func (jc *Queries) GetScrapedVideos() []ScrapedVideo {
 	return result
 }
 
-func (jc *Queries) SaveSraped(video ScrapedVideo, jobId string) bool {
+func (jc *Queries) SaveNewlyScraped(video ScrapedVideo, jobId string) bool {
 	_, err := jc.Queries.AddYtVideo(context.Background(), db.AddYtVideoParams{
 		ID: video.ID,
 		JobID: sql.NullString{
@@ -52,8 +48,5 @@ func (jc *Queries) SaveSraped(video ScrapedVideo, jobId string) bool {
 		},
 	})
 
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }

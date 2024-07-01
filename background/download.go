@@ -1,26 +1,20 @@
-package download
+package background
 
 import (
 	"log/slog"
 	"time"
 
 	"github.com/vkhobor/go-opencv/config"
-	"github.com/vkhobor/go-opencv/scraper"
+	"github.com/vkhobor/go-opencv/queries"
 	"github.com/vkhobor/go-opencv/youtube"
 )
 
-type DownlodedVideo struct {
-	scraper.ScrapedVideo
-	SavePath string
-	Error    error
-}
-
 type Downloader struct {
-	Queries  *Queries
+	Queries  *queries.Queries
 	Throttle time.Duration
 	Config   config.DirectoryConfig
-	Input    <-chan scraper.ScrapedVideo
-	Output   chan<- DownlodedVideo
+	Input    <-chan queries.ScrapedVideo
+	Output   chan<- queries.DownlodedVideo
 }
 
 func (d *Downloader) Start() {
@@ -29,13 +23,13 @@ func (d *Downloader) Start() {
 	}
 }
 
-func (d *Downloader) downloadVideo(video scraper.ScrapedVideo) DownlodedVideo {
+func (d *Downloader) downloadVideo(video queries.ScrapedVideo) queries.DownlodedVideo {
 	time.Sleep(d.Throttle)
 	slog.Info("Download started", "video", video)
 	youtubeVideo := youtube.YoutubeVideo(video.ID)
 
 	savePath, err := d.RetryDownloadWithAllClients(youtubeVideo, video)
-	downloaded := DownlodedVideo{
+	downloaded := queries.DownlodedVideo{
 		ScrapedVideo: video,
 		SavePath:     savePath,
 		Error:        err,
@@ -47,6 +41,7 @@ func (d *Downloader) downloadVideo(video scraper.ScrapedVideo) DownlodedVideo {
 		slog.Info("Downloaded video", "video", video, "downloaded", downloaded)
 	}
 
+	// TODO should only allow saving if does not make the database inconsistent, like multiple sucessful download attempts for the same video
 	err = d.Queries.SaveDownloadAttempt(downloaded)
 	if err != nil {
 		slog.Error("Error while saving download attempt", "error", err, "video", video)
@@ -55,13 +50,13 @@ func (d *Downloader) downloadVideo(video scraper.ScrapedVideo) DownlodedVideo {
 	return downloaded
 }
 
-func HandleProgress(progress chan float64, video scraper.ScrapedVideo) {
+func HandleProgress(progress chan float64, video queries.ScrapedVideo) {
 	for p := range progress {
 		slog.Info("Download progress", "video", video, "progress", p)
 	}
 }
 
-func (d *Downloader) RetryDownloadWithAllClients(video youtube.YoutubeVideo, scrapedVideo scraper.ScrapedVideo) (string, error) {
+func (d *Downloader) RetryDownloadWithAllClients(video youtube.YoutubeVideo, scrapedVideo queries.ScrapedVideo) (string, error) {
 	progress := make(chan float64)
 	defer close(progress)
 	go HandleProgress(progress, scrapedVideo)

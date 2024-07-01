@@ -1,4 +1,4 @@
-package imgimport
+package queries
 
 import (
 	"context"
@@ -7,14 +7,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/vkhobor/go-opencv/db"
-	"github.com/vkhobor/go-opencv/download"
 )
 
-type Queries struct {
-	Queries *db.Queries
-}
-
-func (jc *Queries) GetRefImages(video download.DownlodedVideo) ([]string, error) {
+func (jc *Queries) GetRefImages(video DownlodedVideo) ([]string, error) {
 	res, err := jc.Queries.GetFilterForJob(context.Background(), video.JobID)
 	if err != nil {
 		return []string{}, err
@@ -25,7 +20,7 @@ func (jc *Queries) GetRefImages(video download.DownlodedVideo) ([]string, error)
 	}), nil
 }
 
-func (jc *Queries) StartImportAttempt(video download.DownlodedVideo) (string, error) {
+func (jc *Queries) StartImportAttempt(video DownlodedVideo) (string, error) {
 	importAttemptId := uuid.New().String()
 	_, err := jc.Queries.AddImportAttempt(context.Background(), db.AddImportAttemptParams{
 		ID: importAttemptId,

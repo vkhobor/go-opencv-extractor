@@ -1,4 +1,4 @@
-package download
+package queries
 
 import (
 	"context"
@@ -8,12 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/vkhobor/go-opencv/db"
-	"github.com/vkhobor/go-opencv/scraper"
 )
-
-type Queries struct {
-	Queries *db.Queries
-}
 
 func (jc *Queries) GetDownloadedVideos() []DownlodedVideo {
 	val, err := jc.Queries.GetVideosDownloaded(context.Background())
@@ -24,9 +19,9 @@ func (jc *Queries) GetDownloadedVideos() []DownlodedVideo {
 	result := make([]DownlodedVideo, len(val))
 	for i, v := range val {
 		result[i] = DownlodedVideo{
-			ScrapedVideo: scraper.ScrapedVideo{
+			ScrapedVideo: ScrapedVideo{
 				ID: v.YtVideoID,
-				Job: scraper.Job{
+				Job: Job{
 					JobID:       v.JobID,
 					SearchQuery: v.SearchQuery.String,
 					FilterID:    v.FilterID.String,

@@ -5,11 +5,9 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/vkhobor/go-opencv/config"
 	"github.com/vkhobor/go-opencv/db"
-	"github.com/vkhobor/go-opencv/progress"
 )
 
 func NewRouter(
-	progressQueries *progress.Queries,
 	queries *db.Queries,
 	wakeJobs chan<- struct{},
 	config config.DirectoryConfig,
@@ -29,7 +27,7 @@ func NewRouter(
 		r.Post("/jobs", HandleCreateJob(queries, wakeJobs))
 		r.Get("/jobs", HandleListJobs(queries))
 		r.Get("/jobs/{id}", HandleJobDetails(queries))
-		r.Get("/jobs/{id}/videos", HandleJobVideosFound(progressQueries))
+		r.Get("/jobs/{id}/videos", HandleJobVideosFound(queries))
 
 		r.Post("/references", HandleReferenceUpload(queries, config))
 		r.Get("/references", HandleGetReferences(queries))
@@ -41,8 +39,6 @@ func NewRouter(
 
 		r.Get("/files/{id}", HandleFileServeById(queries))
 		r.Get("/zipped", ExportWorkspace(config))
-
-		r.Get("/stats", HandleGetStats(queries))
 	})
 
 	router.NotFound(HandleNotFound())

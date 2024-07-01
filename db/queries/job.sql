@@ -1,4 +1,4 @@
--- name: ListJobsWithProgress :many
+-- name: ListJobsWithVideos :many
 SELECT
     *
 FROM
@@ -52,14 +52,9 @@ FROM
 -- name: GetOneWithVideos :many
 SELECT
     j.id AS id,
-    v.id AS video_youtube_id,
-    COUNT(DISTINCT p.id) AS pictures_found
+    v.id AS video_youtube_id
 FROM
     jobs j
     LEFT JOIN yt_videos v ON j.id = v.job_id
-    LEFT JOIN pictures p ON v.id = p.yt_video_id
 WHERE
-    j.id = ?
-GROUP BY
-    j.id,
-    v.id;
+    j.id = ?;

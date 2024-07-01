@@ -41,12 +41,11 @@ FROM
 WHERE
   import_attempts.yt_video_id IS NULL;
 
--- name: GetJobVideosWithProgress :many
+-- name: GetVideoWithImportAttempts :many
 SELECT
   *
 FROM
   yt_videos
-  LEFT JOIN download_attempts ON yt_videos.id = download_attempts.yt_video_id
-  LEFT JOIN import_attempts ON yt_videos.id = import_attempts.yt_video_id
+  JOIN import_attempts ON yt_videos.id = import_attempts.yt_video_id
 WHERE
-  yt_videos.job_id = ?;
+  yt_videos.id = ?;

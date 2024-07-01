@@ -10,7 +10,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/vkhobor/go-opencv/db"
-	"github.com/vkhobor/go-opencv/progress"
 )
 
 func HandleCreateJob(queries *db.Queries, wakeJobs chan<- struct{}) http.HandlerFunc {
@@ -76,14 +75,14 @@ func HandleListJobs(queries *db.Queries) http.HandlerFunc {
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			res, err := queries.ListJobsWithProgress(r.Context())
+			res, err := queries.ListJobsWithVideos(r.Context())
 			if err != nil {
 				render.Status(r, http.StatusInternalServerError)
 				render.PlainText(w, r, err.Error())
 				return
 			}
 
-			grouped := lo.GroupBy(res, func(row db.ListJobsWithProgressRow) string {
+			grouped := lo.GroupBy(res, func(row db.ListJobsWithVideosRow) string {
 				return row.ID
 			})
 
@@ -113,12 +112,10 @@ func HandleListJobs(queries *db.Queries) http.HandlerFunc {
 
 func HandleJobDetails(queries *db.Queries) http.HandlerFunc {
 	type jobResponse struct {
-		ID            string `json:"id"`
-		SearchQuery   string `json:"search_query"`
-		VideoTarget   int    `json:"video_target"`
-		PicturesFound int    `json:"pictures_found"`
-		VideosFound   int    `json:"videos_found"`
-		VideosInError int    `json:"videos_in_error"`
+		ID          string `json:"id"`
+		SearchQuery string `json:"search_query"`
+		VideoTarget int    `json:"video_target"`
+		VideosFound int    `json:"videos_found"`
 	}
 
 	return http.HandlerFunc(
@@ -149,14 +146,9 @@ func HandleJobDetails(queries *db.Queries) http.HandlerFunc {
 	)
 }
 
-func HandleJobVideosFound(queries *progress.Queries) http.HandlerFunc {
+func HandleJobVideosFound(queries *db.Queries) http.HandlerFunc {
 	type video struct {
-		YoutubeId        string `json:"youtube_id"`
-		PicturesFound    int    `json:"pictures_found"`
-		ImportProgress   int    `json:"import_progress"`
-		DownloadProgress int    `json:"download_progress"`
-		ImportError      string `json:"import_error"`
-		DownloadError    string `json:"download_error"`
+		YoutubeId string `json:"youtube_id"`
 	}
 
 	type jobResponse struct {
@@ -173,28 +165,21 @@ func HandleJobVideosFound(queries *progress.Queries) http.HandlerFunc {
 				return
 			}
 
-			res, err := queries.VideoProgresses(r.Context(), jobId)
+			job, err := queries.GetOneWithVideos(r.Context(), jobId)
 			if err != nil {
 				render.Status(r, http.StatusInternalServerError)
 				render.PlainText(w, r, err.Error())
 				return
 			}
-			slog.Debug("res", "res", res)
 
-			videos := lo.Map(res, func(row progress.VideoProgress, index int) video {
+			videos := lo.Map(job, func(row db.GetOneWithVideosRow, index int) video {
 				return video{
-					YoutubeId: row.VideoId,
-					// TODO fix this
-					PicturesFound:    0,
-					ImportProgress:   row.ImportProgress,
-					DownloadProgress: row.DownloadProgress,
-					ImportError:      row.ImportError,
-					DownloadError:    row.DownloadError,
+					YoutubeId: row.VideoYoutubeID.String,
 				}
 			})
 
 			resp := jobResponse{
-				ID:     res[0].VideoId,
+				ID:     jobId,
 				Videos: videos,
 			}
 

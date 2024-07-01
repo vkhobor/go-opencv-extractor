@@ -11,11 +11,10 @@ import (
 )
 
 const addImportAttempt = `-- name: AddImportAttempt :one
-INSERT INTO import_attempts (
-  id, yt_video_id, filter_id, progress, error
-) VALUES (
-  ?, ?, ?, ?, ?
-) RETURNING id, yt_video_id, filter_id, progress, error
+INSERT INTO
+  import_attempts (id, yt_video_id, filter_id, progress, error)
+VALUES
+  (?, ?, ?, ?, ?) RETURNING id, yt_video_id, filter_id, progress, error
 `
 
 type AddImportAttemptParams struct {

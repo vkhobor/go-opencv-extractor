@@ -1,7 +1,6 @@
 package scraper
 
 import (
-	"context"
 	"log/slog"
 	"net/url"
 	"time"
@@ -25,16 +24,22 @@ func apiForSearchQuery(host string, search string) (string, error) {
 type Scraper struct {
 	Throttle time.Duration
 	Domain   string
+	visitors []*myCollyCollector
 }
 
-func (s Scraper) Scrape(ctx context.Context, query string) (<-chan youtube.YoutubeVideo, error) {
-	singlePageVisitor := NewCollector(s)
+func (s Scraper) Stop() {
+	for _, v := range s.visitors {
+		v.Stop()
+	}
+}
 
+func (s Scraper) Scrape(query string, onFound func(youtube.YoutubeVideo, error, func())) error {
+	singlePageVisitor := NewCollector(s)
 	singlePageVisitor.MaxDepth = 1
 
 	allPagesVisitor := NewCollector(s)
 
-	youtubeIDsChan := make(chan youtube.YoutubeVideo)
+	s.visitors = append(s.visitors, &singlePageVisitor, &allPagesVisitor)
 
 	allPagesVisitor.OnVideoDetailLink(func(link string) {
 		singlePageVisitor.Visit(link)
@@ -42,28 +47,17 @@ func (s Scraper) Scrape(ctx context.Context, query string) (<-chan youtube.Youtu
 
 	singlePageVisitor.OnYoutubeUrl(func(url string) {
 		id, err := youtube.NewYoutubeIDFromUrl(url)
-		if err != nil {
-			return
-		}
-
-		select {
-		case <-ctx.Done():
-			allPagesVisitor.Stop()
-			singlePageVisitor.Stop()
-			close(youtubeIDsChan)
-		default:
-			youtubeIDsChan <- id
-		}
+		onFound(youtube.YoutubeVideo(id), err, s.Stop)
 	})
 
 	urlEncoded := url.QueryEscape(query)
 	urlToScrape, err := apiForSearchQuery(s.Domain, urlEncoded)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	slog.Debug("Start scraping", "url", urlToScrape)
-	go allPagesVisitor.Visit(urlToScrape)
+	allPagesVisitor.Visit(urlToScrape)
 
-	return youtubeIDsChan, nil
+	return nil
 }

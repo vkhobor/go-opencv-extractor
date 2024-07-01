@@ -12,32 +12,27 @@ import (
 	"gocv.io/x/gocv"
 )
 
-func HandleVideoFromPath(path string, outputDir string, fpsWant int, videoTitle string, refImagePaths []string, progressChan chan<- float64) (*ImportResult, error) {
+func HandleVideoFromPath(path string, outputDir string, fpsWant int, videoTitle string, refImagePaths []string, progress func(float64)) (*ImportResult, error) {
 	fps, err := extractMetadata(path)
 	if err != nil {
 		return nil, err
 	}
 
-	frameChan := make(chan struct{})
-	defer close(frameChan)
+	progressAdapter := func(iter *image.ExtractIterator) {
+		progress(float64(iter.CurrentFrame()) / float64(iter.Length()))
+	}
 
 	iter, err := image.NewExtractIterator(image.Config{
 		VideoPath:        path,
 		PathsToRefImages: refImagePaths,
 		OriginalFPS:      fps,
 		WantFPS:          fpsWant,
-	}, frameChan)
+	}, progressAdapter)
 
 	if err != nil {
 		return nil, err
 	}
 	defer iter.Close()
-
-	go func() {
-		for range frameChan {
-			progressChan <- float64(iter.CurrentFrame()) / float64(iter.Length())
-		}
-	}()
 
 	fileNames, err := processImages(iter, outputDir, fpsWant)
 	if err != nil {

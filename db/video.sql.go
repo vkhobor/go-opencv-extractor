@@ -29,68 +29,6 @@ func (q *Queries) AddYtVideo(ctx context.Context, arg AddYtVideoParams) (YtVideo
 	return i, err
 }
 
-const getJobVideosWithProgress = `-- name: GetJobVideosWithProgress :many
-SELECT
-  yt_videos.id, job_id, download_attempts.id, download_attempts.yt_video_id, download_attempts.progress, blob_storage_id, download_attempts.error, import_attempts.id, import_attempts.yt_video_id, filter_id, import_attempts.progress, import_attempts.error
-FROM
-  yt_videos
-  LEFT JOIN download_attempts ON yt_videos.id = download_attempts.yt_video_id
-  LEFT JOIN import_attempts ON yt_videos.id = import_attempts.yt_video_id
-WHERE
-  yt_videos.job_id = ?
-`
-
-type GetJobVideosWithProgressRow struct {
-	ID            string
-	JobID         sql.NullString
-	ID_2          sql.NullString
-	YtVideoID     sql.NullString
-	Progress      sql.NullInt64
-	BlobStorageID sql.NullString
-	Error         sql.NullString
-	ID_3          sql.NullString
-	YtVideoID_2   sql.NullString
-	FilterID      sql.NullString
-	Progress_2    sql.NullInt64
-	Error_2       sql.NullString
-}
-
-func (q *Queries) GetJobVideosWithProgress(ctx context.Context, jobID sql.NullString) ([]GetJobVideosWithProgressRow, error) {
-	rows, err := q.db.QueryContext(ctx, getJobVideosWithProgress, jobID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetJobVideosWithProgressRow
-	for rows.Next() {
-		var i GetJobVideosWithProgressRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.JobID,
-			&i.ID_2,
-			&i.YtVideoID,
-			&i.Progress,
-			&i.BlobStorageID,
-			&i.Error,
-			&i.ID_3,
-			&i.YtVideoID_2,
-			&i.FilterID,
-			&i.Progress_2,
-			&i.Error_2,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getScrapedVideos = `-- name: GetScrapedVideos :many
 SELECT
   yt_videos.id AS yt_video_id,
@@ -126,6 +64,57 @@ func (q *Queries) GetScrapedVideos(ctx context.Context) ([]GetScrapedVideosRow, 
 			&i.JobID,
 			&i.SearchQuery,
 			&i.FilterID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getVideoWithImportAttempts = `-- name: GetVideoWithImportAttempts :many
+SELECT
+  yt_videos.id, job_id, import_attempts.id, yt_video_id, filter_id, progress, error
+FROM
+  yt_videos
+  JOIN import_attempts ON yt_videos.id = import_attempts.yt_video_id
+WHERE
+  yt_videos.id = ?
+`
+
+type GetVideoWithImportAttemptsRow struct {
+	ID        string
+	JobID     sql.NullString
+	ID_2      string
+	YtVideoID sql.NullString
+	FilterID  sql.NullString
+	Progress  sql.NullInt64
+	Error     sql.NullString
+}
+
+func (q *Queries) GetVideoWithImportAttempts(ctx context.Context, id string) ([]GetVideoWithImportAttemptsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getVideoWithImportAttempts, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetVideoWithImportAttemptsRow
+	for rows.Next() {
+		var i GetVideoWithImportAttemptsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.JobID,
+			&i.ID_2,
+			&i.YtVideoID,
+			&i.FilterID,
+			&i.Progress,
+			&i.Error,
 		); err != nil {
 			return nil, err
 		}
