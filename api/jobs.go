@@ -1,189 +1,175 @@
 package api
 
 import (
+	"context"
 	"database/sql"
 	"log/slog"
-	"net/http"
 
-	"github.com/go-chi/chi"
-	"github.com/go-chi/render"
+	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
+
 	"github.com/samber/lo"
+	"github.com/vkhobor/go-opencv/config"
 	"github.com/vkhobor/go-opencv/db"
 )
 
-func HandleCreateJob(queries *db.Queries, wakeJobs chan<- struct{}) http.HandlerFunc {
-	type jobRequest struct {
-		SearchQuery string `json:"search_query"`
-		Limit       int    `json:"limit"`
-		FilterId    string `json:"filter_id"`
-	}
-
-	type jobResponse struct {
-		Id string `json:"id"`
-	}
-
-	return http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
-			articleRequest := jobRequest{}
-			err := render.Decode(r, &articleRequest)
-			if err != nil || articleRequest.Limit < 1 || articleRequest.SearchQuery == "" {
-				render.Status(r, http.StatusBadRequest)
-				render.PlainText(w, r, "Error decoding request body")
-				return
-			}
-
-			res, err := queries.CreateJob(r.Context(), db.CreateJobParams{
-				FilterID: sql.NullString{
-					String: articleRequest.FilterId,
-					Valid:  true,
-				},
-				SearchQuery: sql.NullString{
-					String: articleRequest.SearchQuery,
-					Valid:  true,
-				},
-				Limit: sql.NullInt64{
-					Int64: int64(articleRequest.Limit),
-					Valid: true,
-				},
-				ID: uuid.New().String(),
-			})
-			if err != nil {
-				render.Status(r, http.StatusInternalServerError)
-				render.PlainText(w, r, err.Error())
-				return
-			}
-
-			render.JSON(w, r, jobResponse{Id: res.ID})
-
-			select {
-			case wakeJobs <- struct{}{}:
-				slog.Info("Waking up jobs")
-			default:
-				slog.Info("Jobs already awake")
-			}
-		},
-	)
+type CreateJob struct {
+	SearchQuery string `json:"search_query"`
+	Limit       int    `json:"limit"`
+	FilterId    string `json:"filter_id"`
 }
 
-func HandleListJobs(queries *db.Queries) http.HandlerFunc {
-	type jobResponse struct {
-		ID          string `json:"id"`
-		SearchQuery string `json:"search_query"`
-		Limit       int    `json:"limit"`
+type CreatedJob struct {
+	Id string `json:"id"`
+}
+
+type CreatedJobResponse struct {
+	Body     CreatedJob
+	Location string `header:"Location"`
+}
+
+func HandleCreateJob(queries *db.Queries, wakeJobs chan<- struct{}, config config.ProgramConfig) Handler[WithBody[CreateJob], CreatedJobResponse] {
+	return func(ctx context.Context, wb *WithBody[CreateJob]) (*CreatedJobResponse, error) {
+		res, err := queries.CreateJob(ctx, db.CreateJobParams{
+			FilterID: sql.NullString{
+				String: wb.Body.FilterId,
+				Valid:  true,
+			},
+			SearchQuery: sql.NullString{
+				String: wb.Body.SearchQuery,
+				Valid:  true,
+			},
+			Limit: sql.NullInt64{
+				Int64: int64(wb.Body.Limit),
+				Valid: true,
+			},
+			ID: uuid.New().String(),
+		})
+
+		if err != nil {
+			return nil, err
+		}
+
+		select {
+		case wakeJobs <- struct{}{}:
+			slog.Info("Waking up jobs")
+		default:
+			slog.Info("Jobs already awake")
+		}
+
+		return &CreatedJobResponse{
+			Body: CreatedJob{
+				Id: res.ID,
+			},
+			Location: config.BaseUrl + "/api/jobs/" + res.ID,
+		}, nil
 	}
+}
 
-	return http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
-			res, err := queries.ListJobsWithVideos(r.Context())
-			if err != nil {
-				render.Status(r, http.StatusInternalServerError)
-				render.PlainText(w, r, err.Error())
-				return
-			}
+type ListJobResponse struct {
+	ID          string `json:"id"`
+	SearchQuery string `json:"search_query"`
+	Limit       int    `json:"limit"`
+}
 
-			grouped := lo.GroupBy(res, func(row db.ListJobsWithVideosRow) string {
-				return row.ID
-			})
+func HandleListJobs(queries *db.Queries) Handler[Empty, WithBody[[]ListJobResponse]] {
+	return func(ctx context.Context, e *Empty) (*WithBody[[]ListJobResponse], error) {
+		res, err := queries.ListJobsWithVideos(ctx)
+		if err != nil {
+			return nil, err
+		}
 
-			jobsResponse := []jobResponse{}
-			for key, value := range grouped {
+		grouped := lo.GroupBy(res, func(row db.ListJobsWithVideosRow) string {
+			return row.ID
+		})
 
-				if len(value) == 1 && value[0].ID_2.Valid == false {
-					jobsResponse = append(jobsResponse, jobResponse{
-						SearchQuery: value[0].SearchQuery.String,
-						ID:          key,
-						Limit:       int(value[0].Limit.Int64),
-					})
-					continue
-				}
+		jobsResponse := []ListJobResponse{}
+		for key, value := range grouped {
 
-				jobsResponse = append(jobsResponse, jobResponse{
+			if len(value) == 1 && value[0].ID_2.Valid == false {
+				jobsResponse = append(jobsResponse, ListJobResponse{
 					SearchQuery: value[0].SearchQuery.String,
 					ID:          key,
 					Limit:       int(value[0].Limit.Int64),
 				})
+				continue
 			}
 
-			render.JSON(w, r, jobsResponse)
-		},
-	)
-}
-
-func HandleJobDetails(queries *db.Queries) http.HandlerFunc {
-	type jobResponse struct {
-		ID          string `json:"id"`
-		SearchQuery string `json:"search_query"`
-		VideoTarget int    `json:"video_target"`
-		VideosFound int    `json:"videos_found"`
-	}
-
-	return http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
-			jobId := chi.URLParam(r, "id")
-			if jobId == "" {
-				render.Status(r, http.StatusBadRequest)
-				render.PlainText(w, r, "No file id provided")
-				return
-			}
-
-			res, err := queries.GetJob(r.Context(), jobId)
-			if err != nil {
-				render.Status(r, http.StatusInternalServerError)
-				render.PlainText(w, r, err.Error())
-				return
-			}
-
-			resp := jobResponse{
-				ID:          res.ID,
-				SearchQuery: res.SearchQuery.String,
-				VideoTarget: int(res.Limit.Int64),
-				VideosFound: int(res.VideosFound),
-			}
-
-			render.JSON(w, r, resp)
-		},
-	)
-}
-
-func HandleJobVideosFound(queries *db.Queries) http.HandlerFunc {
-	type video struct {
-		YoutubeId string `json:"youtube_id"`
-	}
-
-	type jobResponse struct {
-		ID     string  `json:"id"`
-		Videos []video `json:"videos"`
-	}
-
-	return http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
-			jobId := chi.URLParam(r, "id")
-			if jobId == "" {
-				render.Status(r, http.StatusBadRequest)
-				render.PlainText(w, r, "No file id provided")
-				return
-			}
-
-			job, err := queries.GetOneWithVideos(r.Context(), jobId)
-			if err != nil {
-				render.Status(r, http.StatusInternalServerError)
-				render.PlainText(w, r, err.Error())
-				return
-			}
-
-			videos := lo.Map(job, func(row db.GetOneWithVideosRow, index int) video {
-				return video{
-					YoutubeId: row.VideoYoutubeID.String,
-				}
+			jobsResponse = append(jobsResponse, ListJobResponse{
+				SearchQuery: value[0].SearchQuery.String,
+				ID:          key,
+				Limit:       int(value[0].Limit.Int64),
 			})
+		}
+		return &WithBody[[]ListJobResponse]{
+			Body: jobsResponse,
+		}, nil
+	}
+}
 
-			resp := jobResponse{
-				ID:     jobId,
-				Videos: videos,
+type JobDetails struct {
+	ID          string `json:"id"`
+	SearchQuery string `json:"search_query"`
+	VideoTarget int    `json:"video_target"`
+	VideosFound int    `json:"videos_found"`
+}
+
+func HandleJobDetails(queries *db.Queries) Handler[WithPathId, WithBody[JobDetails]] {
+	return func(ctx context.Context, wpi *WithPathId) (*WithBody[JobDetails], error) {
+		if wpi.ID == "" {
+			return nil, huma.Error400BadRequest("id not found")
+		}
+
+		res, err := queries.GetJob(ctx, wpi.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		resp := JobDetails{
+			ID:          res.ID,
+			SearchQuery: res.SearchQuery.String,
+			VideoTarget: int(res.Limit.Int64),
+			VideosFound: int(res.VideosFound),
+		}
+		return &WithBody[JobDetails]{
+			Body: resp,
+		}, nil
+	}
+}
+
+type JobVideo struct {
+	YoutubeId string `json:"youtube_id"`
+}
+
+type JobAndVideos struct {
+	ID     string     `json:"id"`
+	Videos []JobVideo `json:"videos"`
+}
+
+func HandleJobVideosFound(queries *db.Queries) Handler[WithPathId, WithBody[JobAndVideos]] {
+	return func(ctx context.Context, wpi *WithPathId) (*WithBody[JobAndVideos], error) {
+		if wpi.ID == "" {
+			return nil, huma.Error400BadRequest("id not found")
+		}
+
+		job, err := queries.GetOneWithVideos(ctx, wpi.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		videos := lo.Map(job, func(row db.GetOneWithVideosRow, index int) JobVideo {
+			return JobVideo{
+				YoutubeId: row.VideoYoutubeID.String,
 			}
+		})
 
-			render.JSON(w, r, resp)
-		},
-	)
+		resp := JobAndVideos{
+			ID:     wpi.ID,
+			Videos: videos,
+		}
+
+		return &WithBody[JobAndVideos]{
+			Body: resp,
+		}, nil
+	}
 }

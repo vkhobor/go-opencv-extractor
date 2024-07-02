@@ -9,11 +9,13 @@ import (
 type ProgramConfig struct {
 	Port        int    `mapstructure:"port"`
 	BlobStorage string `mapstructure:"blob_storage"`
+	BaseUrl     string `mapstructure:"base_url"`
 	Db          string `mapstructure:"db"`
 }
 
 func addDefaults(viperConf *viper.Viper) {
 	viperConf.SetDefault("port", 8080)
+	viperConf.SetDefault("base_url", "http://localhost:8080")
 	viperConf.SetDefault("blob_storage", "~/.go_extractor/data")
 	viperConf.SetDefault("db", "~/.go_extractor/db.sqlite3")
 }

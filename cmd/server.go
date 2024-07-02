@@ -112,12 +112,11 @@ func run(ctx context.Context, w io.Writer, args []string, programConfig config.P
 	}
 
 	jobManager := background.DbMonitor{
-		Wake:           make(chan struct{}, 1),
-		AutoWakePeriod: time.Minute * 2,
-		Queries:        &highLevelQueries,
-		ScrapeInput:    scrapeArgsChan,
-		DownloadInput:  scrapedVideoChan,
-		ImportInput:    downloadedChan,
+		Wake:          make(chan struct{}, 1),
+		Queries:       &highLevelQueries,
+		ScrapeInput:   scrapeArgsChan,
+		DownloadInput: scrapedVideoChan,
+		ImportInput:   downloadedChan,
 	}
 
 	slog.Info("Starting jobs")
@@ -130,7 +129,7 @@ func run(ctx context.Context, w io.Writer, args []string, programConfig config.P
 	jobManager.Wake <- struct{}{}
 
 	portString := fmt.Sprintf(":%d", programConfig.Port)
-	router := api.NewRouter(dbQueries, jobManager.Wake, dirConfig)
+	router := api.NewRouter(dbQueries, jobManager.Wake, dirConfig, programConfig)
 	srv := &http.Server{Addr: portString, Handler: router}
 	slog.Info("Server started", "port", programConfig.Port)
 

@@ -1,37 +1,36 @@
 package api
 
 import (
-	"embed"
 	"errors"
 	"io"
+	"io/fs"
 	"mime"
 	"net/http"
-	"path"
 	"path/filepath"
 
 	"github.com/vkhobor/go-opencv/web"
 )
 
-func HandleNotFound() http.HandlerFunc {
+func HandleCatchAll() http.HandlerFunc {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			err := tryRead(web.StaticFiles, "dist/extractor/browser", r.URL.Path, w)
+			prefixedPath := filepath.Join(web.PrefixForClientFiles, r.URL.Path)
+			err := readFileToResponse(web.StaticFiles, prefixedPath, w)
 			if err == nil {
 				return
 			}
-			err = tryRead(web.StaticFiles, "dist/extractor/browser", "index.html", w)
+
+			err = readFileToResponse(web.StaticFiles, web.IndexHtml, w)
 			if err != nil {
 				panic(err)
 			}
 		})
 }
 
-var httpFS = http.FileServer(http.FS(web.StaticFiles))
-
 var ErrDir = errors.New("path is dir")
 
-func tryRead(fs embed.FS, prefix, requestedPath string, w http.ResponseWriter) error {
-	f, err := fs.Open(path.Join(prefix, requestedPath))
+func readFileToResponse(fileSystem fs.FS, requestedPath string, w http.ResponseWriter) error {
+	f, err := fileSystem.Open(requestedPath)
 	if err != nil {
 		return err
 	}
