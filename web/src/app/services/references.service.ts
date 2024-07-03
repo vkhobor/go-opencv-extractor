@@ -3,7 +3,6 @@ import { Injectable, inject } from '@angular/core';
 import { injectMutation, injectQuery, injectQueryClient } from '@ngneat/query';
 import { DefaultHttpProxyService } from './http/default-http-proxy.service';
 import { Observable } from 'rxjs';
-import { Job } from '../models/Job';
 
 @Injectable({
   providedIn: 'root',

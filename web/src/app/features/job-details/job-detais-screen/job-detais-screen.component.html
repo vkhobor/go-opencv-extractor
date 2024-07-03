@@ -99,7 +99,7 @@
         <!-- for -->
         @for (item of videos.videos; track item.youtube_id) {
         <div class="flex flex-row justify-around">
-          <app-youtube-embed [id]="item.youtube_id"></app-youtube-embed>
+          <app-youtube-embed [id]="item.youtube_id!"></app-youtube-embed>
           <div>
             <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
               <app-object-table [value]="item"></app-object-table>

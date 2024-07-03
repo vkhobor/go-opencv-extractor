@@ -15,7 +15,6 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { CreateJob } from '../../../../models/CreateJob';
 import { FilterService } from '../../../../services/filter.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { injectQuery } from '@ngneat/query';
@@ -24,6 +23,7 @@ import { Observable } from 'rxjs';
 import { Filter } from '../../../../models/Filter';
 import enviroment from '../../../../../enviroments/enviroment';
 import { UndefinedInitialDataOptions } from '@ngneat/query/lib/query-options';
+import { CreateJob } from '../../../../../api/models';
 
 @Component({
   selector: 'app-create-new-job-form',

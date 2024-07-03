@@ -5,8 +5,8 @@ import { Modal } from '../../../../models/Modal';
 import { CreateNewJobFormComponent } from '../form/create-new-job-form.component';
 import { CommonModule } from '@angular/common';
 import { JobsService } from '../../../../services/jobs.service';
-import { CreateJob } from '../../../../models/CreateJob';
 import { ButtonComponent } from '../../../../components/button/button.component';
+import { CreateJob } from '../../../../../api/models';
 
 @Component({
   selector: 'app-add-modal',

@@ -53,7 +53,7 @@ export class JobsComponent {
   }
 
   dataMapped = computed(() => {
-    const sorted = this.data().data.sort((a, b) => a.id.localeCompare(b.id));
+    const sorted = this.data().data.sort((a, b) => a.id!.localeCompare(b.id!));
 
     return sorted.map((job) => ({
       ...job,

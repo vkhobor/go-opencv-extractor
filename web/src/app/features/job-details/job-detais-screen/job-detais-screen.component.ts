@@ -2,15 +2,6 @@ import { Component, Signal, computed, inject, signal } from '@angular/core';
 import { LayoutComponent } from '../../../components/layout/layout.component';
 import { JobsService } from '../../../services/jobs.service';
 import { ActivatedRoute } from '@angular/router';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { filter, startWith, switchMap } from 'rxjs';
-import {
-  DefinedQueryObserverResult,
-  QueryObserverLoadingErrorResult,
-  QueryObserverResult,
-  createPendingObserverResult,
-} from '@ngneat/query';
-import { JobDetails } from '../../../models/JobDetails';
 import { JsonPipe, NgClass } from '@angular/common';
 import { YoutubeEmbedComponent } from '../youtube-embed/youtube-embed.component';
 import { ObjectTableComponent } from '../../../components/object-table/object-table.component';
