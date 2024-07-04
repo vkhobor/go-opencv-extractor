@@ -78,6 +78,57 @@ func (q *Queries) GetScrapedVideos(ctx context.Context) ([]GetScrapedVideosRow, 
 	return items, nil
 }
 
+const getVideoWithDownloadAttempts = `-- name: GetVideoWithDownloadAttempts :many
+SELECT
+  yt_videos.id, job_id, download_attempts.id, yt_video_id, progress, blob_storage_id, error
+FROM
+  yt_videos
+  JOIN download_attempts ON yt_videos.id = download_attempts.yt_video_id
+WHERE
+  yt_videos.id = ?
+`
+
+type GetVideoWithDownloadAttemptsRow struct {
+	ID            string
+	JobID         sql.NullString
+	ID_2          string
+	YtVideoID     sql.NullString
+	Progress      sql.NullInt64
+	BlobStorageID sql.NullString
+	Error         sql.NullString
+}
+
+func (q *Queries) GetVideoWithDownloadAttempts(ctx context.Context, id string) ([]GetVideoWithDownloadAttemptsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getVideoWithDownloadAttempts, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetVideoWithDownloadAttemptsRow
+	for rows.Next() {
+		var i GetVideoWithDownloadAttemptsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.JobID,
+			&i.ID_2,
+			&i.YtVideoID,
+			&i.Progress,
+			&i.BlobStorageID,
+			&i.Error,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getVideoWithImportAttempts = `-- name: GetVideoWithImportAttempts :many
 SELECT
   yt_videos.id, job_id, import_attempts.id, yt_video_id, filter_id, progress, error

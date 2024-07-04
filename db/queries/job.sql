@@ -49,12 +49,12 @@ FROM
             jobs.id
     ) as t ON t.id = jobs.id;
 
--- name: GetOneWithVideos :many
+-- name: GetVideosForJob :many
 SELECT
     j.id AS id,
     v.id AS video_youtube_id
 FROM
     jobs j
-    LEFT JOIN yt_videos v ON j.id = v.job_id
+    JOIN yt_videos v ON j.id = v.job_id
 WHERE
     j.id = ?;

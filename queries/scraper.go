@@ -3,6 +3,7 @@ package queries
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	"github.com/samber/lo"
 	"github.com/vkhobor/go-opencv/db"
@@ -39,8 +40,20 @@ func (jc *Queries) GetScrapedVideos() []ScrapedVideo {
 	return result
 }
 
-func (jc *Queries) SaveNewlyScraped(video ScrapedVideo, jobId string) bool {
-	_, err := jc.Queries.AddYtVideo(context.Background(), db.AddYtVideoParams{
+var ErrLimitExceeded = errors.New("over limit")
+
+func (jc *Queries) SaveNewlyScraped(video ScrapedVideo, jobId string) error {
+	job, err := jc.Queries.GetJob(context.Background(), jobId)
+	if err != nil {
+		return err
+	}
+
+	if job.VideosFound >= job.Limit.Int64 {
+		return ErrLimitExceeded
+	}
+
+	// TODO if vieo already exists, update it, connect it to the job and return
+	_, err = jc.Queries.AddYtVideo(context.Background(), db.AddYtVideoParams{
 		ID: video.ID,
 		JobID: sql.NullString{
 			String: jobId,
@@ -48,5 +61,5 @@ func (jc *Queries) SaveNewlyScraped(video ScrapedVideo, jobId string) bool {
 		},
 	})
 
-	return err == nil
+	return err
 }

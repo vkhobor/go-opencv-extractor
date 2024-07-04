@@ -137,31 +137,31 @@ func (q *Queries) GetJobs(ctx context.Context) ([]GetJobsRow, error) {
 	return items, nil
 }
 
-const getOneWithVideos = `-- name: GetOneWithVideos :many
+const getVideosForJob = `-- name: GetVideosForJob :many
 SELECT
     j.id AS id,
     v.id AS video_youtube_id
 FROM
     jobs j
-    LEFT JOIN yt_videos v ON j.id = v.job_id
+    JOIN yt_videos v ON j.id = v.job_id
 WHERE
     j.id = ?
 `
 
-type GetOneWithVideosRow struct {
+type GetVideosForJobRow struct {
 	ID             string
-	VideoYoutubeID sql.NullString
+	VideoYoutubeID string
 }
 
-func (q *Queries) GetOneWithVideos(ctx context.Context, id string) ([]GetOneWithVideosRow, error) {
-	rows, err := q.db.QueryContext(ctx, getOneWithVideos, id)
+func (q *Queries) GetVideosForJob(ctx context.Context, id string) ([]GetVideosForJobRow, error) {
+	rows, err := q.db.QueryContext(ctx, getVideosForJob, id)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetOneWithVideosRow
+	var items []GetVideosForJobRow
 	for rows.Next() {
-		var i GetOneWithVideosRow
+		var i GetVideosForJobRow
 		if err := rows.Scan(&i.ID, &i.VideoYoutubeID); err != nil {
 			return nil, err
 		}

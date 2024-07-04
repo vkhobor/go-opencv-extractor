@@ -49,3 +49,12 @@ FROM
   JOIN import_attempts ON yt_videos.id = import_attempts.yt_video_id
 WHERE
   yt_videos.id = ?;
+
+-- name: GetVideoWithDownloadAttempts :many
+SELECT
+  *
+FROM
+  yt_videos
+  JOIN download_attempts ON yt_videos.id = download_attempts.yt_video_id
+WHERE
+  yt_videos.id = ?;

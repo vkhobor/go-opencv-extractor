@@ -43,3 +43,61 @@ func (q *Queries) AddImportAttempt(ctx context.Context, arg AddImportAttemptPara
 	)
 	return i, err
 }
+
+const getImportAttempt = `-- name: GetImportAttempt :one
+SELECT
+  id, yt_video_id, filter_id, progress, error
+FROM
+  import_attempts
+WHERE
+  id = ?
+`
+
+func (q *Queries) GetImportAttempt(ctx context.Context, id string) (ImportAttempt, error) {
+	row := q.db.QueryRowContext(ctx, getImportAttempt, id)
+	var i ImportAttempt
+	err := row.Scan(
+		&i.ID,
+		&i.YtVideoID,
+		&i.FilterID,
+		&i.Progress,
+		&i.Error,
+	)
+	return i, err
+}
+
+const updateImportAttemptError = `-- name: UpdateImportAttemptError :exec
+UPDATE import_attempts
+SET
+  error = ?
+WHERE
+  id = ?
+`
+
+type UpdateImportAttemptErrorParams struct {
+	Error sql.NullString
+	ID    string
+}
+
+func (q *Queries) UpdateImportAttemptError(ctx context.Context, arg UpdateImportAttemptErrorParams) error {
+	_, err := q.db.ExecContext(ctx, updateImportAttemptError, arg.Error, arg.ID)
+	return err
+}
+
+const updateImportAttemptProgress = `-- name: UpdateImportAttemptProgress :exec
+UPDATE import_attempts
+SET
+  progress = ?
+WHERE
+  id = ?
+`
+
+type UpdateImportAttemptProgressParams struct {
+	Progress sql.NullInt64
+	ID       string
+}
+
+func (q *Queries) UpdateImportAttemptProgress(ctx context.Context, arg UpdateImportAttemptProgressParams) error {
+	_, err := q.db.ExecContext(ctx, updateImportAttemptProgress, arg.Progress, arg.ID)
+	return err
+}

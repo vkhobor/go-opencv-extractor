@@ -4,7 +4,6 @@ import (
 	"errors"
 	"log/slog"
 
-	"github.com/samber/lo"
 	"github.com/vkhobor/go-opencv/config"
 	"github.com/vkhobor/go-opencv/queries"
 	"github.com/vkhobor/go-opencv/scraper"
@@ -13,10 +12,11 @@ import (
 
 type ScraperJob struct {
 	scraper.Scraper
-	Queries *queries.Queries
-	Input   <-chan queries.Job
-	Output  chan<- queries.ScrapedVideo
-	Config  config.DirectoryConfig
+	Queries              *queries.Queries
+	MaxErrorStopRetrying int
+	Input                <-chan queries.Job
+	Output               chan<- queries.ScrapedVideo
+	Config               config.DirectoryConfig
 }
 
 // Start starts the Scraper
@@ -24,11 +24,7 @@ func (d *ScraperJob) Start() {
 	for video := range d.Input {
 		results, err := d.scrapeSingle(video)
 		if err != nil {
-			slog.Error(
-				"Error while scraping video",
-				"error", err,
-				"video", video,
-				"method", "Start")
+			continue
 		}
 
 		for _, result := range results {
@@ -38,30 +34,23 @@ func (d *ScraperJob) Start() {
 }
 
 func (d *ScraperJob) scrapeSingle(args queries.Job) ([]queries.ScrapedVideo, error) {
-	if args.Limit <= 0 {
-		return nil, errors.New("limit is less than or equal to 0")
-	}
-	limit := args.Limit
-	if limit > 50 {
-		limit = 50
-	}
 
 	results := []queries.ScrapedVideo{}
-	err := d.Scraper.Scrape(args.SearchQuery, d.handleFound(args, limit, results))
+	err := d.Scraper.Scrape(args.SearchQuery, d.handleFound(args, &results))
 
 	if err != nil {
+		slog.Error("Error while setting up scraper", "error", err, "method", "scrapeSingle")
 		return nil, err
 	}
 
 	return results, nil
 }
 
-func (d *ScraperJob) handleFound(args queries.Job, limit int, output []queries.ScrapedVideo) func(item youtube.YoutubeVideo, err error, stop func()) {
-	saved := 0
+func (d *ScraperJob) handleFound(args queries.Job, output *[]queries.ScrapedVideo) func(item youtube.YoutubeVideo, err error, stop func()) {
 	errored := 0
 
-	f := func(item youtube.YoutubeVideo, err error, stop func()) {
-		if errored >= 5 {
+	return func(item youtube.YoutubeVideo, err error, stop func()) {
+		if errored >= d.MaxErrorStopRetrying {
 			stop()
 			return
 		}
@@ -78,38 +67,17 @@ func (d *ScraperJob) handleFound(args queries.Job, limit int, output []queries.S
 			ID:  item.String(),
 		}
 
-		// TODO should only allow saving if does not make the database inconsistent, like scraping over the limit
-		ok := d.Queries.SaveNewlyScraped(scraped, args.JobID)
-		if !ok {
-			slog.Error("Error while saving scraped video", "video", scraped, "method", "scrapeSingle")
+		err = d.Queries.SaveNewlyScraped(scraped, args.JobID)
+		if err != nil {
+			if errors.Is(err, queries.ErrLimitExceeded) {
+				stop()
+				return
+			}
+
+			slog.Error("Error while saving scraped video", "error", err, "video", scraped, "method", "scrapeSingle")
 			errored++
 		}
 
-		saved++
-		output = append(output, scraped)
-
-		if saved >= limit {
-			d.Scraper.Stop()
-		}
+		*output = append(*output, scraped)
 	}
-	return f
-}
-
-func (d *ScraperJob) handleAlreadySaved(video queries.ScrapedVideo) error {
-	scraped := d.Queries.GetScrapedVideos()
-	found, ok := lo.Find(scraped, func(item queries.ScrapedVideo) bool {
-		return item.ID == video.ID
-	})
-	if !ok {
-		return errors.New("video not found")
-	}
-
-	if found.Job.FilterID == video.FilterID {
-		return nil
-	}
-
-	// TODO attach the job's filter request to the video
-
-	slog.Debug("Already saved", "video", video, "found", found, "method", "handleAlreadySaved")
-	return nil
 }

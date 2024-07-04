@@ -27,17 +27,17 @@ type Scraper struct {
 	visitors []*myCollyCollector
 }
 
-func (s Scraper) Stop() {
+func (s *Scraper) Stop() {
 	for _, v := range s.visitors {
 		v.Stop()
 	}
 }
 
-func (s Scraper) Scrape(query string, onFound func(youtube.YoutubeVideo, error, func())) error {
-	singlePageVisitor := NewCollector(s)
+func (s *Scraper) Scrape(query string, onFound func(youtube.YoutubeVideo, error, func())) error {
+	singlePageVisitor := NewCollector(*s)
 	singlePageVisitor.MaxDepth = 1
 
-	allPagesVisitor := NewCollector(s)
+	allPagesVisitor := NewCollector(*s)
 
 	s.visitors = append(s.visitors, &singlePageVisitor, &allPagesVisitor)
 
@@ -58,6 +58,9 @@ func (s Scraper) Scrape(query string, onFound func(youtube.YoutubeVideo, error, 
 
 	slog.Debug("Start scraping", "url", urlToScrape)
 	allPagesVisitor.Visit(urlToScrape)
+
+	allPagesVisitor.Wait()
+	singlePageVisitor.Wait()
 
 	return nil
 }

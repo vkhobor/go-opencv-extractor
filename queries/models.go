@@ -8,7 +8,6 @@ type Frame struct {
 type ImportedVideo struct {
 	DownlodedVideo
 	ExtractedFrames []Frame
-	Error           error
 }
 
 type DownlodedVideo struct {
@@ -18,6 +17,7 @@ type DownlodedVideo struct {
 }
 
 type Job struct {
+	// TODO remove limit
 	Limit       int
 	JobID       string
 	SearchQuery string

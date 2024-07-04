@@ -19,11 +19,17 @@ type Downloader struct {
 
 func (d *Downloader) Start() {
 	for video := range d.Input {
-		d.Output <- d.downloadVideo(video)
+		downloaded, err := d.downloadVideo(video)
+		if err != nil {
+			slog.Error("Error while downloading video", "error", err, "video", video)
+			continue
+		}
+
+		d.Output <- downloaded
 	}
 }
 
-func (d *Downloader) downloadVideo(video queries.ScrapedVideo) queries.DownlodedVideo {
+func (d *Downloader) downloadVideo(video queries.ScrapedVideo) (queries.DownlodedVideo, error) {
 	time.Sleep(d.Throttle)
 	slog.Info("Download started", "video", video)
 	youtubeVideo := youtube.YoutubeVideo(video.ID)
@@ -37,17 +43,18 @@ func (d *Downloader) downloadVideo(video queries.ScrapedVideo) queries.Downloded
 
 	if err != nil {
 		slog.Error("Error while downloading video", "error", err, "video", video)
+		return queries.DownlodedVideo{}, err
 	} else {
 		slog.Info("Downloaded video", "video", video, "downloaded", downloaded)
 	}
 
-	// TODO should only allow saving if does not make the database inconsistent, like multiple sucessful download attempts for the same video
 	err = d.Queries.SaveDownloadAttempt(downloaded)
 	if err != nil {
 		slog.Error("Error while saving download attempt", "error", err, "video", video)
+		return queries.DownlodedVideo{}, err
 	}
 
-	return downloaded
+	return downloaded, nil
 }
 
 func HandleProgress(progress chan float64, video queries.ScrapedVideo) {

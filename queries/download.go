@@ -3,10 +3,12 @@ package queries
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"log/slog"
 	"os"
 
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"github.com/vkhobor/go-opencv/db"
 )
 
@@ -32,7 +34,23 @@ func (jc *Queries) GetDownloadedVideos() []DownlodedVideo {
 	return result
 }
 
+var ErrHasDownloaded = errors.New("already downloaded")
+
 func (jc *Queries) SaveDownloadAttempt(video DownlodedVideo) error {
+	attempts, err := jc.Queries.GetVideoWithDownloadAttempts(context.Background(), video.ID)
+	if err != nil {
+		return err
+	}
+
+	if len(attempts) > 0 {
+		hasSuccessful := lo.SomeBy(attempts, func(item db.GetVideoWithDownloadAttemptsRow) bool {
+			return !item.Error.Valid
+		})
+		if hasSuccessful {
+			return ErrHasDownloaded
+		}
+	}
+
 	if video.Error != nil {
 		err := jc.Queries.AddDownloadAttempt(context.Background(), db.AddDownloadAttemptParams{
 			ID: uuid.New().String(),
@@ -53,7 +71,7 @@ func (jc *Queries) SaveDownloadAttempt(video DownlodedVideo) error {
 
 	// TODO transaction
 	blobId := uuid.New()
-	err := jc.Queries.AddBlob(context.Background(), db.AddBlobParams{
+	err = jc.Queries.AddBlob(context.Background(), db.AddBlobParams{
 		ID:   blobId.String(),
 		Path: video.SavePath,
 	})

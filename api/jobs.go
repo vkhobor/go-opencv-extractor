@@ -152,14 +152,14 @@ func HandleJobVideosFound(queries *db.Queries) Handler[WithPathId, WithBody[JobA
 			return nil, huma.Error400BadRequest("id not found")
 		}
 
-		job, err := queries.GetOneWithVideos(ctx, wpi.ID)
+		job, err := queries.GetVideosForJob(ctx, wpi.ID)
 		if err != nil {
 			return nil, err
 		}
 
-		videos := lo.Map(job, func(row db.GetOneWithVideosRow, index int) JobVideo {
+		videos := lo.Map(job, func(row db.GetVideosForJobRow, index int) JobVideo {
 			return JobVideo{
-				YoutubeId: row.VideoYoutubeID.String,
+				YoutubeId: row.VideoYoutubeID,
 			}
 		})
 

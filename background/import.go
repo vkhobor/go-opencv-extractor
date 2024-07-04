@@ -1,6 +1,7 @@
 package background
 
 import (
+	"errors"
 	"log/slog"
 	"time"
 
@@ -19,6 +20,7 @@ type Importer struct {
 
 func (d *Importer) Start() {
 	for video := range d.Input {
+		slog.Debug("Importer starting importing", "video", video, "method", "Start")
 		imported, err := d.importVideo(video)
 		if err != nil {
 			slog.Error("Error while importing video", "error", err, "video", video)
@@ -31,27 +33,40 @@ func (d *Importer) Start() {
 
 func (d *Importer) importVideo(video queries.DownlodedVideo) (queries.ImportedVideo, error) {
 	refs, err := d.Queries.GetRefImages(video)
-	if err != nil || len(refs) == 0 {
-		slog.Debug("No videos to import or no reference images", "video", video, "refs", refs, "error", err)
-		return queries.ImportedVideo{}, nil
+	if err != nil {
+		return queries.ImportedVideo{}, err
+	}
+	if len(refs) == 0 {
+		return queries.ImportedVideo{}, errors.New("no ref images found")
 	}
 
 	id, err := d.Queries.StartImportAttempt(video)
 	if err != nil {
-		slog.Error("Error while starting import attempt", "error", err, "video", video)
 		return queries.ImportedVideo{}, err
 	}
 
-	slog.Info("Running import job", "videos_waiting_for_import", d)
-	videoImported := d.handleSingle(refs, video)
+	videoImported, err := d.handleSingle(refs, video)
+	if err != nil {
+		err = d.Queries.UpdateError(id, err)
+		return queries.ImportedVideo{}, err
+	}
 
-	// TODO should only allow saving if does not make the database inconsistent, like multiple sucessful imports for the same video
-	d.Queries.SaveFrames(videoImported, id)
-	d.Queries.UpdateProgress(id, 100)
+	err = d.Queries.FinishImport(videoImported, id)
+	if err != nil {
+		if errors.Is(err, queries.ErrHasImported) {
+			err = d.Queries.UpdateError(id, err)
+			if err != nil {
+				return queries.ImportedVideo{}, err
+			}
+		}
+
+		return queries.ImportedVideo{}, err
+	}
+
 	return videoImported, nil
 }
 
-func (d *Importer) handleSingle(refs []string, video queries.DownlodedVideo) queries.ImportedVideo {
+func (d *Importer) handleSingle(refs []string, video queries.DownlodedVideo) (queries.ImportedVideo, error) {
 	time.Sleep(d.Throttle)
 
 	// Make progress handling async
@@ -64,11 +79,9 @@ func (d *Importer) handleSingle(refs []string, video queries.DownlodedVideo) que
 
 	val, err := videoLib.HandleVideoFromPath(video.SavePath, d.Config.GetImagesDir(), 1, "", refs, progressHandler)
 	if err != nil {
-		slog.Error("Error while importing video", "error", err, "video", video)
-		return queries.ImportedVideo{
-			Error: err,
-		}
+		return queries.ImportedVideo{}, err
 	}
+
 	slog.Info("Imported video", "video", val.FilePaths, "id", video.ID)
 	frames := make([]queries.Frame, 0)
 	for _, v := range val.FilePaths {
@@ -77,7 +90,7 @@ func (d *Importer) handleSingle(refs []string, video queries.DownlodedVideo) que
 	return queries.ImportedVideo{
 		DownlodedVideo:  video,
 		ExtractedFrames: frames,
-	}
+	}, nil
 }
 
 func (d *Importer) importProgressHandler(progressChan <-chan float64, video queries.DownlodedVideo) {
@@ -88,7 +101,7 @@ func (d *Importer) importProgressHandler(progressChan <-chan float64, video quer
 	for item := range progressChan {
 		select {
 		case <-ticker.C:
-			d.Queries.UpdateProgress(video.ID, int(item*100))
+			_ = d.Queries.UpdateProgress(video.ID, int(item*100))
 			slog.Info("importProgressHandler", "id", video.ID, "progress", item)
 		default:
 		}
