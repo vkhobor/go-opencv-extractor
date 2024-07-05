@@ -131,8 +131,12 @@
       },
       "JobVideo": {
         "additionalProperties": false,
-        "properties": { "youtube_id": { "type": "string" } },
-        "required": ["youtube_id"],
+        "properties": {
+          "download_status": { "type": "string" },
+          "import_status": { "type": "string" },
+          "youtube_id": { "type": "string" }
+        },
+        "required": ["youtube_id", "download_status", "import_status"],
         "type": "object"
       },
       "ListJobResponse": {
@@ -237,6 +241,22 @@
           }
         },
         "summary": "Get API jobs by ID"
+      }
+    },
+    "/api/jobs/{id}/actions/restart": {
+      "post": {
+        "responses": {
+          "202": { "description": "Accepted" },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ErrorModel" }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Restart the job pipeline"
       }
     },
     "/api/jobs/{id}/videos": {

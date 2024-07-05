@@ -21,6 +21,15 @@ export class JobsService {
     },
   });
 
+  restartJob = this.#mutate({
+    mutationFn: (id: string) => client.api.jobs.byId(id).actions.restart.post(),
+    onSuccess: () => {
+      this.#queryClient.invalidateQueries({
+        queryKey: ['jobs'],
+      });
+    },
+  });
+
   getJobs() {
     return this.#query({
       queryKey: ['jobs'] as const,

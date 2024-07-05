@@ -34,6 +34,13 @@ func NewRouter(
 		Summary:       "Create a new job",
 	}, HandleCreateJob(queries, wakeJobs, programConfig))
 
+	huma.Register(api, huma.Operation{
+		Method:        "POST",
+		Path:          "/api/jobs/{id}/actions/restart",
+		DefaultStatus: 202,
+		Summary:       "Restart the job pipeline",
+	}, HandleRestartJobPipeline(wakeJobs))
+
 	huma.Get(api, "/api/jobs", HandleListJobs(queries))
 	huma.Get(api, "/api/jobs/{id}", HandleJobDetails(queries))
 	huma.Get(api, "/api/jobs/{id}/videos", HandleJobVideosFound(queries))

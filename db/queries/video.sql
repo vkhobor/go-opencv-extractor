@@ -4,13 +4,14 @@ INSERT INTO
 VALUES
   (?, ?) RETURNING *;
 
--- name: GetYtVideo :one
+-- name: GetYtVideoWithJob :one
 SELECT
   *
 FROM
   yt_videos
+  JOIN jobs ON yt_videos.job_id = jobs.id
 WHERE
-  id = ?;
+  yt_videos.id = ?;
 
 -- name: GetScrapedVideos :many
 SELECT

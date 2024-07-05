@@ -4,6 +4,8 @@
 // @ts-ignore
 import { createErrorModelFromDiscriminatorValue, createJobDetailsFromDiscriminatorValue, type ErrorModel, type JobDetails } from '../../../models/';
 // @ts-ignore
+import { ActionsRequestBuilderNavigationMetadata, type ActionsRequestBuilder } from './actions/';
+// @ts-ignore
 import { type VideosRequestBuilder, VideosRequestBuilderRequestsMetadata } from './videos/';
 // @ts-ignore
 import { type BaseRequestBuilder, type KeysToExcludeForNavigationMetadata, type NavigationMetadata, type Parsable, type ParsableFactory, type RequestConfiguration, type RequestInformation, type RequestsMetadata } from '@microsoft/kiota-abstractions';
@@ -12,6 +14,10 @@ import { type BaseRequestBuilder, type KeysToExcludeForNavigationMetadata, type 
  * Builds and executes requests for operations under /api/jobs/{id}
  */
 export interface JobsItemRequestBuilder extends BaseRequestBuilder<JobsItemRequestBuilder> {
+    /**
+     * The actions property
+     */
+    get actions(): ActionsRequestBuilder;
     /**
      * The videos property
      */
@@ -38,6 +44,9 @@ export const JobsItemRequestBuilderUriTemplate = "{+baseurl}/api/jobs/{id}";
  * Metadata for all the navigation properties in the request builder.
  */
 export const JobsItemRequestBuilderNavigationMetadata: Record<Exclude<keyof JobsItemRequestBuilder, KeysToExcludeForNavigationMetadata>, NavigationMetadata> = {
+    actions: {
+        navigationMetadata: ActionsRequestBuilderNavigationMetadata,
+    },
     videos: {
         requestsMetadata: VideosRequestBuilderRequestsMetadata,
     },

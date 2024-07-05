@@ -174,6 +174,8 @@ export function deserializeIntoJobDetails(jobDetails: Partial<JobDetails> | unde
  */
 export function deserializeIntoJobVideo(jobVideo: Partial<JobVideo> | undefined = {}) : Record<string, (node: ParseNode) => void> {
     return {
+        "download_status": n => { jobVideo.download_status = n.getStringValue(); },
+        "import_status": n => { jobVideo.import_status = n.getStringValue(); },
         "youtube_id": n => { jobVideo.youtube_id = n.getStringValue(); },
     }
 }
@@ -270,6 +272,14 @@ export interface JobDetails extends Parsable {
 }
 export interface JobVideo extends Parsable {
     /**
+     * The download_status property
+     */
+    download_status?: string;
+    /**
+     * The import_status property
+     */
+    import_status?: string;
+    /**
      * The youtube_id property
      */
     youtube_id?: string;
@@ -348,6 +358,8 @@ export function serializeJobDetails(writer: SerializationWriter, jobDetails: Par
  * @param writer Serialization writer to use to serialize this model
  */
 export function serializeJobVideo(writer: SerializationWriter, jobVideo: Partial<JobVideo> | undefined = {}) : void {
+    writer.writeStringValue("download_status", jobVideo.download_status);
+    writer.writeStringValue("import_status", jobVideo.import_status);
     writer.writeStringValue("youtube_id", jobVideo.youtube_id);
 }
 /**

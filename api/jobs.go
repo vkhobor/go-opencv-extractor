@@ -29,7 +29,21 @@ type CreatedJobResponse struct {
 }
 
 func HandleCreateJob(queries *db.Queries, wakeJobs chan<- struct{}, config config.ProgramConfig) Handler[WithBody[CreateJob], CreatedJobResponse] {
+
 	return func(ctx context.Context, wb *WithBody[CreateJob]) (*CreatedJobResponse, error) {
+
+		jobs, err := queries.GetJobs(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		exists := lo.SomeBy(jobs, func(row db.GetJobsRow) bool {
+			return row.SearchQuery.String == wb.Body.SearchQuery && row.FilterID.String == wb.Body.FilterId
+		})
+		if exists {
+			return nil, huma.Error400BadRequest("Job already exists for query")
+		}
+
 		res, err := queries.CreateJob(ctx, db.CreateJobParams{
 			FilterID: sql.NullString{
 				String: wb.Body.FilterId,
@@ -66,6 +80,16 @@ func HandleCreateJob(queries *db.Queries, wakeJobs chan<- struct{}, config confi
 	}
 }
 
+func HandleRestartJobPipeline(wakeJobs chan<- struct{}) Handler[Empty, Empty] {
+
+	return func(ctx context.Context, e *Empty) (*Empty, error) {
+		go func() {
+			wakeJobs <- struct{}{}
+		}()
+		return &Empty{}, nil
+	}
+}
+
 type ListJobResponse struct {
 	ID          string `json:"id"`
 	SearchQuery string `json:"search_query"`
@@ -73,6 +97,7 @@ type ListJobResponse struct {
 }
 
 func HandleListJobs(queries *db.Queries) Handler[Empty, WithBody[[]ListJobResponse]] {
+
 	return func(ctx context.Context, e *Empty) (*WithBody[[]ListJobResponse], error) {
 		res, err := queries.ListJobsWithVideos(ctx)
 		if err != nil {
@@ -115,6 +140,7 @@ type JobDetails struct {
 }
 
 func HandleJobDetails(queries *db.Queries) Handler[WithPathId, WithBody[JobDetails]] {
+
 	return func(ctx context.Context, wpi *WithPathId) (*WithBody[JobDetails], error) {
 		if wpi.ID == "" {
 			return nil, huma.Error400BadRequest("id not found")
@@ -138,7 +164,9 @@ func HandleJobDetails(queries *db.Queries) Handler[WithPathId, WithBody[JobDetai
 }
 
 type JobVideo struct {
-	YoutubeId string `json:"youtube_id"`
+	YoutubeId      string `json:"youtube_id"`
+	DownloadStatus string `json:"download_status"`
+	ImportStatus   string `json:"import_status"`
 }
 
 type JobAndVideos struct {
@@ -147,6 +175,7 @@ type JobAndVideos struct {
 }
 
 func HandleJobVideosFound(queries *db.Queries) Handler[WithPathId, WithBody[JobAndVideos]] {
+
 	return func(ctx context.Context, wpi *WithPathId) (*WithBody[JobAndVideos], error) {
 		if wpi.ID == "" {
 			return nil, huma.Error400BadRequest("id not found")
@@ -158,8 +187,24 @@ func HandleJobVideosFound(queries *db.Queries) Handler[WithPathId, WithBody[JobA
 		}
 
 		videos := lo.Map(job, func(row db.GetVideosForJobRow, index int) JobVideo {
+			downloadStatus := "not started or progressing"
+			if row.DownloadAttemptsSuccess > 0 {
+				downloadStatus = "success"
+			} else if row.DownloadAttemptsError > 0 {
+				downloadStatus = "failed"
+			}
+
+			importStatus := "not started or progressing"
+			if row.ImportAttemptsSuccess > 0 {
+				importStatus = "success"
+			} else if row.ImportAttemptsError > 0 {
+				importStatus = "failed"
+			}
+
 			return JobVideo{
-				YoutubeId: row.VideoYoutubeID,
+				YoutubeId:      row.VideoYoutubeID,
+				DownloadStatus: downloadStatus,
+				ImportStatus:   importStatus,
 			}
 		})
 

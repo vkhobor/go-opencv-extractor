@@ -6,6 +6,7 @@ import { JsonPipe, NgClass } from '@angular/common';
 import { YoutubeEmbedComponent } from '../youtube-embed/youtube-embed.component';
 import { ObjectTableComponent } from '../../../components/object-table/object-table.component';
 import { ProgressComponent } from '../progress/progress.component';
+import { ButtonComponent } from '../../../components/button/button.component';
 
 @Component({
   selector: 'app-job-detais-screen',
@@ -17,6 +18,7 @@ import { ProgressComponent } from '../progress/progress.component';
     YoutubeEmbedComponent,
     ObjectTableComponent,
     ProgressComponent,
+    ButtonComponent,
   ],
   templateUrl: './job-detais-screen.component.html',
   styleUrl: './job-detais-screen.component.css',
@@ -42,4 +44,10 @@ export class JobDetaisScreenComponent {
     this.openVideos.update((prev) => !prev);
   }
   openVideos = signal<boolean>(false);
+
+  restartPipeline(): void {
+    this.jobService.restartJob.mutateAsync(this.details().data?.id!);
+  }
+
+  restartResult = this.jobService.restartJob.result;
 }

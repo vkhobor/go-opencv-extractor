@@ -234,18 +234,35 @@ func (q *Queries) GetVideosDownloaded(ctx context.Context) ([]GetVideosDownloade
 	return items, nil
 }
 
-const getYtVideo = `-- name: GetYtVideo :one
+const getYtVideoWithJob = `-- name: GetYtVideoWithJob :one
 SELECT
-  id, job_id
+  yt_videos.id, job_id, jobs.id, search_query, filter_id, "limit"
 FROM
   yt_videos
+  JOIN jobs ON yt_videos.job_id = jobs.id
 WHERE
-  id = ?
+  yt_videos.id = ?
 `
 
-func (q *Queries) GetYtVideo(ctx context.Context, id string) (YtVideo, error) {
-	row := q.db.QueryRowContext(ctx, getYtVideo, id)
-	var i YtVideo
-	err := row.Scan(&i.ID, &i.JobID)
+type GetYtVideoWithJobRow struct {
+	ID          string
+	JobID       sql.NullString
+	ID_2        string
+	SearchQuery sql.NullString
+	FilterID    sql.NullString
+	Limit       sql.NullInt64
+}
+
+func (q *Queries) GetYtVideoWithJob(ctx context.Context, id string) (GetYtVideoWithJobRow, error) {
+	row := q.db.QueryRowContext(ctx, getYtVideoWithJob, id)
+	var i GetYtVideoWithJobRow
+	err := row.Scan(
+		&i.ID,
+		&i.JobID,
+		&i.ID_2,
+		&i.SearchQuery,
+		&i.FilterID,
+		&i.Limit,
+	)
 	return i, err
 }

@@ -10,6 +10,8 @@ import (
 )
 
 func (jc *Queries) GetToScrapeVideos() []Job {
+
+	// Hi
 	dbVal, err := jc.Queries.GetJobs(context.Background())
 
 	if err != nil {
@@ -20,9 +22,9 @@ func (jc *Queries) GetToScrapeVideos() []Job {
 		return Job{
 			FilterID:    item.FilterID.String,
 			SearchQuery: item.SearchQuery.String,
-			Limit:       int(item.Limit.Int64 - item.FoundVideos),
+			Limit:       int(item.Limit.Int64 - item.VideosFound),
 			JobID:       item.ID,
-		}, item.Limit.Int64-item.FoundVideos > 0
+		}, item.Limit.Int64-item.VideosFound > 0
 	})
 }
 
@@ -41,8 +43,18 @@ func (jc *Queries) GetScrapedVideos() []ScrapedVideo {
 }
 
 var ErrLimitExceeded = errors.New("over limit")
+var ErrAlreadyScrapedForFilter = errors.New("already scraped for filter")
 
 func (jc *Queries) SaveNewlyScraped(video ScrapedVideo, jobId string) error {
+	videoFromDb, err := jc.Queries.GetYtVideoWithJob(context.Background(), video.ID)
+	if err == nil && videoFromDb.FilterID.String == video.FilterID {
+		return ErrAlreadyScrapedForFilter
+	} else if err == nil {
+		// TODO connect to filter or job if multiple filters can exist
+	} else if err != nil && err != sql.ErrNoRows {
+		return err
+	}
+
 	job, err := jc.Queries.GetJob(context.Background(), jobId)
 	if err != nil {
 		return err
@@ -52,7 +64,6 @@ func (jc *Queries) SaveNewlyScraped(video ScrapedVideo, jobId string) error {
 		return ErrLimitExceeded
 	}
 
-	// TODO if vieo already exists, update it, connect it to the job and return
 	_, err = jc.Queries.AddYtVideo(context.Background(), db.AddYtVideoParams{
 		ID: video.ID,
 		JobID: sql.NullString{

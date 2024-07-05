@@ -69,13 +69,17 @@ func (d *ScraperJob) handleFound(args queries.Job, output *[]queries.ScrapedVide
 
 		err = d.Queries.SaveNewlyScraped(scraped, args.JobID)
 		if err != nil {
+			slog.Error("Error while saving scraped video", "error", err, "video", scraped, "method", "scrapeSingle")
+
 			if errors.Is(err, queries.ErrLimitExceeded) {
 				stop()
 				return
+			} else if errors.Is(err, queries.ErrAlreadyScrapedForFilter) {
+				return
+			} else {
+				// Unknown error
+				errored++
 			}
-
-			slog.Error("Error while saving scraped video", "error", err, "video", scraped, "method", "scrapeSingle")
-			errored++
 		}
 
 		*output = append(*output, scraped)

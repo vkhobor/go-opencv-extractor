@@ -1,5 +1,5 @@
 {
-  "descriptionHash": "E539EFE98B1F593A62C53015AD87DE79057840CFC24133206707CC647D52E88F074F99A0DFC2542CF36F064750B442696B3EA211863EF5F14A7DBEDF70EC8260",
+  "descriptionHash": "924FB07572F8678588B3676D372D2A4708243E8583772E1127D122B1FDF4658A637EF49CDF6F190067EDCA10D2E96FF32415B264C74FA2D4BEB5F25D174AE9B5",
   "descriptionLocation": "../../../doc/openapi.json",
   "lockFileVersion": "1.0.0",
   "kiotaVersion": "1.15.0",
@@ -28,10 +28,10 @@
     "multipart/form-data;q=0.1"
   ],
   "includePatterns": [
-    "/",
-    "/api",
     "/api/jobs",
     "/api/jobs/{id}",
+    "/api/jobs/{id}/actions",
+    "/api/jobs/{id}/actions/restart",
     "/api/jobs/{id}/videos"
   ],
   "excludePatterns": [],

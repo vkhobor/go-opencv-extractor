@@ -10,7 +10,7 @@ SELECT
     j.id AS id,
     j.search_query AS search_query,
     j."limit" AS "limit",
-    COUNT(DISTINCT v.id) AS videos_found
+    COUNT(v.id) AS videos_found
 FROM
     jobs j
     LEFT JOIN yt_videos v ON j.id = v.job_id
@@ -29,32 +29,62 @@ VALUES
 
 -- name: GetJobs :many
 SELECT
-    COALESCE(found_videos, 0),
+    COUNT(yt_videos.id) AS videos_found,
     jobs.id,
     jobs."limit",
     jobs.search_query,
     jobs.filter_id
 FROM
     jobs
-    LEFT JOIN (
-        SELECT
-            COUNT(*) as found_videos,
-            jobs.id
-        FROM
-            jobs
-            LEFT JOIN yt_videos ON jobs.id = yt_videos.job_id
-        WHERE
-            yt_videos.id IS NOT NULL
-        GROUP BY
-            jobs.id
-    ) as t ON t.id = jobs.id;
+    LEFT JOIN yt_videos ON jobs.id = yt_videos.job_id
+GROUP BY
+    jobs.id;
 
 -- name: GetVideosForJob :many
 SELECT
-    j.id AS id,
-    v.id AS video_youtube_id
+    v.id AS video_youtube_id,
+    COUNT(successDownload.yt_video_id) AS download_attempts_success,
+    COUNT(errorDownload.yt_video_id) AS download_attempts_error,
+    COUNT(successImport.yt_video_id) AS import_attempts_success,
+    COUNT(successImport.yt_video_id) AS import_attempts_error
 FROM
     jobs j
     JOIN yt_videos v ON j.id = v.job_id
+    LEFT JOIN (
+        SELECT
+            yt_video_id
+        FROM
+            download_attempts
+        WHERE
+            error is null
+    ) successDownload ON v.id = successDownload.yt_video_id
+    LEFT JOIN (
+        SELECT
+            yt_video_id
+        FROM
+            download_attempts
+        WHERE
+            error is not null
+    ) errorDownload ON v.id = errorDownload.yt_video_id
+    LEFT JOIN (
+        SELECT
+            yt_video_id
+        FROM
+            import_attempts
+        WHERE
+            error is null
+            and progress = 100
+    ) successImport ON v.id = successImport.yt_video_id
+    LEFT JOIN (
+        SELECT
+            yt_video_id
+        FROM
+            import_attempts
+        WHERE
+            error is not null
+            and progress != 100
+    ) errorImport ON v.id = successImport.yt_video_id
 WHERE
-    j.id = ?;
+    j.id = ?
+GROUP BY
+    v.id;
