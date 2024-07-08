@@ -170,7 +170,7 @@ FROM
             import_attempts
         WHERE
             error is not null
-            and progress != 100
+            and progress is not 100
     ) errorImport ON v.id = successImport.yt_video_id
 WHERE
     j.id = ?

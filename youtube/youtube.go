@@ -89,7 +89,7 @@ func (y YoutubeVideo) DownloadToFolder(clientType youtubeClient, folderPath stri
 	}
 	defer file.Close()
 
-	progressReporter := &WriteReporter{
+	progressReporter := &writeReporter{
 		Total:    size,
 		Progress: progress,
 	}
@@ -100,14 +100,14 @@ func (y YoutubeVideo) DownloadToFolder(clientType youtubeClient, folderPath stri
 
 	return filePath, nil
 }
-// TODO probably can be private
-type WriteReporter struct {
-	Total    int64
+
+type writeReporter struct {
 	current  int64
+	Total    int64
 	Progress chan<- float64
 }
 
-func (w *WriteReporter) Write(p []byte) (n int, err error) {
+func (w *writeReporter) Write(p []byte) (n int, err error) {
 	n = len(p)
 	w.current += int64(n)
 

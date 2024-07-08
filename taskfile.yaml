@@ -45,6 +45,16 @@ tasks:
 
   # Advanced development related tasks
 
+  compose-up:
+    aliases: [up]
+    cmds:
+    - docker compose up
+    -
+  compose-up:build:
+    aliases: [upb]
+    cmds:
+    - docker compose up --build
+
   install-sqlc:
     cmds:
     - go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
@@ -109,10 +119,24 @@ tasks:
     cmds:
     - docker buildx create --name builderx --use
 
-  docker:build-docker:
+  docker:build-docker:amd:
     cmds:
-    - docker buildx build --platform linux/amd64 -t vkhobor/extractor:latest --pull --push .
+    - docker buildx build --platform linux/amd64 -t vkhobor/extractor:latest --pull --load .
 
-  docker:rebuild-docker:
+  docker:rebuild-docker:amd:
     cmds:
     - docker buildx build --platform linux/amd64  --no-cache -t vkhobor/extractor:latest --pull --load .
+
+  docker:build-docker:all:
+    cmds:
+    - docker buildx build --platform linux/amd64,linux/arm64 -t vkhobor/extractor:latest --pull --push .
+
+  # Run the following after: docker container run --rm -it build-context /bin/sh
+  docker:test-dockerignore:
+    cmds:
+    - docker image build --no-cache -t build-context --load -f - . <<EOF
+    - FROM busybox
+    - WORKDIR /build-context
+    - COPY . .
+    - CMD find .
+    - EOF
