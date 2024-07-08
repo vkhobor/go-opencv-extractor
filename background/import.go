@@ -30,7 +30,7 @@ func (d *Importer) Start() {
 		// d.Output <- imported
 	}
 }
-
+// TODO optionally move the single processing to another package e.g import/service
 func (d *Importer) importVideo(video queries.DownlodedVideo) (queries.ImportedVideo, error) {
 	refs, err := d.Queries.GetRefImages(video)
 	if err != nil {
