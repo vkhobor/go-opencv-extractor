@@ -100,7 +100,7 @@ func (y YoutubeVideo) DownloadToFolder(clientType youtubeClient, folderPath stri
 
 	return filePath, nil
 }
-
+// TODO probably can be private
 type WriteReporter struct {
 	Total    int64
 	current  int64
