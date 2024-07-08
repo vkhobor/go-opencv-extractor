@@ -112,7 +112,7 @@ export class FoundImagesScreenComponent {
   next() {
     if (
       this.imagePage().data!.total! >
-      this.currentPageNumber() + 1 * this.pageSize
+      (this.currentPageNumber() + 1) * this.pageSize
     ) {
       this.currentPageNumber.update((prev) => prev + 1);
     }

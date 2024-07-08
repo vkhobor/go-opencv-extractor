@@ -27,11 +27,14 @@ func (d *Downloader) Start() {
 		}
 
 		select {
-		// Try to send the downloaded video to the output channel potentially saving a database call
 		case d.Output <- downloaded:
-		// If the output channel is full, try to wake the job manager
+			continue
+		default:
+		}
+
+		select {
 		case d.WakeJobs <- struct{}{}:
-		// If the job manager is awake it will pick it up from the database on next pull from channel
+			continue
 		default:
 		}
 	}
