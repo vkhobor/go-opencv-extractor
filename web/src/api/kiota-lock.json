@@ -1,8 +1,8 @@
 {
-  "descriptionHash": "924FB07572F8678588B3676D372D2A4708243E8583772E1127D122B1FDF4658A637EF49CDF6F190067EDCA10D2E96FF32415B264C74FA2D4BEB5F25D174AE9B5",
-  "descriptionLocation": "../../../doc/openapi.json",
+  "descriptionHash": "D556D2ACE6DD7406DE7A1C5381676006DF324E3C45A3FD8456AEB49B098F61D05C7F5964F21421DAE8BE9FAF97CB94676A920F83C0A866276022D60C8B063141",
+  "descriptionLocation": "../../../doc/openapi-3.0.json",
   "lockFileVersion": "1.0.0",
-  "kiotaVersion": "1.15.0",
+  "kiotaVersion": "1.16.0",
   "clientClassName": "ApiClient",
   "clientNamespaceName": "ApiSDK",
   "language": "TypeScript",
@@ -28,10 +28,11 @@
     "multipart/form-data;q=0.1"
   ],
   "includePatterns": [
+    "/api/images",
     "/api/jobs",
     "/api/jobs/{id}",
-    "/api/jobs/{id}/actions",
     "/api/jobs/{id}/actions/restart",
+    "/api/jobs/{id}/actions/update-limit",
     "/api/jobs/{id}/videos"
   ],
   "excludePatterns": [],

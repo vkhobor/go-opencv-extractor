@@ -15,6 +15,9 @@ SELECT
 FROM
     pictures
     JOIN import_attempts ON pictures.import_attempt_id = import_attempts.id
+WHERE
+    @is_filter_by_youtube_id = false
+    OR import_attempts.yt_video_id = @youtube_id
 LIMIT
     ?
 OFFSET
@@ -24,4 +27,8 @@ OFFSET
 SELECT
     COUNT(*) as count_all
 FROM
-    pictures;
+    pictures
+    JOIN import_attempts ON pictures.import_attempt_id = import_attempts.id
+WHERE
+    @is_filter_by_youtube_id = false
+    OR import_attempts.yt_video_id = @youtube_id;

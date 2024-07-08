@@ -1,12 +1,14 @@
 import { Component, Signal, computed, inject, signal } from '@angular/core';
 import { LayoutComponent } from '../../../components/layout/layout.component';
 import { JobsService } from '../../../services/jobs.service';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { JsonPipe, NgClass } from '@angular/common';
 import { YoutubeEmbedComponent } from '../youtube-embed/youtube-embed.component';
 import { ObjectTableComponent } from '../../../components/object-table/object-table.component';
 import { ProgressComponent } from '../progress/progress.component';
 import { ButtonComponent } from '../../../components/button/button.component';
+import { LinkIconComponent } from '../../../components/icons/link-icon/link-icon.component';
+import { JobVideo } from '../../../../api/models';
 
 @Component({
   selector: 'app-job-detais-screen',
@@ -14,7 +16,10 @@ import { ButtonComponent } from '../../../components/button/button.component';
   imports: [
     LayoutComponent,
     JsonPipe,
+    LayoutComponent,
+    RouterLink,
     NgClass,
+    LinkIconComponent,
     YoutubeEmbedComponent,
     ObjectTableComponent,
     ProgressComponent,
@@ -33,8 +38,19 @@ export class JobDetaisScreenComponent {
   // progress = this.jobService.getJobProgress(this.route.snapshot.params['id'])
   //   .result;
 
-  videos = this.jobService.getJobVideos(this.route.snapshot.params['id'])
+  videosOrig = this.jobService.getJobVideos(this.route.snapshot.params['id'])
     .result;
+  videos = computed(() => {
+    return this.videosOrig().data?.videos?.sort((a, b) => {
+      if (a.download_status === 'success' && b.download_status !== 'success') {
+        return -1;
+      }
+      if (a.download_status !== 'success' && b.download_status === 'success') {
+        return 1;
+      }
+      return 0;
+    });
+  });
 
   openProgress = signal<boolean>(false);
   toggleProgress() {
@@ -50,4 +66,11 @@ export class JobDetaisScreenComponent {
   }
 
   restartResult = this.jobService.restartJob.result;
+
+  increaseLimit() {
+    this.jobService.updateJobLimit.mutateAsync({
+      id: this.details().data?.id!,
+      value: this.details().data?.video_target! + 1,
+    });
+  }
 }

@@ -6,4 +6,6 @@ Warning: KiotaBuilder OpenAPI warning: #/components/schemas/ErrorModel/propertie
 Warning: KiotaBuilder OpenAPI warning: #/components/schemas/ErrorModel/properties/type - The format uri is not supported by Kiota and the string type will be used.
 Warning: KiotaBuilder OpenAPI warning: #/components/schemas/JobAndVideos/properties/$schema - The format uri is not supported by Kiota and the string type will be used.
 Warning: KiotaBuilder OpenAPI warning: #/components/schemas/JobDetails/properties/$schema - The format uri is not supported by Kiota and the string type will be used.
+Warning: KiotaBuilder OpenAPI warning: #/components/schemas/Response/properties/$schema - The format uri is not supported by Kiota and the string type will be used.
+Warning: KiotaBuilder OpenAPI warning: #/components/schemas/UpdateJobLimitRequestBody/properties/$schema - The format uri is not supported by Kiota and the string type will be used.
 Warning: KiotaBuilder No server url found in the OpenAPI document. The base url will need to be set when using the client.

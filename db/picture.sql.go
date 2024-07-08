@@ -44,10 +44,19 @@ SELECT
     COUNT(*) as count_all
 FROM
     pictures
+    JOIN import_attempts ON pictures.import_attempt_id = import_attempts.id
+WHERE
+    ?1 = false
+    OR import_attempts.yt_video_id = ?2
 `
 
-func (q *Queries) AllPicturesCount(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, allPicturesCount)
+type AllPicturesCountParams struct {
+	IsFilterByYoutubeID interface{}
+	YoutubeID           sql.NullString
+}
+
+func (q *Queries) AllPicturesCount(ctx context.Context, arg AllPicturesCountParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, allPicturesCount, arg.IsFilterByYoutubeID, arg.YoutubeID)
 	var count_all int64
 	err := row.Scan(&count_all)
 	return count_all, err
@@ -59,6 +68,9 @@ SELECT
 FROM
     pictures
     JOIN import_attempts ON pictures.import_attempt_id = import_attempts.id
+WHERE
+    ? = false
+    OR import_attempts.yt_video_id = ?
 LIMIT
     ?
 OFFSET
@@ -66,8 +78,10 @@ OFFSET
 `
 
 type GetPicturesParams struct {
-	Limit  int64
-	Offset int64
+	IsFilterByYoutubeID interface{}
+	YoutubeID           sql.NullString
+	Limit               int64
+	Offset              int64
 }
 
 type GetPicturesRow struct {
@@ -83,7 +97,12 @@ type GetPicturesRow struct {
 }
 
 func (q *Queries) GetPictures(ctx context.Context, arg GetPicturesParams) ([]GetPicturesRow, error) {
-	rows, err := q.db.QueryContext(ctx, getPictures, arg.Limit, arg.Offset)
+	rows, err := q.db.QueryContext(ctx, getPictures,
+		arg.IsFilterByYoutubeID,
+		arg.YoutubeID,
+		arg.Limit,
+		arg.Offset,
+	)
 	if err != nil {
 		return nil, err
 	}

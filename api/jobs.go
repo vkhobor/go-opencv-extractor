@@ -80,6 +80,49 @@ func HandleCreateJob(queries *db.Queries, wakeJobs chan<- struct{}, config confi
 	}
 }
 
+type UpdateJobLimitRequest struct {
+	Body struct {
+		Limit int `json:"limit"`
+	}
+	ID string `path:"id"`
+}
+
+func HandleUpdateJobLimit(queries *db.Queries, wakeJobs chan<- struct{}) Handler[UpdateJobLimitRequest, Empty] {
+
+	return func(ctx context.Context, wb *UpdateJobLimitRequest) (*Empty, error) {
+
+		job, err := queries.GetJob(ctx, wb.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		if int64(wb.Body.Limit) <= job.Limit.Int64 {
+			return nil, huma.Error400BadRequest("Limit is already set to this value or larger")
+		}
+
+		err = queries.UpdateJobLimit(ctx, db.UpdateJobLimitParams{
+			Limit: sql.NullInt64{
+				Int64: int64(wb.Body.Limit),
+				Valid: true,
+			},
+			ID: wb.ID,
+		})
+
+		if err != nil {
+			return nil, err
+		}
+
+		select {
+		case wakeJobs <- struct{}{}:
+			slog.Info("Waking up jobs")
+		default:
+			slog.Info("Jobs already awake")
+		}
+
+		return &Empty{}, nil
+	}
+}
+
 func HandleRestartJobPipeline(wakeJobs chan<- struct{}) Handler[Empty, Empty] {
 
 	return func(ctx context.Context, e *Empty) (*Empty, error) {

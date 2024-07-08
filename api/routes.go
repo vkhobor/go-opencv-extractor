@@ -16,6 +16,7 @@ func NewRouter(
 	programConfig config.ProgramConfig,
 ) chi.Router {
 	router := chi.NewMux()
+
 	router.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"https://*", "http://*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -24,7 +25,6 @@ func NewRouter(
 		AllowCredentials: false,
 		MaxAge:           300,
 	}))
-
 	api := humachi.New(router, huma.DefaultConfig("My API", "1.0.0"))
 
 	huma.Register(api, huma.Operation{
@@ -41,23 +41,22 @@ func NewRouter(
 		Summary:       "Restart the job pipeline",
 	}, HandleRestartJobPipeline(wakeJobs))
 
+	huma.Post(api, "/api/jobs/{id}/actions/update-limit", HandleUpdateJobLimit(queries, wakeJobs))
+
 	huma.Get(api, "/api/jobs", HandleListJobs(queries))
 	huma.Get(api, "/api/jobs/{id}", HandleJobDetails(queries))
 	huma.Get(api, "/api/jobs/{id}/videos", HandleJobVideosFound(queries))
+	huma.Get(api, "/api/images", HandleImages(queries))
 
-	router.Route("/api", func(r chi.Router) {
+	// Legacy routes
+	router.Post("/api/references", HandleReferenceUpload(queries, config))
+	router.Get("/api/references", HandleGetReferences(queries))
+	router.Delete("/api/references", HandleDeleteAllReferences(queries))
 
-		r.Post("/references", HandleReferenceUpload(queries, config))
-		r.Get("/references", HandleGetReferences(queries))
-		r.Delete("/references", HandleDeleteAllReferences(queries))
+	router.Get("/api/filters", HandleGetFilters(queries))
 
-		r.Get("/filters", HandleGetFilters(queries))
-
-		r.Get("/images", HandleImages(queries))
-
-		r.Get("/files/{id}", HandleFileServeById(queries))
-		r.Get("/zipped", ExportWorkspace(config))
-	})
+	router.Get("/api/files/{id}", HandleFileServeById(queries))
+	router.Get("/api/zipped", ExportWorkspace(config))
 
 	router.NotFound(HandleCatchAll())
 

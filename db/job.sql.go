@@ -261,3 +261,21 @@ func (q *Queries) ListJobsWithVideos(ctx context.Context) ([]ListJobsWithVideosR
 	}
 	return items, nil
 }
+
+const updateJobLimit = `-- name: UpdateJobLimit :exec
+UPDATE jobs
+SET
+    "limit" = ?
+WHERE
+    id = ?
+`
+
+type UpdateJobLimitParams struct {
+	Limit sql.NullInt64
+	ID    string
+}
+
+func (q *Queries) UpdateJobLimit(ctx context.Context, arg UpdateJobLimitParams) error {
+	_, err := q.db.ExecContext(ctx, updateJobLimit, arg.Limit, arg.ID)
+	return err
+}

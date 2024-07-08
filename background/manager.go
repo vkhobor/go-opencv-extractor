@@ -8,20 +8,18 @@ import (
 )
 
 type DbMonitor struct {
+	// TODO separate into different channels for each type of work
 	Wake          chan struct{}
 	Queries       *queries.Queries
 	ScrapeInput   chan<- queries.Job
 	DownloadInput chan<- queries.ScrapedVideo
 	ImportInput   chan<- queries.DownlodedVideo
-	once          sync.Once
 }
 
 func (jm *DbMonitor) Start() {
-	jm.once.Do(func() {
-		for range jm.Wake {
-			jm.PullWorkItemsFromDb()
-		}
-	})
+	for range jm.Wake {
+		jm.PullWorkItemsFromDb()
+	}
 }
 
 func (jm *DbMonitor) PullWorkItemsFromDb() {

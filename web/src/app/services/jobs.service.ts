@@ -30,6 +30,16 @@ export class JobsService {
     },
   });
 
+  updateJobLimit = this.#mutate({
+    mutationFn: ({ id, value }: { id: string; value: number }) =>
+      client.api.jobs.byId(id).actions.updateLimit.post({ limit: value }),
+    onSuccess: (_, { id }) => {
+      this.#queryClient.invalidateQueries({
+        queryKey: ['jobs', id],
+      });
+    },
+  });
+
   getJobs() {
     return this.#query({
       queryKey: ['jobs'] as const,

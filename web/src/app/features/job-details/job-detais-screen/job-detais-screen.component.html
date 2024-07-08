@@ -8,7 +8,7 @@
         class="text-transparent bg-clip-text bg-gradient-to-r to-emerald-600 from-sky-400"
       >
         @if (details().data; as jobDetails) {
-        {{ jobDetails.search_query }}
+          {{ jobDetails.search_query }}
         }
       </span>
       query on youtube
@@ -24,7 +24,7 @@
       >
     </div>
 
-    <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
+    <div class="relative overflow-x-auto shadow-md rounded-lg">
       <table
         class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400"
       >
@@ -45,9 +45,31 @@
               Target video amount
             </th>
             <td class="px-6 py-4">
-              @if (details().data; as jobDetails) {
-              {{ jobDetails.video_target }}
-              }
+              <div class="flex flex-row justify-between items-center">
+                <span class="align-middle">
+                  @if (details().data; as jobDetails) {
+                    {{ jobDetails.video_target }}
+                  }
+                </span>
+                <button
+                (click)="increaseLimit()"
+                  type="button"
+                  class="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-full text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      fill="currentColor"
+                      d="M11 13H6q-.425 0-.712-.288T5 12t.288-.712T6 11h5V6q0-.425.288-.712T12 5t.713.288T13 6v5h5q.425 0 .713.288T19 12t-.288.713T18 13h-5v5q0 .425-.288.713T12 19t-.712-.288T11 18z"
+                    />
+                  </svg>
+                  <span class="sr-only">Icon description</span>
+                </button>
+              </div>
             </td>
           </tr>
           <tr class="border-b border-gray-200 dark:border-gray-700">
@@ -59,7 +81,7 @@
             </th>
             <td class="px-6 py-4">
               @if (details().data; as jobDetails) {
-              {{ jobDetails.videos_found }}
+                {{ jobDetails.videos_found }}
               }
             </td>
           </tr>
@@ -73,7 +95,7 @@
       class="mt-10"
       [ngClass]="{
         'bg-white dark:bg-gray-900 text-gray-900 dark:text-white': openVideos(),
-        'text-gray-500 dark:text-gray-400': !openVideos()
+        'text-gray-500 dark:text-gray-400': !openVideos(),
       }"
     >
       <h2 id="accordion-flush-heading-1">
@@ -102,22 +124,37 @@
       </h2>
       <div
         id="accordion-flush-body-1"
-        class="space-y-5 my-10"
+        class="space-y-16 my-10"
         [class.hidden]="!openVideos()"
       >
-        @if(openVideos()){ @if(videos().data; as videos){
-        <!-- for -->
-        @for (item of videos.videos; track item.youtube_id) {
-        <div class="flex flex-row justify-around">
-          <app-youtube-embed [id]="item.youtube_id!"></app-youtube-embed>
-          <div>
-            <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
-              <app-object-table [value]="item"></app-object-table>
-            </div>
-          </div>
-        </div>
-
-        } } }
+        @if (openVideos()) {
+          @if (videos(); as videos) {
+            @for (item of videos; track item.youtube_id) {
+              <div class="flex flex-col justify-between md:flex-row">
+                <div class="md:max-w-72">
+                  <app-youtube-embed
+                    [id]="item.youtube_id!"
+                  ></app-youtube-embed>
+                </div>
+                <div>
+                  <div
+                    class="mt-6 md:mt-0 relative overflow-x-auto shadow-md rounded-lg"
+                  >
+                    <app-object-table [value]="item"></app-object-table>
+                  </div>
+                  <div class="w-full flex-row justify-end flex p-3">
+                    <a
+                      class="block"
+                      routerLink="/images-found"
+                      [queryParams]="{ youtube_id: item.youtube_id! }"
+                      >Link to images found <app-link-icon></app-link-icon
+                    ></a>
+                  </div>
+                </div>
+              </div>
+            }
+          }
+        }
       </div>
     </div>
     <!-- <div

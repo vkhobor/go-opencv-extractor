@@ -88,3 +88,10 @@ WHERE
     j.id = ?
 GROUP BY
     v.id;
+
+-- name: UpdateJobLimit :exec
+UPDATE jobs
+SET
+    "limit" = ?
+WHERE
+    id = ?;

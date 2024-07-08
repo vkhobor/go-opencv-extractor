@@ -36,6 +36,13 @@ tasks:
     cmds:
     - task: start
 
+  generate-openapi:
+    aliases: [gen-openapi]
+    vars:
+      PORT: "{{randInt 1000 10000}}"
+    cmds:
+    - go run . openapi -p {{.PORT}} -o ./doc
+
   # Advanced development related tasks
 
   install-sqlc:
@@ -52,7 +59,8 @@ tasks:
   install-dev-deps:
     deps: [install-sqlc, install-migrate]
 
-  sql:
+  generate-sqlc-methods:
+    aliases: [sqlc]
     deps: [install-sqlc]
     watch: true
     sources:

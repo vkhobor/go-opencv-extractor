@@ -15,6 +15,7 @@ type Downloader struct {
 	Config   config.DirectoryConfig
 	Input    <-chan queries.ScrapedVideo
 	Output   chan<- queries.DownlodedVideo
+	WakeJobs chan<- struct{}
 }
 
 func (d *Downloader) Start() {
@@ -25,7 +26,14 @@ func (d *Downloader) Start() {
 			continue
 		}
 
-		d.Output <- downloaded
+		select {
+		// Try to send the downloaded video to the output channel potentially saving a database call
+		case d.Output <- downloaded:
+		// If the output channel is full, try to wake the job manager
+		case d.WakeJobs <- struct{}{}:
+		// If the job manager is awake it will pick it up from the database on next pull from channel
+		default:
+		}
 	}
 }
 
@@ -58,8 +66,15 @@ func (d *Downloader) downloadVideo(video queries.ScrapedVideo) (queries.Downlode
 }
 
 func HandleProgress(progress chan float64, video queries.ScrapedVideo) {
-	for p := range progress {
-		slog.Info("Download progress", "video", video, "progress", p)
+	ticker := time.NewTicker(time.Second * 30)
+	defer ticker.Stop()
+
+	for item := range progress {
+		select {
+		case <-ticker.C:
+			slog.Info("downloadProgress", "id", video.ID, "progress", item)
+		default:
+		}
 	}
 }
 

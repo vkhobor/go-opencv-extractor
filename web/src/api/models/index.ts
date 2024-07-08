@@ -97,6 +97,30 @@ export function createListJobResponseFromDiscriminatorValue(parseNode: ParseNode
     return deserializeIntoListJobResponse;
 }
 /**
+ * Creates a new instance of the appropriate class based on discriminator value
+ * @param parseNode The parse node to use to read the discriminator value and create the object
+ * @returns {Picture}
+ */
+export function createPictureFromDiscriminatorValue(parseNode: ParseNode | undefined) : ((instance?: Parsable) => Record<string, (node: ParseNode) => void>) {
+    return deserializeIntoPicture;
+}
+/**
+ * Creates a new instance of the appropriate class based on discriminator value
+ * @param parseNode The parse node to use to read the discriminator value and create the object
+ * @returns {Response}
+ */
+export function createResponseFromDiscriminatorValue(parseNode: ParseNode | undefined) : ((instance?: Parsable) => Record<string, (node: ParseNode) => void>) {
+    return deserializeIntoResponse;
+}
+/**
+ * Creates a new instance of the appropriate class based on discriminator value
+ * @param parseNode The parse node to use to read the discriminator value and create the object
+ * @returns {UpdateJobLimitRequestBody}
+ */
+export function createUpdateJobLimitRequestBodyFromDiscriminatorValue(parseNode: ParseNode | undefined) : ((instance?: Parsable) => Record<string, (node: ParseNode) => void>) {
+    return deserializeIntoUpdateJobLimitRequestBody;
+}
+/**
  * The deserialization information for the current model
  * @returns {Record<string, (node: ParseNode) => void>}
  */
@@ -188,6 +212,38 @@ export function deserializeIntoListJobResponse(listJobResponse: Partial<ListJobR
         "id": n => { listJobResponse.id = n.getStringValue(); },
         "limit": n => { listJobResponse.limit = n.getNumberValue(); },
         "search_query": n => { listJobResponse.search_query = n.getStringValue(); },
+    }
+}
+/**
+ * The deserialization information for the current model
+ * @returns {Record<string, (node: ParseNode) => void>}
+ */
+export function deserializeIntoPicture(picture: Partial<Picture> | undefined = {}) : Record<string, (node: ParseNode) => void> {
+    return {
+        "blob_id": n => { picture.blob_id = n.getStringValue(); },
+        "id": n => { picture.id = n.getStringValue(); },
+        "youtube_id": n => { picture.youtube_id = n.getStringValue(); },
+    }
+}
+/**
+ * The deserialization information for the current model
+ * @returns {Record<string, (node: ParseNode) => void>}
+ */
+export function deserializeIntoResponse(response: Partial<Response> | undefined = {}) : Record<string, (node: ParseNode) => void> {
+    return {
+        "pictures": n => { response.pictures = n.getCollectionOfObjectValues<Picture>(createPictureFromDiscriminatorValue); },
+        "$schema": n => { response.schema = n.getStringValue(); },
+        "total": n => { response.total = n.getNumberValue(); },
+    }
+}
+/**
+ * The deserialization information for the current model
+ * @returns {Record<string, (node: ParseNode) => void>}
+ */
+export function deserializeIntoUpdateJobLimitRequestBody(updateJobLimitRequestBody: Partial<UpdateJobLimitRequestBody> | undefined = {}) : Record<string, (node: ParseNode) => void> {
+    return {
+        "limit": n => { updateJobLimitRequestBody.limit = n.getNumberValue(); },
+        "$schema": n => { updateJobLimitRequestBody.schema = n.getStringValue(); },
     }
 }
 export interface ErrorDetail extends Parsable {
@@ -298,6 +354,34 @@ export interface ListJobResponse extends Parsable {
      */
     search_query?: string;
 }
+export interface Picture extends Parsable {
+    /**
+     * The blob_id property
+     */
+    blob_id?: string;
+    /**
+     * The id property
+     */
+    id?: string;
+    /**
+     * The youtube_id property
+     */
+    youtube_id?: string;
+}
+export interface Response extends Parsable {
+    /**
+     * The pictures property
+     */
+    pictures?: Picture[];
+    /**
+     * A URL to the JSON Schema for this object.
+     */
+    schema?: string;
+    /**
+     * The total property
+     */
+    total?: number;
+}
 /**
  * Serializes information the current object
  * @param writer Serialization writer to use to serialize this model
@@ -370,6 +454,40 @@ export function serializeListJobResponse(writer: SerializationWriter, listJobRes
     writer.writeStringValue("id", listJobResponse.id);
     writer.writeNumberValue("limit", listJobResponse.limit);
     writer.writeStringValue("search_query", listJobResponse.search_query);
+}
+/**
+ * Serializes information the current object
+ * @param writer Serialization writer to use to serialize this model
+ */
+export function serializePicture(writer: SerializationWriter, picture: Partial<Picture> | undefined = {}) : void {
+    writer.writeStringValue("blob_id", picture.blob_id);
+    writer.writeStringValue("id", picture.id);
+    writer.writeStringValue("youtube_id", picture.youtube_id);
+}
+/**
+ * Serializes information the current object
+ * @param writer Serialization writer to use to serialize this model
+ */
+export function serializeResponse(writer: SerializationWriter, response: Partial<Response> | undefined = {}) : void {
+    writer.writeCollectionOfObjectValues<Picture>("pictures", response.pictures, serializePicture);
+    writer.writeNumberValue("total", response.total);
+}
+/**
+ * Serializes information the current object
+ * @param writer Serialization writer to use to serialize this model
+ */
+export function serializeUpdateJobLimitRequestBody(writer: SerializationWriter, updateJobLimitRequestBody: Partial<UpdateJobLimitRequestBody> | undefined = {}) : void {
+    writer.writeNumberValue("limit", updateJobLimitRequestBody.limit);
+}
+export interface UpdateJobLimitRequestBody extends Parsable {
+    /**
+     * The limit property
+     */
+    limit?: number;
+    /**
+     * A URL to the JSON Schema for this object.
+     */
+    schema?: string;
 }
 /* tslint:enable */
 /* eslint-enable */

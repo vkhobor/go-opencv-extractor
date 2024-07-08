@@ -40,7 +40,8 @@ FROM
   LEFT JOIN import_attempts ON yt_videos.id = import_attempts.yt_video_id
   JOIN jobs ON jobs.id = yt_videos.job_id
 WHERE
-  import_attempts.yt_video_id IS NULL;
+  import_attempts.progress != 100
+  GROUP BY yt_videos.id;
 
 -- name: GetVideoWithImportAttempts :many
 SELECT

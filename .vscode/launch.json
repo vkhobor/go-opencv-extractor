@@ -19,6 +19,14 @@
         "--db",
         "./.tmp/db.sqlite3"
       ]
+    },
+    {
+      "name": "Launch openapi cmd",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/main.go",
+      "args": ["openapi", "-p", "7575", "--output", "./doc"]
     }
   ]
 }

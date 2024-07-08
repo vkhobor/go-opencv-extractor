@@ -74,6 +74,10 @@ func (jc *Queries) UpdateProgress(id string, progress int) error {
 		return ErrCannotUpdateTo100
 	}
 
+	return jc.updateProgress(id, progress)
+}
+
+func (jc *Queries) updateProgress(id string, progress int) error {
 	return jc.Queries.UpdateImportAttemptProgress(context.Background(), db.UpdateImportAttemptProgressParams{
 		ID: id,
 		Progress: sql.NullInt64{
@@ -95,7 +99,7 @@ func (jc *Queries) CheckImportedAlready(ctx context.Context, videoID string) (bo
 
 	if len(videos) > 0 {
 		hasSuccessful := lo.SomeBy(videos, func(item db.GetVideoWithImportAttemptsRow) bool {
-			return !item.Error.Valid
+			return !item.Error.Valid && item.Progress.Int64 == 100
 		})
 		if hasSuccessful {
 			return true, nil
@@ -106,12 +110,6 @@ func (jc *Queries) CheckImportedAlready(ctx context.Context, videoID string) (bo
 }
 
 func (jc *Queries) FinishImport(video ImportedVideo, importAttemptId string) error {
-	err := jc.UpdateProgress(importAttemptId, 100)
-
-	if err != nil {
-		return err
-	}
-
 	imported, err := jc.CheckImportedAlready(context.Background(), video.ID)
 	if err != nil {
 		return err
@@ -119,6 +117,12 @@ func (jc *Queries) FinishImport(video ImportedVideo, importAttemptId string) err
 
 	if imported {
 		return ErrHasImported
+	}
+
+	err = jc.updateProgress(importAttemptId, 100)
+
+	if err != nil {
+		return err
 	}
 
 	for _, frame := range video.ExtractedFrames {

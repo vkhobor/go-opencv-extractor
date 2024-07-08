@@ -17,6 +17,7 @@ type ScraperJob struct {
 	Input                <-chan queries.Job
 	Output               chan<- queries.ScrapedVideo
 	Config               config.DirectoryConfig
+	WakeJobs             chan<- struct{}
 }
 
 // Start starts the Scraper
@@ -28,7 +29,14 @@ func (d *ScraperJob) Start() {
 		}
 
 		for _, result := range results {
-			d.Output <- result
+			select {
+			// Try to send the downloaded video to the output channel, potentially saving a database call
+			case d.Output <- result:
+			// If the output channel is full, try to wake the job manager
+			case d.WakeJobs <- struct{}{}:
+			// If the job manager is awake it will pick it up from the database on next pull from channel
+			default:
+			}
 		}
 	}
 }

@@ -1,47 +1,59 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable } from '@angular/core';
 import {
-  injectQuery,
-  injectMutation,
-  injectQueryClient,
+  InfiniteData,
+  InfiniteQueryObserverResult,
   injectInfiniteQuery,
+  injectQuery,
+  QueryKey,
+  QueryObserverResult,
 } from '@ngneat/query';
-import { Observable, map } from 'rxjs';
-import { DefaultHttpProxyService } from './http/default-http-proxy.service';
-import { ImagesResponse } from '../models/Image';
+import { client } from './http/kiota';
+
+import { undefToErr } from './http/undefToErr';
+import { CreateInfiniteQueryOptions } from '@ngneat/query/lib/infinite-query';
+import { Response } from '../../api/models';
+import { Result } from '@ngneat/query/lib/types';
+import { ImagesRequestBuilderGetQueryParameters } from '../../api/api/images';
+
+export type ImagePageQueryParams = Omit<
+  ImagesRequestBuilderGetQueryParameters,
+  'limit' | 'offset'
+>;
 
 @Injectable({
   providedIn: 'root',
 })
 export class ImagesService {
-  #http = inject(DefaultHttpProxyService);
   #query = injectQuery();
-  #mutate = injectMutation();
-  #queryClient = injectQueryClient();
-  #infinite = injectInfiniteQuery();
 
-  getImages(pageSize: number) {
-    return this.#infinite({
-      queryKey: ['images'] as const,
-      queryFn: ({ pageParam }) => this.getImagePage(pageParam, pageSize),
-      initialPageParam: 0,
-      getPreviousPageParam: (firstPage, _, params) => {
-        if (params === 0) return undefined;
-        return params - 1;
-      },
-      getNextPageParam: (lastPage, allPages, params) => {
-        if (allPages.map((x) => x.pictures).flat().length >= lastPage.total)
-        return undefined;
-        return params + 1;
-      },
+  getImagePage(
+    pageParam: number,
+    pageSize: number,
+    params: ImagePageQueryParams,
+  ) {
+    return this.#query({
+      queryKey: ['images', params, pageParam, pageSize] as const,
+      enabled: false,
+      queryFn: () => this.getImagePageApi(pageParam, pageSize, params),
     });
   }
 
-  getImagePage(pageNumber: number, pageSize: number) {
+  getImagePageApi(
+    pageNumber: number,
+    pageSize: number,
+    params: ImagePageQueryParams,
+  ) {
     const offset = pageNumber * pageSize;
     const limit = pageSize;
 
-    return this.#http.get(
-      `/images?offset=${offset}&limit=${limit}`
-    ) as Observable<ImagesResponse>;
+    return undefToErr(
+      client.api.images.get({
+        queryParameters: {
+          limit,
+          offset,
+          ...params,
+        },
+      }),
+    );
   }
 }
