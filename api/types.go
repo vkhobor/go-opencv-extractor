@@ -2,6 +2,7 @@ package api
 
 import "context"
 
+// TODO remove the structs leave the func type
 type WithBody[T any] struct {
 	Body T
 }

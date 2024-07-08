@@ -16,7 +16,7 @@ type myCollyCollector struct {
 func NewCollector(s Scraper) myCollyCollector {
 	defaultColl := colly.NewCollector(
 		colly.AllowedDomains(s.Domain),
-		// colly.Async(true),
+		// TODO colly.Async(true) enable or check if stopped needs to be atomic
 		colly.UserAgent(""),
 		// colly.Debugger(&debug.LogDebugger{}),
 	)

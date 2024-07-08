@@ -11,7 +11,9 @@ import (
 	"github.com/google/uuid"
 	"gocv.io/x/gocv"
 )
-
+// TODO separate video iteration to another package
+// TODO move this to the same package where opencv stuff are import/image_surf
+// TODO remove videotitle param
 func HandleVideoFromPath(path string, outputDir string, fpsWant int, videoTitle string, refImagePaths []string, progress func(float64)) (*ImportResult, error) {
 	fps, err := extractMetadata(path)
 	if err != nil {

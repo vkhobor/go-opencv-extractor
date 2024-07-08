@@ -39,7 +39,7 @@ func (d *Downloader) Start() {
 		}
 	}
 }
-
+// TODO optionally move the single processing to another package e.g download/service
 func (d *Downloader) downloadVideo(video queries.ScrapedVideo) (queries.DownlodedVideo, error) {
 	time.Sleep(d.Throttle)
 	slog.Info("Download started", "video", video)

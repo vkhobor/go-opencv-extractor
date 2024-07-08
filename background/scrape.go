@@ -43,7 +43,7 @@ func (d *ScraperJob) Start() {
 		}
 	}
 }
-
+// TODO optionally move the single processing to another package e.g scrape/service
 func (d *ScraperJob) scrapeSingle(args queries.Job) ([]queries.ScrapedVideo, error) {
 
 	results := []queries.ScrapedVideo{}

@@ -48,7 +48,8 @@ func NewRouter(
 	huma.Get(api, "/api/jobs/{id}/videos", HandleJobVideosFound(queries))
 	huma.Get(api, "/api/images", HandleImages(queries))
 
-	// Legacy routes
+// TODO separate endpoints to files possibly packages
+	// TODO migrate legacy routes
 	router.Post("/api/references", HandleReferenceUpload(queries, config))
 	router.Get("/api/references", HandleGetReferences(queries))
 	router.Delete("/api/references", HandleDeleteAllReferences(queries))
