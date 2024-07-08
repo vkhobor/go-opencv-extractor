@@ -49,20 +49,19 @@
   <!-- Dropdown menu -->
   <div
     id="{{ id }}DropDownAction"
-    class="z-10 hidden bg-white divide-y divide-gray-100 rounded-lg shadow w-44 dark:bg-gray-700 dark:divide-gray-600"
+    class="z-10 hidden overflow-hidden bg-white divide-y divide-gray-100 rounded-lg shadow w-44 dark:bg-gray-700 dark:divide-gray-600"
   >
-    <ul class="py-1 text-sm text-gray-700 dark:text-gray-200">
+    <ul class="text-sm text-gray-700 dark:text-gray-200">
       @for (item of actions; track item.id) {
-
-      <li>
-        <button
-          id="{{ item.id }}"
-          (click)="actionSelected.emit(item)"
-          class="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
-        >
-          {{ item.label }}
-        </button>
-      </li>
+        <li>
+          <button
+            id="{{ item.id }}"
+            (click)="actionSelected.emit(item)"
+            class="block w-full text-left px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
+          >
+            {{ item.label }}
+          </button>
+        </li>
       }
     </ul>
   </div>
