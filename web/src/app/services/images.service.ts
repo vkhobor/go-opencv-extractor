@@ -1,11 +1,11 @@
 import { Injectable } from '@angular/core';
 import {
-  InfiniteData,
-  InfiniteQueryObserverResult,
-  injectInfiniteQuery,
-  injectQuery,
-  QueryKey,
-  QueryObserverResult,
+    InfiniteData,
+    InfiniteQueryObserverResult,
+    injectInfiniteQuery,
+    injectQuery,
+    QueryKey,
+    QueryObserverResult,
 } from '@ngneat/query';
 import { client } from './http/kiota';
 
@@ -16,44 +16,44 @@ import { Result } from '@ngneat/query/lib/types';
 import { ImagesRequestBuilderGetQueryParameters } from '../../api/api/images';
 
 export type ImagePageQueryParams = Omit<
-  ImagesRequestBuilderGetQueryParameters,
-  'limit' | 'offset'
+    ImagesRequestBuilderGetQueryParameters,
+    'limit' | 'offset'
 >;
 
 @Injectable({
-  providedIn: 'root',
+    providedIn: 'root',
 })
 export class ImagesService {
-  #query = injectQuery();
+    #query = injectQuery();
 
-  getImagePage(
-    pageParam: number,
-    pageSize: number,
-    params: ImagePageQueryParams,
-  ) {
-    return this.#query({
-      queryKey: ['images', params, pageParam, pageSize] as const,
-      enabled: false,
-      queryFn: () => this.getImagePageApi(pageParam, pageSize, params),
-    });
-  }
+    getImagePage(
+        pageParam: number,
+        pageSize: number,
+        params: ImagePageQueryParams
+    ) {
+        return this.#query({
+            queryKey: ['images', params, pageParam, pageSize] as const,
+            enabled: false,
+            queryFn: () => this.getImagePageApi(pageParam, pageSize, params),
+        });
+    }
 
-  getImagePageApi(
-    pageNumber: number,
-    pageSize: number,
-    params: ImagePageQueryParams,
-  ) {
-    const offset = pageNumber * pageSize;
-    const limit = pageSize;
+    getImagePageApi(
+        pageNumber: number,
+        pageSize: number,
+        params: ImagePageQueryParams
+    ) {
+        const offset = pageNumber * pageSize;
+        const limit = pageSize;
 
-    return undefToErr(
-      client.api.images.get({
-        queryParameters: {
-          limit,
-          offset,
-          ...params,
-        },
-      }),
-    );
-  }
+        return undefToErr(
+            client.api.images.get({
+                queryParameters: {
+                    limit,
+                    offset,
+                    ...params,
+                },
+            })
+        );
+    }
 }

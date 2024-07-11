@@ -1,4 +1,4 @@
 export interface Modal {
-  openModal(): void;
-  closeModal(): void;
+    openModal(): void;
+    closeModal(): void;
 }

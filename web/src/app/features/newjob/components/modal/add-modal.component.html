@@ -1,22 +1,22 @@
 <app-modal-container #modal>
-  <app-modal-layout [title]="'Add new Job'" (closeModal)="closeModal()">
-    <app-create-new-job-form
-      #form
-      (valid)="valid = $event"
-      (data)="data = $event"
-    ></app-create-new-job-form>
+    <app-modal-layout [title]="'Add new Job'" (closeModal)="closeModal()">
+        <app-create-new-job-form
+            #form
+            (valid)="valid = $event"
+            (data)="data = $event"
+        ></app-create-new-job-form>
 
-    <div footer>
-      <app-button
-        (click)="save()"
-        [disabled]="!valid"
-        [isLoading]="saveResult().isPending"
-        >Add job</app-button
-      >
+        <div footer>
+            <app-button
+                (click)="save()"
+                [disabled]="!valid"
+                [isLoading]="saveResult().isPending"
+                >Add job</app-button
+            >
 
-      <app-button (click)="closeModal()" [type]="'secondary'"
-        >Cancel</app-button
-      >
-    </div>
-  </app-modal-layout>
+            <app-button (click)="closeModal()" [type]="'secondary'"
+                >Cancel</app-button
+            >
+        </div>
+    </app-modal-layout>
 </app-modal-container>

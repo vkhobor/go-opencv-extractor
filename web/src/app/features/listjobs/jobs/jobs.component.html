@@ -1,64 +1,66 @@
 <app-layout>
-  <div
-    class="flex items-center justify-between flex-column flex-wrap md:flex-row space-y-4 md:space-y-0 pb-4 bg-white dark:bg-gray-900"
-  >
-    <app-actions
-      [actions]="actions"
-      (actionSelected)="onActionSelected($event)"
-    ></app-actions>
-  </div>
-  <app-add-modal #modal></app-add-modal>
-  <app-settings-modal #modal2></app-settings-modal>
-  <!-- Loading -->
-  @if (data().isLoading) {
-    <p class="dark:text-white">Loading..</p>
-  }
-  @if (data().isError) {
-    <p clasifs="dark:text-white">Error</p>
-  }
-  @if (data().data; as data) {
-    <!-- For -->
-
-    <div class="relative overflow-x-auto shadow-md rounded-lg">
-      <table
-        class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400"
-      >
-        <thead
-          class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400"
-        >
-          <tr>
-            <th scope="col" class="px-6 py-3">Search Query</th>
-            <th scope="col" class="px-6 py-3">
-              <div class="flex items-center">Limit</div>
-            </th>
-
-            <th scope="col" class="px-6 py-3">
-              <span class="sr-only">Edit</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (item of dataMapped(); track item.id) {
-            <tr class="bg-white dark:bg-gray-800 dark:border-gray-700">
-              <th
-                scope="row"
-                class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white"
-              >
-                {{ item.search_query }}
-              </th>
-
-              <td class="px-6 py-4">{{ item.limit }}</td>
-              <td class="px-6 py-4 text-right">
-                <a
-                  class="font-medium text-blue-600 dark:text-blue-500 hover:underline"
-                  routerLink="/jobs/{{ item.id }}"
-                  >Edit</a
-                >
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
+    <div
+        class="flex items-center justify-between flex-column flex-wrap md:flex-row space-y-4 md:space-y-0 pb-4 bg-white dark:bg-gray-900"
+    >
+        <app-actions
+            [actions]="actions"
+            (actionSelected)="onActionSelected($event)"
+        ></app-actions>
     </div>
-  }
+    <app-add-modal #modal></app-add-modal>
+    <app-settings-modal #modal2></app-settings-modal>
+    <!-- Loading -->
+    @if (data().isLoading) {
+        <p class="dark:text-white">Loading..</p>
+    }
+    @if (data().isError) {
+        <p clasifs="dark:text-white">Error</p>
+    }
+    @if (data().data; as data) {
+        <!-- For -->
+
+        <div class="relative overflow-x-auto shadow-md rounded-lg">
+            <table
+                class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400"
+            >
+                <thead
+                    class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400"
+                >
+                    <tr>
+                        <th scope="col" class="px-6 py-3">Search Query</th>
+                        <th scope="col" class="px-6 py-3">
+                            <div class="flex items-center">Limit</div>
+                        </th>
+
+                        <th scope="col" class="px-6 py-3">
+                            <span class="sr-only">Edit</span>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (item of dataMapped(); track item.id) {
+                        <tr
+                            class="bg-white dark:bg-gray-800 dark:border-gray-700"
+                        >
+                            <th
+                                scope="row"
+                                class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white"
+                            >
+                                {{ item.search_query }}
+                            </th>
+
+                            <td class="px-6 py-4">{{ item.limit }}</td>
+                            <td class="px-6 py-4 text-right">
+                                <a
+                                    class="font-medium text-blue-600 dark:text-blue-500 hover:underline"
+                                    routerLink="/jobs/{{ item.id }}"
+                                    >Edit</a
+                                >
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
 </app-layout>

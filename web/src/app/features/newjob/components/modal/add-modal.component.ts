@@ -9,42 +9,42 @@ import { ButtonComponent } from '../../../../components/button/button.component'
 import { CreateJob } from '../../../../../api/models';
 
 @Component({
-  selector: 'app-add-modal',
-  standalone: true,
-  imports: [
-    CommonModule,
-    ModalLayoutComponent,
-    ModalContainerComponent,
-    CreateNewJobFormComponent,
-    ButtonComponent,
-  ],
-  templateUrl: './add-modal.component.html',
-  styleUrl: './add-modal.component.css',
+    selector: 'app-add-modal',
+    standalone: true,
+    imports: [
+        CommonModule,
+        ModalLayoutComponent,
+        ModalContainerComponent,
+        CreateNewJobFormComponent,
+        ButtonComponent,
+    ],
+    templateUrl: './add-modal.component.html',
+    styleUrl: './add-modal.component.css',
 })
 export class AddModalComponent implements Modal {
-  @ViewChild('modal') modal!: ModalContainerComponent;
-  @ViewChild('form') form!: CreateNewJobFormComponent;
+    @ViewChild('modal') modal!: ModalContainerComponent;
+    @ViewChild('form') form!: CreateNewJobFormComponent;
 
-  constructor(private jobsService: JobsService) {}
+    constructor(private jobsService: JobsService) {}
 
-  data: CreateJob | undefined = undefined;
-  valid: boolean = false;
-  saveResult = this.jobsService.addJob.result;
+    data: CreateJob | undefined = undefined;
+    valid: boolean = false;
+    saveResult = this.jobsService.addJob.result;
 
-  openModal(): void {
-    this.modal.openModal();
-  }
-
-  save(): void {
-    this.form.touchAll();
-    if (this.data && this.form.valid) {
-      this.jobsService.addJob
-        .mutateAsync(this.data)
-        .then(() => this.closeModal());
+    openModal(): void {
+        this.modal.openModal();
     }
-  }
 
-  closeModal(): void {
-    this.modal.closeModal();
-  }
+    save(): void {
+        this.form.touchAll();
+        if (this.data && this.form.valid) {
+            this.jobsService.addJob
+                .mutateAsync(this.data)
+                .then(() => this.closeModal());
+        }
+    }
+
+    closeModal(): void {
+        this.modal.closeModal();
+    }
 }

@@ -1,163 +1,182 @@
 <app-layout>
-  <div>
-    <h1
-      class="mb-12 text-3xl font-extrabold text-gray-900 dark:text-white md:text-5xl lg:text-6xl"
-    >
-      Based on
-      <span
-        class="text-transparent bg-clip-text bg-gradient-to-r to-emerald-600 from-sky-400"
-      >
-        @if (details().data; as jobDetails) {
-          {{ jobDetails.search_query }}
-        }
-      </span>
-      query on youtube
-    </h1>
-
-    <div class="mb-2">
-      <app-button
-        [type]="'secondary'"
-        (click)="restartPipeline()"
-        [isLoading]="restartResult().isPending"
-      >
-        Retry pipelines</app-button
-      >
-    </div>
-
-    <div class="relative overflow-x-auto shadow-md rounded-lg">
-      <table
-        class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400"
-      >
-        <thead class="text-xs text-gray-700 uppercase dark:text-gray-400">
-          <tr>
-            <th scope="col" class="px-6 py-3 bg-gray-50 dark:bg-gray-800">
-              Property
-            </th>
-            <th scope="col" class="px-6 py-3">Value</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr class="border-b border-gray-200 dark:border-gray-700">
-            <th
-              scope="row"
-              class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap bg-gray-50 dark:text-white dark:bg-gray-800"
-            >
-              Target video amount
-            </th>
-            <td class="px-6 py-4">
-              <div class="flex flex-row justify-between items-center">
-                <span class="align-middle">
-                  @if (details().data; as jobDetails) {
-                    {{ jobDetails.video_target }}
-                  }
-                </span>
-                <button
-                (click)="increaseLimit()"
-                  type="button"
-                  class="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-full text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      fill="currentColor"
-                      d="M11 13H6q-.425 0-.712-.288T5 12t.288-.712T6 11h5V6q0-.425.288-.712T12 5t.713.288T13 6v5h5q.425 0 .713.288T19 12t-.288.713T18 13h-5v5q0 .425-.288.713T12 19t-.712-.288T11 18z"
-                    />
-                  </svg>
-                  <span class="sr-only">Icon description</span>
-                </button>
-              </div>
-            </td>
-          </tr>
-          <tr class="border-b border-gray-200 dark:border-gray-700">
-            <th
-              scope="row"
-              class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap bg-gray-50 dark:text-white dark:bg-gray-800"
-            >
-              Videos found
-            </th>
-            <td class="px-6 py-4">
-              @if (details().data; as jobDetails) {
-                {{ jobDetails.videos_found }}
-              }
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div
-      id="accordion-flush"
-      data-accordion="collapse"
-      class="mt-10"
-      [ngClass]="{
-        'bg-white dark:bg-gray-900 text-gray-900 dark:text-white': openVideos(),
-        'text-gray-500 dark:text-gray-400': !openVideos(),
-      }"
-    >
-      <h2 id="accordion-flush-heading-1">
-        <button
-          (click)="toggleVideos()"
-          type="button"
-          class="flex items-center justify-between w-full py-5 font-medium rtl:text-right border-b border-gray-200 dark:border-gray-700 gap-3"
+    <div>
+        <h1
+            class="mb-12 text-3xl font-extrabold text-gray-900 dark:text-white md:text-5xl lg:text-6xl"
         >
-          <span>Videos</span>
-          <svg
-            [class.rotate-180]="!openVideos()"
-            class="w-3 h-3 shrink-0"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 10 6"
-          >
-            <path
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 5 5 1 1 5"
-            />
-          </svg>
-        </button>
-      </h2>
-      <div
-        id="accordion-flush-body-1"
-        class="space-y-16 my-10"
-        [class.hidden]="!openVideos()"
-      >
-        @if (openVideos()) {
-          @if (videos(); as videos) {
-            @for (item of videos; track item.youtube_id) {
-              <div class="flex flex-col justify-between md:flex-row">
-                <div class="md:max-w-72">
-                  <app-youtube-embed
-                    [id]="item.youtube_id!"
-                  ></app-youtube-embed>
-                </div>
-                <div>
-                  <div
-                    class="mt-6 md:mt-0 relative overflow-x-auto shadow-md rounded-lg"
-                  >
-                    <app-object-table [value]="item"></app-object-table>
-                  </div>
-                  <div class="w-full flex-row justify-end flex p-3">
-                    <a
-                      class="block"
-                      routerLink="/images-found"
-                      [queryParams]="{ youtube_id: item.youtube_id! }"
-                      >Link to images found <app-link-icon></app-link-icon
-                    ></a>
-                  </div>
-                </div>
-              </div>
-            }
-          }
-        }
-      </div>
-    </div>
-    <!-- <div
+            Based on
+            <span
+                class="text-transparent bg-clip-text bg-gradient-to-r to-emerald-600 from-sky-400"
+            >
+                @if (details().data; as jobDetails) {
+                    {{ jobDetails.search_query }}
+                }
+            </span>
+            query on youtube
+        </h1>
+
+        <div class="mb-2">
+            <app-button
+                [type]="'secondary'"
+                (click)="restartPipeline()"
+                [isLoading]="restartResult().isPending"
+            >
+                Retry pipelines</app-button
+            >
+        </div>
+
+        <div class="relative overflow-x-auto shadow-md rounded-lg">
+            <table
+                class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400"
+            >
+                <thead
+                    class="text-xs text-gray-700 uppercase dark:text-gray-400"
+                >
+                    <tr>
+                        <th
+                            scope="col"
+                            class="px-6 py-3 bg-gray-50 dark:bg-gray-800"
+                        >
+                            Property
+                        </th>
+                        <th scope="col" class="px-6 py-3">Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="border-b border-gray-200 dark:border-gray-700">
+                        <th
+                            scope="row"
+                            class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap bg-gray-50 dark:text-white dark:bg-gray-800"
+                        >
+                            Target video amount
+                        </th>
+                        <td class="px-6 py-4">
+                            <div
+                                class="flex flex-row justify-between items-center"
+                            >
+                                <span class="align-middle">
+                                    @if (details().data; as jobDetails) {
+                                        {{ jobDetails.video_target }}
+                                    }
+                                </span>
+                                <button
+                                    (click)="increaseLimit()"
+                                    type="button"
+                                    class="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-full text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700"
+                                >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        width="16"
+                                        height="16"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            fill="currentColor"
+                                            d="M11 13H6q-.425 0-.712-.288T5 12t.288-.712T6 11h5V6q0-.425.288-.712T12 5t.713.288T13 6v5h5q.425 0 .713.288T19 12t-.288.713T18 13h-5v5q0 .425-.288.713T12 19t-.712-.288T11 18z"
+                                        />
+                                    </svg>
+                                    <span class="sr-only"
+                                        >Icon description</span
+                                    >
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr class="border-b border-gray-200 dark:border-gray-700">
+                        <th
+                            scope="row"
+                            class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap bg-gray-50 dark:text-white dark:bg-gray-800"
+                        >
+                            Videos found
+                        </th>
+                        <td class="px-6 py-4">
+                            @if (details().data; as jobDetails) {
+                                {{ jobDetails.videos_found }}
+                            }
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div
+            id="accordion-flush"
+            data-accordion="collapse"
+            class="mt-10"
+            [ngClass]="{
+                'bg-white dark:bg-gray-900 text-gray-900 dark:text-white':
+                    openVideos(),
+                'text-gray-500 dark:text-gray-400': !openVideos(),
+            }"
+        >
+            <h2 id="accordion-flush-heading-1">
+                <button
+                    (click)="toggleVideos()"
+                    type="button"
+                    class="flex items-center justify-between w-full py-5 font-medium rtl:text-right border-b border-gray-200 dark:border-gray-700 gap-3"
+                >
+                    <span>Videos</span>
+                    <svg
+                        [class.rotate-180]="!openVideos()"
+                        class="w-3 h-3 shrink-0"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 10 6"
+                    >
+                        <path
+                            stroke="currentColor"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M9 5 5 1 1 5"
+                        />
+                    </svg>
+                </button>
+            </h2>
+            <div
+                id="accordion-flush-body-1"
+                class="space-y-16 my-10"
+                [class.hidden]="!openVideos()"
+            >
+                @if (openVideos()) {
+                    @if (videos(); as videos) {
+                        @for (item of videos; track item.youtube_id) {
+                            <div
+                                class="flex flex-col justify-between md:flex-row"
+                            >
+                                <div class="md:max-w-72">
+                                    <app-youtube-embed
+                                        [id]="item.youtube_id!"
+                                    ></app-youtube-embed>
+                                </div>
+                                <div>
+                                    <div
+                                        class="mt-6 md:mt-0 relative overflow-x-auto shadow-md rounded-lg"
+                                    >
+                                        <app-object-table
+                                            [value]="item"
+                                        ></app-object-table>
+                                    </div>
+                                    <div
+                                        class="w-full flex-row justify-end flex p-3"
+                                    >
+                                        <a
+                                            class="block"
+                                            routerLink="/images-found"
+                                            [queryParams]="{
+                                                youtube_id: item.youtube_id!,
+                                            }"
+                                            >Link to images found
+                                            <app-link-icon></app-link-icon
+                                        ></a>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                }
+            </div>
+        </div>
+        <!-- <div
 
       id="accordion-flush"
       data-accordion="collapse"
@@ -201,5 +220,5 @@
         } }
       </div>
     </div> -->
-  </div>
+    </div>
 </app-layout>

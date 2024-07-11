@@ -1,70 +1,69 @@
-version: '3'
+version: "3"
 
-interval: '500ms'
+interval: "500ms"
 
 vars:
   GO_EXTRACTOR_DEV_SERVER_PORT: 7000
   GO_EXTRACTOR_DEV_CLIENT_PORT: 4200
 
 tasks:
-
   # Basic development related tasks
 
   dev:
     deps:
-    - server:dev
-    - client:dev
+      - server:dev
+      - client:dev
 
   server:dev:
     cmds:
-    - go run . serve -p {{.GO_EXTRACTOR_DEV_SERVER_PORT}} --blob-storage ./.tmp/blob --db ./.tmp/db.sqlite3
+      - go run . serve -p {{.GO_EXTRACTOR_DEV_SERVER_PORT}} --blob-storage ./.tmp/blob --db ./.tmp/db.sqlite3
 
   client:dev:
     dir: web
     cmds:
-    - NG_APP_API_URL=http://localhost:{{.GO_EXTRACTOR_DEV_SERVER_PORT}}/api npm run start -- --port {{.GO_EXTRACTOR_DEV_CLIENT_PORT}}
+      - NG_APP_API_URL=http://localhost:{{.GO_EXTRACTOR_DEV_SERVER_PORT}}/api npm run start -- --port {{.GO_EXTRACTOR_DEV_CLIENT_PORT}}
 
   client:dev:build:
     dir: web
     sources:
-    - web/src/**/*
+      - web/src/**/*
     cmds:
-    - npm run build:dev
+      - npm run build:dev
 
   preview:
-    deps: ['client:dev:build']
+    deps: ["client:dev:build"]
     cmds:
-    - task: start
+      - task: start
 
   generate-openapi:
     aliases: [gen-openapi]
     vars:
       PORT: "{{randInt 1000 10000}}"
     cmds:
-    - go run . openapi -p {{.PORT}} -o ./doc
+      - go run . openapi -p {{.PORT}} -o ./doc
 
   # Advanced development related tasks
 
   compose-up:
     aliases: [up]
     cmds:
-    - docker compose up
-    -
+      - docker compose up
+      -
   compose-up:build:
     aliases: [upb]
     cmds:
-    - docker compose up --build
+      - docker compose up --build
 
   install-sqlc:
     cmds:
-    - go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+      - go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
     status:
-    - sqlc --help
+      - sqlc --help
   install-migrate:
     status:
-    - migrate -version
+      - migrate -version
     cmds:
-    - go install -tags 'sqlite3' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+      - go install -tags 'sqlite3' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
 
   install-dev-deps:
     deps: [install-sqlc, install-migrate]
@@ -74,69 +73,69 @@ tasks:
     deps: [install-sqlc]
     watch: true
     sources:
-    - db/migrations/*.sql
-    - db/queries/*.sql
+      - db/migrations/*.sql
+      - db/queries/*.sql
     generates:
-    - db/db.go
-    - db/models.go
-    - db/*.sql.go
+      - db/db.go
+      - db/models.go
+      - db/*.sql.go
     cmds:
-    - sqlc generate
+      - sqlc generate
 
   generate-migration:
     deps: [install-migrate]
     dir: db/migrations
     preconditions:
-    - sh: test -n "{{.CLI_ARGS}}"
-      msg: "Please provide a name for the migration"
+      - sh: test -n "{{.CLI_ARGS}}"
+        msg: "Please provide a name for the migration"
     cmds:
-    - migrate create -ext sql {{.CLI_ARGS}}
+      - migrate create -ext sql {{.CLI_ARGS}}
 
   delete-last-migration:
     dir: db/migrations
     cmds:
-    - rm -f $(ls -t | head -n2)
+      - rm -f $(ls -t | head -n2)
 
   redo-last-migration:
     dir: db/migrations
     deps: [delete-last-migration]
     preconditions:
-    - sh: test -n "{{.CLI_ARGS}}"
-      msg: "Please provide a name for the migration"
+      - sh: test -n "{{.CLI_ARGS}}"
+        msg: "Please provide a name for the migration"
     cmds:
-    - task: generate-migration
+      - task: generate-migration
 
   # Production related tasks
 
   client:prod:build:
     dir: web
     sources:
-    - web/src/**/*
+      - web/src/**/*
     cmds:
-    - npm run build
+      - npm run build
 
   docker:new-builder:
     cmds:
-    - docker buildx create --name builderx --use
+      - docker buildx create --name builderx --use
 
   docker:build-docker:amd:
     cmds:
-    - docker buildx build --platform linux/amd64 -t vkhobor/extractor:latest --pull --load .
+      - docker buildx build --platform linux/amd64 -t vkhobor/extractor:latest --pull --load .
 
   docker:rebuild-docker:amd:
     cmds:
-    - docker buildx build --platform linux/amd64  --no-cache -t vkhobor/extractor:latest --pull --load .
+      - docker buildx build --platform linux/amd64  --no-cache -t vkhobor/extractor:latest --pull --load .
 
   docker:build-docker:all:
     cmds:
-    - docker buildx build --platform linux/amd64,linux/arm64 -t vkhobor/extractor:latest --pull --push .
+      - docker buildx build --platform linux/amd64,linux/arm64 -t vkhobor/extractor:latest --pull --push .
 
   # Run the following after: docker container run --rm -it build-context /bin/sh
   docker:test-dockerignore:
     cmds:
-    - docker image build --no-cache -t build-context --load -f - . <<EOF
-    - FROM busybox
-    - WORKDIR /build-context
-    - COPY . .
-    - CMD find .
-    - EOF
+      - docker image build --no-cache -t build-context --load -f - . <<EOF
+      - FROM busybox
+      - WORKDIR /build-context
+      - COPY . .
+      - CMD find .
+      - EOF

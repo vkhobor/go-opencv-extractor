@@ -4,8 +4,8 @@ import { FoundImagesScreenComponent } from './features/list-found-images/found-i
 import { JobDetaisScreenComponent } from './features/job-details/job-detais-screen/job-detais-screen.component';
 
 export const routes: Routes = [
-  { path: 'jobs', component: JobsComponent },
-  { path: '', redirectTo: '/jobs', pathMatch: 'full' },
-  { path: 'jobs/:id', component: JobDetaisScreenComponent },
-  { path: 'images-found', component: FoundImagesScreenComponent },
+    { path: 'jobs', component: JobsComponent },
+    { path: '', redirectTo: '/jobs', pathMatch: 'full' },
+    { path: 'jobs/:id', component: JobDetaisScreenComponent },
+    { path: 'images-found', component: FoundImagesScreenComponent },
 ];

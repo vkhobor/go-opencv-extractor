@@ -9,49 +9,51 @@ import { ReferencesService } from '../../../../services/references.service';
 import enviroment from '../../../../../enviroments/enviroment';
 
 @Component({
-  selector: 'app-settings-modal',
-  standalone: true,
-  imports: [
-    CommonModule,
-    ModalLayoutComponent,
-    ModalContainerComponent,
-    CreateNewJobFormComponent,
-    ButtonComponent,
-  ],
-  templateUrl: './settings-modal.component.html',
-  styleUrl: './settings-modal.component.css',
+    selector: 'app-settings-modal',
+    standalone: true,
+    imports: [
+        CommonModule,
+        ModalLayoutComponent,
+        ModalContainerComponent,
+        CreateNewJobFormComponent,
+        ButtonComponent,
+    ],
+    templateUrl: './settings-modal.component.html',
+    styleUrl: './settings-modal.component.css',
 })
 export class SettingsModalComponent implements Modal {
-  @ViewChild('modal') modal!: ModalContainerComponent;
+    @ViewChild('modal') modal!: ModalContainerComponent;
 
-  filesSignal = signal<File[] | null>(null);
-  fileSelected($event: any) {
-    this.filesSignal.set($event.target.files as File[]);
-  }
+    filesSignal = signal<File[] | null>(null);
+    fileSelected($event: any) {
+        this.filesSignal.set($event.target.files as File[]);
+    }
 
-  uploadResult = this.references.upload.result;
-  deleteAllResult = this.references.deleteAll.result;
+    uploadResult = this.references.upload.result;
+    deleteAllResult = this.references.deleteAll.result;
 
-  referencesValues = this.references.getReferences().result;
-  referencesUrls = computed(() =>
-    this.referencesValues().data?.map((r) => `${enviroment.api}/files/${r.id}`)
-  );
+    referencesValues = this.references.getReferences().result;
+    referencesUrls = computed(() =>
+        this.referencesValues().data?.map(
+            (r) => `${enviroment.api}/files/${r.id}`
+        )
+    );
 
-  constructor(private references: ReferencesService) {}
+    constructor(private references: ReferencesService) {}
 
-  openModal(): void {
-    this.modal.openModal();
-  }
+    openModal(): void {
+        this.modal.openModal();
+    }
 
-  save(): void {
-    this.references.upload.mutateAsync(this.filesSignal()!);
-  }
+    save(): void {
+        this.references.upload.mutateAsync(this.filesSignal()!);
+    }
 
-  deleteAll(): void {
-    this.references.deleteAll.mutateAsync({});
-  }
+    deleteAll(): void {
+        this.references.deleteAll.mutateAsync({});
+    }
 
-  closeModal(): void {
-    this.modal.closeModal();
-  }
+    closeModal(): void {
+        this.modal.closeModal();
+    }
 }

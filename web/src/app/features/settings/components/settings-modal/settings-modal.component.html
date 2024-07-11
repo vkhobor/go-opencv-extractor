@@ -1,38 +1,43 @@
 <app-modal-container #modal>
-  <app-modal-layout [title]="'Default filter'" (closeModal)="closeModal()">
-    @if(referencesUrls()?.length !== 0) {
-    <ul class="flex flex-row flex-wrap gap-4 mb-3">
-      @for (item of referencesUrls(); track item) {
-      <li>
-        <img class="object-contain w-32 h-32" [src]="item" alt="image" />
-      </li>
-      }
-    </ul>
-    <app-button
-      [isLoading]="deleteAllResult().isPending"
-      (click)="deleteAll()"
-      w-auto
-      >Delete all</app-button
-    >}
+    <app-modal-layout [title]="'Default filter'" (closeModal)="closeModal()">
+        @if (referencesUrls()?.length !== 0) {
+            <ul class="flex flex-row flex-wrap gap-4 mb-3">
+                @for (item of referencesUrls(); track item) {
+                    <li>
+                        <img
+                            class="object-contain w-32 h-32"
+                            [src]="item"
+                            alt="image"
+                        />
+                    </li>
+                }
+            </ul>
+            <app-button
+                [isLoading]="deleteAllResult().isPending"
+                (click)="deleteAll()"
+                w-auto
+                >Delete all</app-button
+            >
+        }
 
-    <form>
-      <label
-        class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-        for="multiple_files"
-        >Upload multiple pictures</label
-      >
-      <input
-        (change)="fileSelected($event)"
-        class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400"
-        id="multiple_files"
-        type="file"
-        multiple
-      />
-    </form>
-    <div>
-      <app-button [isLoading]="uploadResult().isPending" (click)="save()"
-        >Add</app-button
-      >
-    </div>
-  </app-modal-layout>
+        <form>
+            <label
+                class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                for="multiple_files"
+                >Upload multiple pictures</label
+            >
+            <input
+                (change)="fileSelected($event)"
+                class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400"
+                id="multiple_files"
+                type="file"
+                multiple
+            />
+        </form>
+        <div>
+            <app-button [isLoading]="uploadResult().isPending" (click)="save()"
+                >Add</app-button
+            >
+        </div>
+    </app-modal-layout>
 </app-modal-container>

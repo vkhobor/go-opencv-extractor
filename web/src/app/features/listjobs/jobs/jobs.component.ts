@@ -5,58 +5,60 @@ import { LayoutComponent } from '../../../components/layout/layout.component';
 import { AddModalComponent } from '../../newjob/components/modal/add-modal.component';
 import { SettingsModalComponent } from '../../settings/components/settings-modal/settings-modal.component';
 import {
-  Action,
-  ActionsComponent,
+    Action,
+    ActionsComponent,
 } from '../../../components/actions/actions.component';
 import { initFlowbite } from 'flowbite';
 
 @Component({
-  selector: 'app-jobs',
-  standalone: true,
-  imports: [
-    ActionsComponent,
-    SettingsModalComponent,
-    RouterLink,
-    LayoutComponent,
-    AddModalComponent,
-  ],
-  templateUrl: './jobs.component.html',
-  styleUrl: './jobs.component.css',
+    selector: 'app-jobs',
+    standalone: true,
+    imports: [
+        ActionsComponent,
+        SettingsModalComponent,
+        RouterLink,
+        LayoutComponent,
+        AddModalComponent,
+    ],
+    templateUrl: './jobs.component.html',
+    styleUrl: './jobs.component.css',
 })
 export class JobsComponent {
-  @ViewChild(AddModalComponent) addModal!: AddModalComponent;
-  @ViewChild(SettingsModalComponent) settingsModal!: SettingsModalComponent;
+    @ViewChild(AddModalComponent) addModal!: AddModalComponent;
+    @ViewChild(SettingsModalComponent) settingsModal!: SettingsModalComponent;
 
-  constructor(private jobService: JobsService) {}
-  data = this.jobService.getJobs().result;
+    constructor(private jobService: JobsService) {}
+    data = this.jobService.getJobs().result;
 
-  actions: Action[] = [
-    {
-      id: 'Add',
-      label: 'Add',
-    },
-    {
-      id: 'Default filter',
-      label: 'Default filter',
-    },
-  ];
+    actions: Action[] = [
+        {
+            id: 'Add',
+            label: 'Add',
+        },
+        {
+            id: 'Default filter',
+            label: 'Default filter',
+        },
+    ];
 
-  onActionSelected(action: Action) {
-    switch (action.id) {
-      case 'Add':
-        this.addModal.openModal();
-        break;
-      case 'Default filter':
-        this.settingsModal.openModal();
-        break;
+    onActionSelected(action: Action) {
+        switch (action.id) {
+            case 'Add':
+                this.addModal.openModal();
+                break;
+            case 'Default filter':
+                this.settingsModal.openModal();
+                break;
+        }
     }
-  }
 
-  dataMapped = computed(() => {
-    const sorted = this.data().data.sort((a, b) => a.id!.localeCompare(b.id!));
+    dataMapped = computed(() => {
+        const sorted = this.data().data.sort((a, b) =>
+            a.id!.localeCompare(b.id!)
+        );
 
-    return sorted.map((job) => ({
-      ...job,
-    }));
-  });
+        return sorted.map((job) => ({
+            ...job,
+        }));
+    });
 }

@@ -4,14 +4,14 @@ import { HttpClient } from '@angular/common/http';
 import env from '../../../enviroments/enviroment';
 
 @Injectable({
-  providedIn: 'root',
+    providedIn: 'root',
 })
 export class DefaultHttpProxyService extends HttpProxyService {
-  override getBaseUrl(): string {
-    return env.api;
-  }
+    override getBaseUrl(): string {
+        return env.api;
+    }
 
-  constructor(http: HttpClient) {
-    super(http);
-  }
+    constructor(http: HttpClient) {
+        super(http);
+    }
 }

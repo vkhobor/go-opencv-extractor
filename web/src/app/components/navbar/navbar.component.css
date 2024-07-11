@@ -1,3 +1,3 @@
 .is-active {
-  @apply md:text-white md:p-0 md:dark:text-white bg-gray-700 text-gray-400 md:bg-transparent;
+    @apply md:text-white md:p-0 md:dark:text-white bg-gray-700 text-gray-400 md:bg-transparent;
 }

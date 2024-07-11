@@ -1,40 +1,40 @@
 {
-  "descriptionHash": "D556D2ACE6DD7406DE7A1C5381676006DF324E3C45A3FD8456AEB49B098F61D05C7F5964F21421DAE8BE9FAF97CB94676A920F83C0A866276022D60C8B063141",
-  "descriptionLocation": "../../../doc/openapi-3.0.json",
-  "lockFileVersion": "1.0.0",
-  "kiotaVersion": "1.16.0",
-  "clientClassName": "ApiClient",
-  "clientNamespaceName": "ApiSDK",
-  "language": "TypeScript",
-  "usesBackingStore": false,
-  "excludeBackwardCompatible": false,
-  "includeAdditionalData": true,
-  "disableSSLValidation": false,
-  "serializers": [
-    "@microsoft/kiota-serialization-form.FormSerializationWriterFactory",
-    "@microsoft/kiota-serialization-json.JsonSerializationWriterFactory",
-    "@microsoft/kiota-serialization-text.TextSerializationWriterFactory",
-    "@microsoft/kiota-serialization-multipart.MultipartSerializationWriterFactory"
-  ],
-  "deserializers": [
-    "@microsoft/kiota-serialization-form.FormParseNodeFactory",
-    "@microsoft/kiota-serialization-json.JsonParseNodeFactory",
-    "@microsoft/kiota-serialization-text.TextParseNodeFactory"
-  ],
-  "structuredMimeTypes": [
-    "application/json",
-    "text/plain;q=0.9",
-    "application/x-www-form-urlencoded;q=0.2",
-    "multipart/form-data;q=0.1"
-  ],
-  "includePatterns": [
-    "/api/images",
-    "/api/jobs",
-    "/api/jobs/{id}",
-    "/api/jobs/{id}/actions/restart",
-    "/api/jobs/{id}/actions/update-limit",
-    "/api/jobs/{id}/videos"
-  ],
-  "excludePatterns": [],
-  "disabledValidationRules": []
+    "descriptionHash": "D556D2ACE6DD7406DE7A1C5381676006DF324E3C45A3FD8456AEB49B098F61D05C7F5964F21421DAE8BE9FAF97CB94676A920F83C0A866276022D60C8B063141",
+    "descriptionLocation": "../../../doc/openapi-3.0.json",
+    "lockFileVersion": "1.0.0",
+    "kiotaVersion": "1.16.0",
+    "clientClassName": "ApiClient",
+    "clientNamespaceName": "ApiSDK",
+    "language": "TypeScript",
+    "usesBackingStore": false,
+    "excludeBackwardCompatible": false,
+    "includeAdditionalData": true,
+    "disableSSLValidation": false,
+    "serializers": [
+        "@microsoft/kiota-serialization-form.FormSerializationWriterFactory",
+        "@microsoft/kiota-serialization-json.JsonSerializationWriterFactory",
+        "@microsoft/kiota-serialization-text.TextSerializationWriterFactory",
+        "@microsoft/kiota-serialization-multipart.MultipartSerializationWriterFactory"
+    ],
+    "deserializers": [
+        "@microsoft/kiota-serialization-form.FormParseNodeFactory",
+        "@microsoft/kiota-serialization-json.JsonParseNodeFactory",
+        "@microsoft/kiota-serialization-text.TextParseNodeFactory"
+    ],
+    "structuredMimeTypes": [
+        "application/json",
+        "text/plain;q=0.9",
+        "application/x-www-form-urlencoded;q=0.2",
+        "multipart/form-data;q=0.1"
+    ],
+    "includePatterns": [
+        "/api/images",
+        "/api/jobs",
+        "/api/jobs/{id}",
+        "/api/jobs/{id}/actions/restart",
+        "/api/jobs/{id}/actions/update-limit",
+        "/api/jobs/{id}/videos"
+    ],
+    "excludePatterns": [],
+    "disabledValidationRules": []
 }
