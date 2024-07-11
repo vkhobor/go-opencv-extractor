@@ -9,3 +9,4 @@
 *.jpg
 *.sqlite3
 /.tmp/db.sqlite3
+**/.tmp/
