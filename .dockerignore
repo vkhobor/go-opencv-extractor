@@ -7,8 +7,8 @@ node_modules/
 .vscode
 bin
 
-*.mp4
-*.png
+**/*.mp4
+**/*.png
 /db.sqlite3
 taskfile.yaml
 *.md

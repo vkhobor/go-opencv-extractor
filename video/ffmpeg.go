@@ -1,4 +1,5 @@
 package video
+
 // TODO move to its own package
 import (
 	"log/slog"

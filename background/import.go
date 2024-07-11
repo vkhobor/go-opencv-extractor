@@ -30,6 +30,7 @@ func (d *Importer) Start() {
 		// d.Output <- imported
 	}
 }
+
 // TODO optionally move the single processing to another package e.g import/service
 func (d *Importer) importVideo(video queries.DownlodedVideo) (queries.ImportedVideo, error) {
 	refs, err := d.Queries.GetRefImages(video)
@@ -47,14 +48,20 @@ func (d *Importer) importVideo(video queries.DownlodedVideo) (queries.ImportedVi
 
 	videoImported, err := d.handleSingle(id, refs, video)
 	if err != nil {
-		err = d.Queries.UpdateError(id, err)
+		innerErr := d.Queries.UpdateError(id, err)
+		if innerErr != nil {
+			return queries.ImportedVideo{}, err
+		}
 		return queries.ImportedVideo{}, err
 	}
 
 	err = d.Queries.FinishImport(videoImported, id)
 	if err != nil {
 		if errors.Is(err, queries.ErrHasImported) {
-			err = d.Queries.UpdateError(id, err)
+			innerErr := d.Queries.UpdateError(id, err)
+			if innerErr != nil {
+				return queries.ImportedVideo{}, err
+			}
 		}
 
 		return queries.ImportedVideo{}, err

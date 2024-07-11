@@ -36,7 +36,13 @@ func (jc *Queries) GetScrapedVideos() []ScrapedVideo {
 
 	result := make([]ScrapedVideo, len(val))
 	for i, v := range val {
-		result[i] = ScrapedVideo{ID: v.YtVideoID}
+		result[i] = ScrapedVideo{
+			Job: Job{
+				JobID:       v.JobID,
+				SearchQuery: v.SearchQuery.String,
+				FilterID:    v.FilterID.String,
+			},
+			ID: v.YtVideoID}
 	}
 
 	return result

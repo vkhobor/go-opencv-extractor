@@ -39,8 +39,10 @@ func (d *Downloader) Start() {
 		}
 	}
 }
+
 // TODO optionally move the single processing to another package e.g download/service
 func (d *Downloader) downloadVideo(video queries.ScrapedVideo) (queries.DownlodedVideo, error) {
+	// TODO check if video is already downloaded, optionally abort while progressing
 	time.Sleep(d.Throttle)
 	slog.Info("Download started", "video", video)
 	youtubeVideo := youtube.YoutubeVideo(video.ID)
