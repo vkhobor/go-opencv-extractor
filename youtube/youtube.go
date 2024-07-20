@@ -111,10 +111,7 @@ func (w *writeReporter) Write(p []byte) (n int, err error) {
 	n = len(p)
 	w.current += int64(n)
 
-	select {
-	case w.Progress <- float64(w.current) / float64(w.Total) * 100:
-	default:
-	}
+	w.Progress <- float64(w.current) / float64(w.Total)
 
 	return
 }

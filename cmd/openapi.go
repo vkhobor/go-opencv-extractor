@@ -20,6 +20,7 @@ import (
 	"github.com/vkhobor/go-opencv/api"
 	"github.com/vkhobor/go-opencv/config"
 	database "github.com/vkhobor/go-opencv/db"
+	"github.com/vkhobor/go-opencv/mlog"
 
 	"github.com/DATA-DOG/go-sqlmock"
 
@@ -43,13 +44,13 @@ func runOpenApiServer(ctx context.Context, _ io.Writer, _ []string, port int, ou
 	emptyChan := make(chan struct{})
 	portString := fmt.Sprintf(":%d", port)
 
-	slog.Info("Starting router", "port", port)
+	mlog.Log().Info("Starting router", "port", port)
 	router := api.NewRouter(dbQueries, emptyChan, dirConfig, config.ProgramConfig{})
 
 	savingOpenApiDone := make(chan struct{})
 
 	go func() {
-		slog.Info("Server starting", "port", port)
+		mlog.Log().Info("Server starting", "port", port)
 		l, err := net.Listen("tcp", portString)
 		if err != nil {
 			log.Fatal(err)
@@ -135,7 +136,7 @@ func NewRunOpenApi() *cobra.Command {
 				return err
 			}
 
-			slog.Info("Starting openapi cmd", "port", port, "output", output)
+			mlog.Log().Info("Starting openapi cmd", "port", port, "output", output)
 
 			if err := runOpenApiServer(ctx, os.Stdout, args, port, output); err != nil {
 				fmt.Fprintf(os.Stderr, "%s\n", err)

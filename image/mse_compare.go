@@ -9,24 +9,22 @@ import (
 )
 
 func CompareImagesPath(path1, path2 string) (float64, error) {
-	// Open the images
 	img1 := gocv.IMRead(path1, gocv.IMReadColor)
 	defer img1.Close()
 
 	img2 := gocv.IMRead(path2, gocv.IMReadColor)
 	defer img2.Close()
 
-	return CompareImages(img1, img2)
+	return CompareImages(&img1, &img2)
 }
 
-func CompareImages(img1, img2 gocv.Mat) (float64, error) {
-
+func CompareImages(img1, img2 *gocv.Mat) (float64, error) {
 	// Check if the images have the same size
 	if img1.Rows() != img2.Rows() || img1.Cols() != img2.Cols() {
 		return 0, errors.New("images do not have the same size")
 	}
 
-	// Calculate the MSE
+	// Calculate the MSE, Mean Squared Error
 	var mse float64
 	for y := 0; y < img1.Rows(); y++ {
 		for x := 0; x < img1.Cols(); x++ {

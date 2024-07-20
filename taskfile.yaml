@@ -11,10 +11,10 @@ tasks:
 
   dev:
     deps:
-      - server:dev
+      - server
       - client:dev
 
-  server:dev:
+  server:
     cmds:
       - go run . serve -p {{.GO_EXTRACTOR_DEV_SERVER_PORT}} --blob-storage ./.tmp/blob --db ./.tmp/db.sqlite3
 
@@ -23,17 +23,10 @@ tasks:
     cmds:
       - NG_APP_API_URL=http://localhost:{{.GO_EXTRACTOR_DEV_SERVER_PORT}}/api npm run start -- --port {{.GO_EXTRACTOR_DEV_CLIENT_PORT}}
 
-  client:dev:build:
-    dir: web
-    sources:
-      - web/src/**/*
-    cmds:
-      - npm run build:dev
-
   preview:
-    deps: ["client:dev:build"]
+    deps: ["client:build"]
     cmds:
-      - task: start
+      - task: server
 
   generate-openapi:
     aliases: [gen-openapi]
@@ -107,10 +100,12 @@ tasks:
 
   # Production related tasks
 
-  client:prod:build:
+  client:build:
     dir: web
     sources:
-      - web/src/**/*
+      - src/**/*.*
+    generates:
+      - dist/**/*.*
     cmds:
       - npm run build
 
@@ -118,15 +113,16 @@ tasks:
     cmds:
       - docker buildx create --name builderx --use
 
-  docker:build-docker:amd:
+  docker:build:amd:
     cmds:
       - docker buildx build --platform linux/amd64 -t vkhobor/extractor:latest --pull --load .
 
-  docker:rebuild-docker:amd:
+  docker:rebuild:amd:
     cmds:
       - docker buildx build --platform linux/amd64  --no-cache -t vkhobor/extractor:latest --pull --load .
 
-  docker:build-docker:all:
+  docker:build:all:
+    aliases: [dockb]
     cmds:
       - docker buildx build --platform linux/amd64,linux/arm64 -t vkhobor/extractor:latest --pull --push .
 

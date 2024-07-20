@@ -2,10 +2,10 @@ package background
 
 import (
 	"errors"
-	"log/slog"
 	"time"
 
 	"github.com/vkhobor/go-opencv/config"
+	"github.com/vkhobor/go-opencv/mlog"
 	"github.com/vkhobor/go-opencv/queries"
 	videoLib "github.com/vkhobor/go-opencv/video"
 )
@@ -19,15 +19,12 @@ type Importer struct {
 
 func (d *Importer) Start() {
 	for video := range d.Input {
-		slog.Debug("Importer starting importing", "video", video, "method", "Start")
+		mlog.Log().Debug("Importer starting importing", "video", video, "method", "Start")
 		_, err := d.importVideo(video)
 		if err != nil {
-			slog.Error("Error while importing video", "error", err, "video", video)
+			mlog.Log().Error("Error while importing video", "error", err, "video", video)
 			continue
 		}
-
-		// TODO handle output if needed
-		// d.Output <- imported
 	}
 }
 
@@ -81,14 +78,14 @@ func (d *Importer) handleSingle(importAttemptId string, refs []string, video que
 		progress <- progressFromImport
 	}
 
-	val, err := videoLib.HandleVideoFromPath(video.SavePath, d.Config.GetImagesDir(), 1, "", refs, progressHandler)
+	filePaths, err := videoLib.HandleVideoFromPath(video.SavePath, d.Config.GetImagesDir(), 1, refs, progressHandler)
 	if err != nil {
 		return queries.ImportedVideo{}, err
 	}
 
-	slog.Info("Imported video", "video", val.FilePaths, "id", video.ID)
+	mlog.Log().Info("Imported video", "video", filePaths, "id", video.ID)
 	frames := make([]queries.Frame, 0)
-	for _, v := range val.FilePaths {
+	for _, v := range filePaths {
 		frames = append(frames, queries.Frame{FrameNumber: 0, Path: v})
 	}
 	return queries.ImportedVideo{
@@ -98,15 +95,17 @@ func (d *Importer) handleSingle(importAttemptId string, refs []string, video que
 }
 
 func (d *Importer) importProgressHandler(progressChan <-chan float64, video queries.DownlodedVideo, importAttemptId string) {
-	// sample progresschan every one 30 seconds
-	ticker := time.NewTicker(time.Second * 30)
+	ticker := time.NewTicker(time.Second * 15)
 	defer ticker.Stop()
 
+	previousItem := 0.0
 	for item := range progressChan {
 		select {
 		case <-ticker.C:
 			_ = d.Queries.UpdateProgress(importAttemptId, int(item*100))
-			slog.Info("importProgressHandler", "id", video.ID, "progress", item)
+			if item-previousItem > 0.2 {
+				mlog.Log().Info("importProgressHandler", "id", video.ID, "progress", item)
+			}
 		default:
 		}
 	}

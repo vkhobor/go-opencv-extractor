@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"io"
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -23,6 +22,7 @@ import (
 	"github.com/vkhobor/go-opencv/api"
 	"github.com/vkhobor/go-opencv/background"
 	"github.com/vkhobor/go-opencv/config"
+	"github.com/vkhobor/go-opencv/mlog"
 	pathutils "github.com/vkhobor/go-opencv/path"
 	"github.com/vkhobor/go-opencv/queries"
 	"github.com/vkhobor/go-opencv/scraper"
@@ -36,15 +36,20 @@ func run(ctx context.Context, w io.Writer, args []string, programConfig config.P
 	logger := slog.New(tint.NewHandler(w, &tint.Options{
 		Level: slog.LevelDebug,
 	}))
-	slog.SetLogLoggerLevel(slog.LevelDebug)
-	slog.SetDefault(logger)
+	mlog.SetDefault(logger)
+
+	slog.SetLogLoggerLevel(slog.LevelError)
+	loggerSlog := slog.New(tint.NewHandler(w, &tint.Options{
+		Level: slog.LevelError,
+	}))
+	slog.SetDefault(loggerSlog)
 
 	err := pathutils.EnsurePath(programConfig.Db, false)
 	if err != nil {
 		return err
 	}
 
-	slog.Info("Opening database", "file", programConfig.Db)
+	mlog.Log().Info("Opening database", "file", programConfig.Db)
 	dbconn, err := sql.Open("sqlite3", programConfig.Db)
 	if err != nil {
 		return err
@@ -54,7 +59,7 @@ func run(ctx context.Context, w io.Writer, args []string, programConfig config.P
 		return err
 	}
 
-	slog.Info("Migrating database")
+	mlog.Log().Info("Migrating database")
 	m, err := migrate.NewWithDatabaseInstance(
 		"file://./db/migrations",
 		"sqlite3", driver)
@@ -67,7 +72,7 @@ func run(ctx context.Context, w io.Writer, args []string, programConfig config.P
 		return err
 	}
 
-	slog.Info("Setup dependencies")
+	mlog.Log().Info("Setup dependencies")
 	dbQueries := database.New(dbconn)
 
 	highLevelQueries := queries.Queries{
@@ -97,7 +102,6 @@ func run(ctx context.Context, w io.Writer, args []string, programConfig config.P
 		Config:   dirConfig,
 		Input:    scrapedVideoChan,
 		Output:   downloadedChan,
-		WakeJobs: wakeJobs,
 	}
 
 	importer := background.Importer{
@@ -117,7 +121,6 @@ func run(ctx context.Context, w io.Writer, args []string, programConfig config.P
 		MaxErrorStopRetrying: 5,
 		Output:               scrapedVideoChan,
 		Config:               dirConfig,
-		WakeJobs:             wakeJobs,
 	}
 
 	jobManager := background.DbMonitor{
@@ -128,7 +131,7 @@ func run(ctx context.Context, w io.Writer, args []string, programConfig config.P
 		ImportInput:   downloadedChan,
 	}
 
-	slog.Info("Starting jobs")
+	mlog.Log().Info("Starting jobs")
 
 	go scraperJob.Start()
 	go downloader.Start()
@@ -140,12 +143,13 @@ func run(ctx context.Context, w io.Writer, args []string, programConfig config.P
 	portString := fmt.Sprintf(":%d", programConfig.Port)
 	router := api.NewRouter(dbQueries, jobManager.Wake, dirConfig, programConfig)
 	srv := &http.Server{Addr: portString, Handler: router}
-	slog.Info("Server started", "port", programConfig.Port)
+	mlog.Log().Info("Server started", "port", programConfig.Port)
 
 	go func() {
 		httpError := srv.ListenAndServe()
 		if httpError != nil && httpError != http.ErrServerClosed {
-			log.Fatal(httpError)
+			mlog.Log().Error("Cannot listen and serve", "httpError", httpError)
+			panic(httpError)
 		}
 	}()
 
@@ -154,10 +158,10 @@ func run(ctx context.Context, w io.Writer, args []string, programConfig config.P
 	gracefulTimeout, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	slog.Info("Shutting down server...")
+	mlog.Log().Info("Shutting down server...")
 	err = srv.Shutdown(gracefulTimeout)
 	if err != nil {
-		slog.Error("Error shutting down server", "error", err)
+		mlog.Log().Error("Error shutting down server", "error", err)
 		return err
 	}
 
@@ -181,12 +185,11 @@ func NewRunserver() *cobra.Command {
 				return err
 			}
 			if err := config.Validate(); err != nil {
-				slog.Error("Invalid configuration", "config", config)
+				mlog.Log().Error("Invalid configuration", "config", config)
 				return fmt.Errorf("invalid configuration")
 			}
 
-			slog.Info("Starting serve", "configuration", config)
-
+			mlog.Log().Info("Starting serve", "configuration", config)
 			if err := run(ctx, os.Stdout, args, config); err != nil {
 				fmt.Fprintf(os.Stderr, "%s\n", err)
 				os.Exit(1)

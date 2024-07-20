@@ -1,9 +1,9 @@
 package background
 
 import (
-	"log/slog"
 	"sync"
 
+	"github.com/vkhobor/go-opencv/mlog"
 	"github.com/vkhobor/go-opencv/queries"
 )
 
@@ -31,7 +31,7 @@ func (jm *DbMonitor) PullWorkItemsFromDb() {
 
 		jobs := jm.Queries.GetToScrapeVideos()
 
-		slog.Debug("PullWorkItemsFromDb", "jobs", jobs)
+		mlog.Log().Debug("PullWorkItemsFromDb", "jobs", jobs)
 		for _, args := range jobs {
 			jm.ScrapeInput <- args
 		}
@@ -42,7 +42,7 @@ func (jm *DbMonitor) PullWorkItemsFromDb() {
 
 		scrapedVideos := jm.Queries.GetScrapedVideos()
 
-		slog.Debug("PullWorkItemsFromDb", "scrapedVideos", scrapedVideos)
+		mlog.Log().Debug("PullWorkItemsFromDb", "scrapedVideos", scrapedVideos)
 		for _, video := range scrapedVideos {
 			jm.DownloadInput <- video
 		}
@@ -53,7 +53,7 @@ func (jm *DbMonitor) PullWorkItemsFromDb() {
 
 		downloadedVideos := jm.Queries.GetDownloadedVideos()
 
-		slog.Debug("PullWorkItemsFromDb", "downloadedVideos", downloadedVideos)
+		mlog.Log().Debug("PullWorkItemsFromDb", "downloadedVideos", downloadedVideos)
 		for _, video := range downloadedVideos {
 			jm.ImportInput <- video
 		}

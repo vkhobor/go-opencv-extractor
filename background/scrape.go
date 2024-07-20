@@ -2,9 +2,9 @@ package background
 
 import (
 	"errors"
-	"log/slog"
 
 	"github.com/vkhobor/go-opencv/config"
+	"github.com/vkhobor/go-opencv/mlog"
 	"github.com/vkhobor/go-opencv/queries"
 	"github.com/vkhobor/go-opencv/scraper"
 	"github.com/vkhobor/go-opencv/youtube"
@@ -17,7 +17,6 @@ type ScraperJob struct {
 	Input                <-chan queries.Job
 	Output               chan<- queries.ScrapedVideo
 	Config               config.DirectoryConfig
-	WakeJobs             chan<- struct{}
 }
 
 // Start starts the Scraper
@@ -29,20 +28,11 @@ func (d *ScraperJob) Start() {
 		}
 
 		for _, result := range results {
-			select {
-			case d.Output <- result:
-				continue
-			default:
-			}
-
-			select {
-			case d.WakeJobs <- struct{}{}:
-				continue
-			default:
-			}
+			d.Output <- result
 		}
 	}
 }
+
 // TODO optionally move the single processing to another package e.g scrape/service
 func (d *ScraperJob) scrapeSingle(args queries.Job) ([]queries.ScrapedVideo, error) {
 
@@ -50,7 +40,7 @@ func (d *ScraperJob) scrapeSingle(args queries.Job) ([]queries.ScrapedVideo, err
 	err := d.Scraper.Scrape(args.SearchQuery, d.handleFound(args, &results))
 
 	if err != nil {
-		slog.Error("Error while setting up scraper", "error", err, "method", "scrapeSingle")
+		mlog.Log().Error("Error while setting up scraper", "error", err, "method", "scrapeSingle")
 		return nil, err
 	}
 
@@ -67,12 +57,12 @@ func (d *ScraperJob) handleFound(args queries.Job, output *[]queries.ScrapedVide
 		}
 
 		if err != nil {
-			slog.Error("Error while scraping", "error", err)
+			mlog.Log().Error("Error while scraping", "error", err)
 			errored++
 			return
 		}
 
-		slog.Debug("Scraped", "scraped", item)
+		mlog.Log().Debug("Scraped", "scraped", item)
 		scraped := queries.ScrapedVideo{
 			Job: args,
 			ID:  item.String(),
@@ -80,7 +70,7 @@ func (d *ScraperJob) handleFound(args queries.Job, output *[]queries.ScrapedVide
 
 		err = d.Queries.SaveNewlyScraped(scraped, args.JobID)
 		if err != nil {
-			slog.Error("Error while saving scraped video", "error", err, "video", scraped, "method", "scrapeSingle")
+			mlog.Log().Error("Error while saving scraped video", "error", err, "video", scraped, "method", "scrapeSingle")
 
 			if errors.Is(err, queries.ErrLimitExceeded) {
 				stop()

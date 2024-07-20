@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"database/sql"
-	"log/slog"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
@@ -11,6 +10,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/vkhobor/go-opencv/config"
 	"github.com/vkhobor/go-opencv/db"
+	"github.com/vkhobor/go-opencv/mlog"
 )
 
 type CreateJob struct {
@@ -66,9 +66,9 @@ func HandleCreateJob(queries *db.Queries, wakeJobs chan<- struct{}, config confi
 
 		select {
 		case wakeJobs <- struct{}{}:
-			slog.Info("Waking up jobs")
+			mlog.Log().Info("Waking up jobs")
 		default:
-			slog.Info("Jobs already awake")
+			mlog.Log().Info("Jobs already awake")
 		}
 
 		return &CreatedJobResponse{
@@ -114,9 +114,9 @@ func HandleUpdateJobLimit(queries *db.Queries, wakeJobs chan<- struct{}) Handler
 
 		select {
 		case wakeJobs <- struct{}{}:
-			slog.Info("Waking up jobs")
+			mlog.Log().Info("Waking up jobs")
 		default:
-			slog.Info("Jobs already awake")
+			mlog.Log().Info("Jobs already awake")
 		}
 
 		return &Empty{}, nil
