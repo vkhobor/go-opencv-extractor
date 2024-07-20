@@ -11,7 +11,6 @@ import (
 
 func (jc *Queries) GetToScrapeVideos() []Job {
 
-	// Hi
 	dbVal, err := jc.Queries.GetJobs(context.Background())
 
 	if err != nil {

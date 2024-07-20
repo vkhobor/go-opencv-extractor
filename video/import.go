@@ -25,6 +25,7 @@ func HandleVideoFromPath(path string, outputDir string, fpsWant int, refImagePat
 		return nil, err
 	}
 	defer checker.Close()
+
 	surfMatch := iter.Filter2(iterator.IterateWithPrevious, func(info videoiter.FrameInfoWithPrevious, err error) bool {
 		return checker.IsImageMatch(*info.Current.Frame)
 	})
