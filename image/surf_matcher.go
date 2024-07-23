@@ -48,7 +48,7 @@ type Checker struct {
 	Close         func() error
 }
 
-func NewChecker(refs []string, opts ...CheckerOption) (*Checker, error) {
+func NewChecker(refs []string, options ...CheckerOption) (*Checker, error) {
 	refImages, err := getImagesFromPaths(refs)
 	if err != nil {
 		return nil, err
@@ -68,7 +68,7 @@ func NewChecker(refs []string, opts ...CheckerOption) (*Checker, error) {
 
 	matcher := gocv.NewBFMatcher()
 
-	c := &Checker{
+	checker := &Checker{
 		CheckerConfig: defaultCheckerConfig,
 		descriptors:   descriptors,
 		matcher:       matcher,
@@ -86,11 +86,11 @@ func NewChecker(refs []string, opts ...CheckerOption) (*Checker, error) {
 			return nil
 		}}
 
-	for _, o := range opts {
-		o(c)
+	for _, option := range options {
+		option(checker)
 	}
 
-	return c, nil
+	return checker, nil
 }
 
 func (e *Checker) IsImageMatch(frame gocv.Mat) bool {
