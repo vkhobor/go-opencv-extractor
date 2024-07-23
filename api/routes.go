@@ -5,6 +5,7 @@ import (
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
+	"github.com/kevincobain2000/gol"
 	"github.com/vkhobor/go-opencv/config"
 	"github.com/vkhobor/go-opencv/db"
 )
@@ -25,6 +26,15 @@ func NewRouter(
 		AllowCredentials: false,
 		MaxAge:           300,
 	}))
+
+	g := gol.NewGol(func(o *gol.GolOptions) error {
+		o.FilePaths = []string{programConfig.LogFolder + "/" + "*.log"}
+		return nil
+	})
+
+	router.HandleFunc("/gol/api", g.Adapter(g.NewAPIHandler().Get))
+	router.HandleFunc("/gol", g.Adapter(g.NewAssetsHandler().Get))
+
 	api := humachi.New(router, huma.DefaultConfig("My API", "1.0.0"))
 
 	huma.Register(api, huma.Operation{

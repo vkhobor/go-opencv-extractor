@@ -16,7 +16,7 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/sqlite3"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"github.com/lmittmann/tint"
+	"gopkg.in/natefinch/lumberjack.v2"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/vkhobor/go-opencv/api"
@@ -27,21 +27,25 @@ import (
 	"github.com/vkhobor/go-opencv/queries"
 	"github.com/vkhobor/go-opencv/scraper"
 
-	database "github.com/vkhobor/go-opencv/db"
-
 	"github.com/spf13/cobra"
+	database "github.com/vkhobor/go-opencv/db"
 )
 
 func run(ctx context.Context, w io.Writer, args []string, programConfig config.ProgramConfig) error {
-	logger := slog.New(tint.NewHandler(w, &tint.Options{
-		Level: slog.LevelDebug,
-	}))
+	pathutils.MustEnsurePath(programConfig.LogFolder, true)
+	logFile := &lumberjack.Logger{
+		Filename:   programConfig.LogFolder + "/log.log",
+		MaxSize:    500,
+		MaxBackups: 3,
+		MaxAge:     28,
+	}
+
+	multiWriter := io.MultiWriter(w, logFile)
+	logger := slog.New(slog.NewTextHandler(multiWriter, nil))
 	mlog.SetDefault(logger)
 
 	slog.SetLogLoggerLevel(slog.LevelError)
-	loggerSlog := slog.New(tint.NewHandler(w, &tint.Options{
-		Level: slog.LevelError,
-	}))
+	loggerSlog := slog.New(slog.NewTextHandler(multiWriter, nil))
 	slog.SetDefault(loggerSlog)
 
 	err := pathutils.EnsurePath(programConfig.Db, false)
@@ -202,10 +206,13 @@ func NewRunserver() *cobra.Command {
 	cmdPrint.MarkFlagRequired("port")
 	viperConf.BindPFlag("port", cmdPrint.Flags().Lookup("port"))
 
-	cmdPrint.Flags().StringP("db", "d", "~/test", "Address of the sqlite database")
+	cmdPrint.Flags().StringP("db", "d", "", "Address of the sqlite database")
 	viperConf.BindPFlag("db", cmdPrint.Flags().Lookup("db"))
 
-	cmdPrint.Flags().StringP("blob-storage", "s", "~/test", "Specify where to store files")
+	cmdPrint.Flags().StringP("log-folder", "l", "", "Folder to put logs in")
+	viperConf.BindPFlag("log_folder", cmdPrint.Flags().Lookup("log-folder"))
+
+	cmdPrint.Flags().StringP("blob-storage", "s", "", "Specify where to store files")
 	viperConf.BindPFlag("blob_storage", cmdPrint.Flags().Lookup("blob-storage"))
 
 	return cmdPrint

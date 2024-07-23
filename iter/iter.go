@@ -38,17 +38,17 @@ func Filter2[K, V any](seq Seq2[K, V], filterFunc FilterFunc2[K, V]) Seq2[K, V] 
 	}
 }
 
-func Filter2CanError[K, V any](seq Seq2[K, V], filterFunc FilterFunc2CanError[K, V]) Seq2[K, V] {
-	return func(yield func(K, V) bool) {
+func FilterCanError[K, V any](seq Seq2[K, V], filterFunc FilterFunc2CanError[K, V]) Seq2[K, error] {
+	return func(yield func(K, error) bool) {
 		seq(func(key K, value V) bool {
 			shouldYield, err := filterFunc(key, value)
 			if err != nil {
-				return false
+				return yield(key, err)
 			}
 			if !shouldYield {
 				return true
 			}
-			if yield(key, value) {
+			if yield(key, err) {
 				return true
 			}
 			return false

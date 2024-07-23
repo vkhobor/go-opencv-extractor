@@ -16,7 +16,7 @@ tasks:
 
   server:
     cmds:
-      - go run . serve -p {{.GO_EXTRACTOR_DEV_SERVER_PORT}} --blob-storage ./.tmp/blob --db ./.tmp/db.sqlite3
+      - go run . serve -p {{.GO_EXTRACTOR_DEV_SERVER_PORT}} --blob-storage ./.tmp/blob --db ./.tmp/db.sqlite3 --log-folder ./.tmp/logs
 
   client:dev:
     dir: web

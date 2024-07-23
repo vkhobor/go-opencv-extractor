@@ -10,6 +10,7 @@ type ProgramConfig struct {
 	Port        int    `mapstructure:"port"`
 	BlobStorage string `mapstructure:"blob_storage"`
 	BaseUrl     string `mapstructure:"base_url"`
+	LogFolder   string `mapstructure:"log_folder"`
 	Db          string `mapstructure:"db"`
 }
 
@@ -17,6 +18,7 @@ func addDefaults(viperConf *viper.Viper) {
 	viperConf.SetDefault("port", 8080)
 	viperConf.SetDefault("base_url", "http://localhost:8080")
 	viperConf.SetDefault("blob_storage", "~/.go_extractor/data")
+	viperConf.SetDefault("log_folder", "~/.go_extractor/logs")
 	viperConf.SetDefault("db", "~/.go_extractor/db.sqlite3")
 }
 
@@ -31,6 +33,14 @@ func (c ProgramConfig) Validate() error {
 
 	if c.Db == "" {
 		return fmt.Errorf("invalid db file")
+	}
+
+	if c.BaseUrl == "" {
+		return fmt.Errorf("invalid baseurl")
+	}
+
+	if c.LogFolder == "" {
+		return fmt.Errorf("invalid logsfoldr")
 	}
 
 	return nil

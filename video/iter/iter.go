@@ -80,10 +80,7 @@ func (v VideoIterator) Iterate(yield func(FrameInfo, error) bool) {
 	defer currentFrame.Close()
 	for {
 		if !capture.Read(&currentFrame) {
-			if !yield(FrameInfo{}, errors.New("Failed to read frame")) {
-				break
-			}
-			continue
+			break
 		}
 
 		frameNumber := int(capture.Get(gocv.VideoCapturePosFrames))
@@ -109,9 +106,19 @@ func (v VideoIterator) IterateWithPrevious(yield func(withPrevious FrameInfoWith
 	}
 	defer previous.Frame.Close()
 
+	isFirst := true
+
 	v.Iterate(func(fi FrameInfo, err error) bool {
 		if err != nil {
 			return yield(FrameInfoWithPrevious{}, err)
+		}
+
+		if isFirst {
+			isFirst = false
+			previous.FrameNum = fi.FrameNum
+			previous.TimeFromStart = fi.TimeFromStart
+			fi.Frame.CopyTo(previous.Frame)
+			return true
 		}
 
 		if !yield(FrameInfoWithPrevious{Current: fi, Previous: previous}, nil) {

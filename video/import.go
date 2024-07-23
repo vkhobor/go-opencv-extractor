@@ -8,6 +8,7 @@ import (
 
 	"github.com/vkhobor/go-opencv/image"
 	"github.com/vkhobor/go-opencv/iter"
+	"github.com/vkhobor/go-opencv/mlog"
 	videoiter "github.com/vkhobor/go-opencv/video/iter"
 
 	"github.com/google/uuid"
@@ -19,6 +20,7 @@ func HandleVideoFromPath(path string, outputDir string, fpsWant int, refImagePat
 	if err != nil {
 		return nil, err
 	}
+	mlog.Log().Debug("VideoIterator created", "path", path, "fps", fpsWant)
 
 	checker, err := image.NewChecker(refImagePaths)
 	if err != nil {
@@ -26,17 +28,25 @@ func HandleVideoFromPath(path string, outputDir string, fpsWant int, refImagePat
 	}
 	defer checker.Close()
 
+	mlog.Log().Debug("Checker created", "refImagePaths", refImagePaths)
+
 	surfMatch := iter.Filter2(iterator.IterateWithPrevious, func(info videoiter.FrameInfoWithPrevious, err error) bool {
+		progress(float64(info.Current.FrameNum) / float64(iterator.MaxFrame()) * 100)
+		if err != nil {
+			return true
+		}
+
 		return checker.IsImageMatch(*info.Current.Frame)
 	})
 
-	var filterError error
-	surfMatchEnoughDifference := iter.Filter2CanError(surfMatch, func(info videoiter.FrameInfoWithPrevious, err error) (bool, error) {
+	surfMatchEnoughDifference := iter.FilterCanError(surfMatch, func(info videoiter.FrameInfoWithPrevious, err error) (bool, error) {
+		if err != nil {
+			return false, err
+		}
 		if distanceIsLessThanDuration(info.Current, info.Previous, time.Minute*2) {
 			diff, err := image.CompareImages(info.Previous.Frame, info.Current.Frame)
 			if err != nil {
-				filterError = err
-				return false, err
+				return true, err
 			}
 
 			// if diff is too small, skip
@@ -46,9 +56,6 @@ func HandleVideoFromPath(path string, outputDir string, fpsWant int, refImagePat
 		}
 		return true, nil
 	})
-	if filterError != nil {
-		return nil, filterError
-	}
 
 	filePaths := make([]string, 0)
 	var iterationError error
@@ -65,7 +72,6 @@ func HandleVideoFromPath(path string, outputDir string, fpsWant int, refImagePat
 		}
 		filePaths = append(filePaths, filePath)
 
-		progress(float64(value.Current.FrameNum) / float64(iterator.MaxFrame()) * 100)
 		return true
 	})
 
