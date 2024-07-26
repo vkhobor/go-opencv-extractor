@@ -2,12 +2,13 @@ package background
 
 import (
 	"errors"
+	"fmt"
+	"iter"
 
 	"github.com/vkhobor/go-opencv/config"
 	"github.com/vkhobor/go-opencv/mlog"
 	"github.com/vkhobor/go-opencv/queries"
 	"github.com/vkhobor/go-opencv/scraper"
-	"github.com/vkhobor/go-opencv/youtube"
 )
 
 type ScraperJob struct {
@@ -19,11 +20,11 @@ type ScraperJob struct {
 	Config               config.DirectoryConfig
 }
 
-// Start starts the Scraper
 func (d *ScraperJob) Start() {
 	for video := range d.Input {
 		results, err := d.scrapeSingle(video)
 		if err != nil {
+			mlog.Log().Error("Scraping did not produce any results", "error", err)
 			continue
 		}
 
@@ -35,54 +36,56 @@ func (d *ScraperJob) Start() {
 
 // TODO optionally move the single processing to another package e.g scrape/service
 func (d *ScraperJob) scrapeSingle(args queries.Job) ([]queries.ScrapedVideo, error) {
+	iterable := d.Scraper.AllForQuery(args.SearchQuery)
+	results, errs := d.collectScraped(iterable, args)
 
-	results := []queries.ScrapedVideo{}
-	err := d.Scraper.Scrape(args.SearchQuery, d.handleFound(args, &results))
-
-	if err != nil {
-		mlog.Log().Error("Error while setting up scraper", "error", err, "method", "scrapeSingle")
-		return nil, err
+	if len(errs) != 0 {
+		mlog.Log().Error("Encountered errors while scraping", "errors", errs)
+	}
+	if len(results) < args.Limit {
+		return nil, fmt.Errorf("could not scrape any videos", errors.Join(errs...))
 	}
 
 	return results, nil
 }
 
-func (d *ScraperJob) handleFound(args queries.Job, output *[]queries.ScrapedVideo) func(item youtube.YoutubeVideo, err error, stop func()) {
-	errored := 0
+func (d *ScraperJob) collectScraped(scrape iter.Seq[scraper.Result], args queries.Job) ([]queries.ScrapedVideo, []error) {
+	errorsEncountered := []error{}
+	collected := []queries.ScrapedVideo{}
 
-	return func(item youtube.YoutubeVideo, err error, stop func()) {
-		if errored >= d.MaxErrorStopRetrying {
-			stop()
-			return
+	for result := range scrape {
+		if len(errorsEncountered) >= d.MaxErrorStopRetrying {
+			break
 		}
 
-		if err != nil {
-			mlog.Log().Error("Error while scraping", "error", err)
-			errored++
-			return
+		if result.Error != nil {
+			mlog.Log().Error("Error while scraping", "error", result.Error)
+			errorsEncountered = append(errorsEncountered, result.Error)
+			continue
 		}
 
-		mlog.Log().Debug("Scraped", "scraped", item)
+		mlog.Log().Debug("Scraped", "scraped", result)
 		scraped := queries.ScrapedVideo{
 			Job: args,
-			ID:  item.String(),
+			ID:  string(result.YoutubeVideo),
 		}
 
-		err = d.Queries.SaveNewlyScraped(scraped, args.JobID)
+		err := d.Queries.SaveNewlyScraped(scraped, args.JobID)
 		if err != nil {
-			mlog.Log().Error("Error while saving scraped video", "error", err, "video", scraped, "method", "scrapeSingle")
-
 			if errors.Is(err, queries.ErrLimitExceeded) {
-				stop()
-				return
+				mlog.Log().Warn("Reached scraping limit, stopping", "job", args, "id", scraped.ID)
+				break
 			} else if errors.Is(err, queries.ErrAlreadyScrapedForFilter) {
-				return
+				mlog.Log().Warn("Collision, already scraped", "job", args, "id", scraped.ID)
+				continue
 			} else {
 				// Unknown error
-				errored++
+				errorsEncountered = append(errorsEncountered, err)
+				continue
 			}
 		}
 
-		*output = append(*output, scraped)
+		collected = append(collected, scraped)
 	}
+	return collected, errorsEncountered
 }

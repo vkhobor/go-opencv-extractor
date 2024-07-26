@@ -8,9 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/signal"
 	"sync"
-	"syscall"
 
 	"fmt"
 
@@ -23,11 +21,9 @@ import (
 	"github.com/vkhobor/go-opencv/mlog"
 
 	"github.com/DATA-DOG/go-sqlmock"
-
-	"github.com/spf13/cobra"
 )
 
-func runOpenApiServer(ctx context.Context, _ io.Writer, _ []string, port int, output string) error {
+func RunOpenApiServer(ctx context.Context, _ io.Writer, _ []string, port int, output string) error {
 	db, _, err := sqlmock.New()
 	if err != nil {
 		return err
@@ -36,7 +32,10 @@ func runOpenApiServer(ctx context.Context, _ io.Writer, _ []string, port int, ou
 
 	dbQueries := database.New(db)
 
-	dirConfig, err := config.NewDirectoryConfig("./")
+	conf := config.ServerConfig{
+		BlobStorage: "/",
+	}
+	dirConfig, err := conf.GetDirectoryConfig()
 	if err != nil {
 		return err
 	}
@@ -45,7 +44,7 @@ func runOpenApiServer(ctx context.Context, _ io.Writer, _ []string, port int, ou
 	portString := fmt.Sprintf(":%d", port)
 
 	mlog.Log().Info("Starting router", "port", port)
-	router := api.NewRouter(dbQueries, emptyChan, dirConfig, config.ProgramConfig{})
+	router := api.NewRouter(dbQueries, emptyChan, dirConfig, config.ServerConfig{})
 
 	savingOpenApiDone := make(chan struct{})
 
@@ -114,43 +113,4 @@ func saveOpenApiSpecs(wg *sync.WaitGroup, port int, output string, apiPath strin
 	slog.Info("Saved openapi spec", "file", outputFile)
 
 	return nil
-}
-
-func NewRunOpenApi() *cobra.Command {
-
-	var cmdPrint = &cobra.Command{
-		Use: "openapi",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := cmd.Context()
-
-			ctx, cancel := signal.NotifyContext(ctx, os.Interrupt, os.Kill, syscall.SIGTERM)
-			defer cancel()
-
-			port, err := cmd.Flags().GetInt("port")
-			if err != nil {
-				return err
-			}
-
-			output, err := cmd.Flags().GetString("output")
-			if err != nil {
-				return err
-			}
-
-			mlog.Log().Info("Starting openapi cmd", "port", port, "output", output)
-
-			if err := runOpenApiServer(ctx, os.Stdout, args, port, output); err != nil {
-				fmt.Fprintf(os.Stderr, "%s\n", err)
-				os.Exit(1)
-			}
-			return nil
-		},
-	}
-
-	cmdPrint.Flags().IntP("port", "p", 8080, "Specify the port")
-	cmdPrint.MarkFlagRequired("port")
-
-	cmdPrint.Flags().StringP("output", "o", "./doc", "Specify the folder to output the openapi specs")
-	cmdPrint.MarkFlagRequired("output")
-
-	return cmdPrint
 }

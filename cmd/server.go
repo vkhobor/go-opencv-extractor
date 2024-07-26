@@ -6,9 +6,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"fmt"
@@ -27,11 +24,10 @@ import (
 	"github.com/vkhobor/go-opencv/queries"
 	"github.com/vkhobor/go-opencv/scraper"
 
-	"github.com/spf13/cobra"
 	database "github.com/vkhobor/go-opencv/db"
 )
 
-func run(ctx context.Context, w io.Writer, args []string, programConfig config.ProgramConfig) error {
+func RunServer(ctx context.Context, w io.Writer, args []string, programConfig config.ServerConfig) error {
 	pathutils.MustEnsurePath(programConfig.LogFolder, true)
 	logFile := &lumberjack.Logger{
 		Filename:   programConfig.LogFolder + "/log.log",
@@ -39,13 +35,19 @@ func run(ctx context.Context, w io.Writer, args []string, programConfig config.P
 		MaxBackups: 3,
 		MaxAge:     28,
 	}
-
 	multiWriter := io.MultiWriter(w, logFile)
-	logger := slog.New(slog.NewTextHandler(multiWriter, nil))
+
+	logger := slog.New(slog.NewTextHandler(multiWriter, &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	}))
 	mlog.SetDefault(logger)
 
+	// Separate handler for slog.
+	// If any package uses slog internally we filter for LevelError
+	loggerSlog := slog.New(slog.NewTextHandler(multiWriter, &slog.HandlerOptions{
+		Level: slog.LevelError,
+	}))
 	slog.SetLogLoggerLevel(slog.LevelError)
-	loggerSlog := slog.New(slog.NewTextHandler(multiWriter, nil))
 	slog.SetDefault(loggerSlog)
 
 	err := pathutils.EnsurePath(programConfig.Db, false)
@@ -83,18 +85,18 @@ func run(ctx context.Context, w io.Writer, args []string, programConfig config.P
 		Queries: dbQueries,
 	}
 
-	dirConfig, err := config.NewDirectoryConfig(programConfig.BlobStorage)
+	dirConfig, err := programConfig.GetDirectoryConfig()
 	if err != nil {
 		return err
 	}
 
-	scrapeArgsChan := make(chan queries.Job)
+	scrapeArgsChan := make(chan queries.Job, 100)
 	defer close(scrapeArgsChan)
 
-	scrapedVideoChan := make(chan queries.ScrapedVideo)
+	scrapedVideoChan := make(chan queries.ScrapedVideo, 100)
 	defer close(scrapedVideoChan)
 
-	downloadedChan := make(chan queries.DownlodedVideo)
+	downloadedChan := make(chan queries.DownlodedVideo, 100)
 	defer close(downloadedChan)
 
 	wakeJobs := make(chan struct{}, 1)
@@ -170,50 +172,4 @@ func run(ctx context.Context, w io.Writer, args []string, programConfig config.P
 	}
 
 	return nil
-}
-
-func NewRunserver() *cobra.Command {
-	viperConf := config.MustNewDefaultViperConfig()
-
-	var cmdPrint = &cobra.Command{
-		Use: "serve",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := cmd.Context()
-
-			ctx, cancel := signal.NotifyContext(ctx, os.Interrupt, os.Kill, syscall.SIGTERM)
-			defer cancel()
-
-			config := config.ProgramConfig{}
-			err := viperConf.Unmarshal(&config)
-			if err != nil {
-				return err
-			}
-			if err := config.Validate(); err != nil {
-				mlog.Log().Error("Invalid configuration", "config", config)
-				return fmt.Errorf("invalid configuration")
-			}
-
-			mlog.Log().Info("Starting serve", "configuration", config)
-			if err := run(ctx, os.Stdout, args, config); err != nil {
-				fmt.Fprintf(os.Stderr, "%s\n", err)
-				os.Exit(1)
-			}
-			return nil
-		},
-	}
-
-	cmdPrint.Flags().IntP("port", "p", 8080, "Specify the port")
-	cmdPrint.MarkFlagRequired("port")
-	viperConf.BindPFlag("port", cmdPrint.Flags().Lookup("port"))
-
-	cmdPrint.Flags().StringP("db", "d", "", "Address of the sqlite database")
-	viperConf.BindPFlag("db", cmdPrint.Flags().Lookup("db"))
-
-	cmdPrint.Flags().StringP("log-folder", "l", "", "Folder to put logs in")
-	viperConf.BindPFlag("log_folder", cmdPrint.Flags().Lookup("log-folder"))
-
-	cmdPrint.Flags().StringP("blob-storage", "s", "", "Specify where to store files")
-	viperConf.BindPFlag("blob_storage", cmdPrint.Flags().Lookup("blob-storage"))
-
-	return cmdPrint
 }

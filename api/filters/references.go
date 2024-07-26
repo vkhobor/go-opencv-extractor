@@ -1,4 +1,4 @@
-package api
+package filters
 
 import (
 	"context"
@@ -20,6 +20,7 @@ const (
 	megabyte = 1 << 20 // 1 megabyte = 2^20 bytes
 )
 
+// TODO migrate to fully dynamic filters
 var defaultFilterId = "1fed33d4-0ea3-4b84-909c-261e4b2a3d43"
 
 func HandleReferenceUpload(queries *db.Queries, config config.DirectoryConfig) http.HandlerFunc {

@@ -1,4 +1,4 @@
-package api
+package filters
 
 import (
 	"net/http"

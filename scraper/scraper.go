@@ -1,6 +1,7 @@
 package scraper
 
 import (
+	"iter"
 	"log/slog"
 	"net/url"
 	"time"
@@ -8,7 +9,7 @@ import (
 	"github.com/vkhobor/go-opencv/youtube"
 )
 
-func apiForSearchQuery(host string, search string) (string, error) {
+func apiForSearchQuery(host string, search string) string {
 	params := url.Values{}
 	params.Add("q", search)
 
@@ -18,7 +19,7 @@ func apiForSearchQuery(host string, search string) (string, error) {
 		RawQuery: params.Encode(),
 		Path:     "search",
 	}
-	return u.String(), nil
+	return u.String()
 }
 
 type Scraper struct {
@@ -33,7 +34,25 @@ func (s *Scraper) Stop() {
 	}
 }
 
-func (s *Scraper) Scrape(query string, onFound func(youtube.YoutubeVideo, error, func())) error {
+type Result struct {
+	youtube.YoutubeVideo
+	Error error
+}
+
+func (s *Scraper) AllForQuery(query string) iter.Seq[Result] {
+	return func(yield func(Result) bool) {
+		s.Scrape(query, func(yv youtube.YoutubeVideo, err error, close func()) {
+			if !yield(Result{
+				YoutubeVideo: yv,
+				Error:        err,
+			}) {
+				close()
+			}
+		})
+	}
+}
+
+func (s *Scraper) Scrape(query string, onFound func(youtube.YoutubeVideo, error, func())) {
 	singlePageVisitor := NewCollector(*s)
 	singlePageVisitor.MaxDepth = 1
 
@@ -51,16 +70,11 @@ func (s *Scraper) Scrape(query string, onFound func(youtube.YoutubeVideo, error,
 	})
 
 	urlEncoded := url.QueryEscape(query)
-	urlToScrape, err := apiForSearchQuery(s.Domain, urlEncoded)
-	if err != nil {
-		return err
-	}
+	urlToScrape := apiForSearchQuery(s.Domain, urlEncoded)
 
 	slog.Debug("Start scraping", "url", urlToScrape)
 	allPagesVisitor.Visit(urlToScrape)
 
 	allPagesVisitor.Wait()
 	singlePageVisitor.Wait()
-
-	return nil
 }

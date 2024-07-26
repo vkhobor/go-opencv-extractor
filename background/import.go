@@ -8,6 +8,7 @@ import (
 	"github.com/vkhobor/go-opencv/mlog"
 	"github.com/vkhobor/go-opencv/queries"
 	videoLib "github.com/vkhobor/go-opencv/video"
+	videoIter "github.com/vkhobor/go-opencv/video/iter"
 )
 
 type Importer struct {
@@ -71,11 +72,11 @@ func (d *Importer) handleSingle(importAttemptId string, refs []string, video que
 	time.Sleep(d.Throttle)
 
 	// Make progress handling async
-	progress := make(chan float64, 1)
+	progress := make(chan videoIter.Progress, 1)
 	defer close(progress)
 	go d.importProgressHandler(progress, video, importAttemptId)
-	progressHandler := func(progressFromImport float64) {
-		progress <- progressFromImport
+	progressHandler := func(p videoIter.Progress) {
+		progress <- p
 	}
 
 	filePaths, err := videoLib.HandleVideoFromPath(video.SavePath, d.Config.GetImagesDir(), 1, refs, progressHandler)
@@ -94,18 +95,20 @@ func (d *Importer) handleSingle(importAttemptId string, refs []string, video que
 	}, nil
 }
 
-func (d *Importer) importProgressHandler(progressChan <-chan float64, video queries.DownlodedVideo, importAttemptId string) {
-	ticker := time.NewTicker(time.Second * 15)
+func (d *Importer) importProgressHandler(progressChan <-chan videoIter.Progress, video queries.DownlodedVideo, importAttemptId string) {
+	ticker := time.NewTicker(time.Second * 5)
 	defer ticker.Stop()
 
-	previousItem := 0.0
+	previous := videoIter.Progress{}
 	for item := range progressChan {
 		select {
 		case <-ticker.C:
-			_ = d.Queries.UpdateProgress(importAttemptId, int(item*100))
-			if item-previousItem > 0.2 {
-				mlog.Log().Info("importProgressHandler", "id", video.ID, "progress", item)
-			}
+			go func() { _ = d.Queries.UpdateProgress(importAttemptId, int(item.Percent())) }()
+			mlog.Log().Info("importProgressHandler",
+				"id", video.ID,
+				"progress", item,
+				"speed fps", item.FPS(previous))
+			previous = item
 		default:
 		}
 	}

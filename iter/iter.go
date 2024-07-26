@@ -1,57 +1,64 @@
 package iter
 
-type (
-	Seq[V any]     func(yield func(V) bool)
-	Seq2[K, V any] func(yield func(K, V) bool)
-)
+import "iter"
 
 type FilterFunc[V any] func(V) bool
 type FilterFunc2[K, V any] func(K, V) bool
 type FilterFunc2CanError[K, V any] func(K, V) (bool, error)
 
-// Filter yields only values for which filterFunc returns true
-func Filter[T any](s Seq[T], filterFunc FilterFunc[T]) Seq[T] {
+func Filter[T any](seq iter.Seq[T], filterFunc FilterFunc[T]) iter.Seq[T] {
 	return func(yield func(T) bool) {
-		s(func(value T) bool {
-			if shouldYield := filterFunc(value); !shouldYield {
-				return true
+		for item := range seq {
+			if keep := filterFunc(item); keep {
+				if !yield(item) {
+					break
+				}
 			}
-			if yield(value) {
-				return true
-			}
-			return false
-		})
+		}
 	}
 }
 
-func Filter2[K, V any](seq Seq2[K, V], filterFunc FilterFunc2[K, V]) Seq2[K, V] {
+func Filter2[K, V any](seq iter.Seq2[K, V], filterFunc FilterFunc2[K, V]) iter.Seq2[K, V] {
 	return func(yield func(K, V) bool) {
-		seq(func(key K, value V) bool {
-			if shouldYield := filterFunc(key, value); !shouldYield {
-				return true
+		for key, value := range seq {
+			if keep := filterFunc(key, value); keep {
+				if !yield(key, value) {
+					break
+				}
 			}
-			if yield(key, value) {
-				return true
-			}
-			return false
-		})
+		}
 	}
 }
 
-func FilterCanError[K, V any](seq Seq2[K, V], filterFunc FilterFunc2CanError[K, V]) Seq2[K, error] {
+func Sample[K, V any](seq iter.Seq2[K, V], every int) iter.Seq2[K, V] {
+	index := 0
+	return func(yield func(K, V) bool) {
+		for key, value := range seq {
+			if index%every == 0 {
+				if !yield(key, value) {
+					break
+				}
+			}
+			index++
+		}
+	}
+}
+
+func FilterWithError2[K, V any](seq iter.Seq2[K, V], filterFunc FilterFunc2CanError[K, V]) iter.Seq2[K, error] {
 	return func(yield func(K, error) bool) {
-		seq(func(key K, value V) bool {
-			shouldYield, err := filterFunc(key, value)
+		for key, value := range seq {
+			keep, err := filterFunc(key, value)
 			if err != nil {
-				return yield(key, err)
+				if !yield(key, err) {
+					break
+				}
 			}
-			if !shouldYield {
-				return true
+
+			if keep {
+				if !yield(key, err) {
+					break
+				}
 			}
-			if yield(key, err) {
-				return true
-			}
-			return false
-		})
+		}
 	}
 }

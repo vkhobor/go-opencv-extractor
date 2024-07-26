@@ -109,6 +109,10 @@ tasks:
     cmds:
       - npm run build
 
+  docker:build:starter:
+    cmds:
+      - docker build --platform linux/amd64,linux/arm64 --push -t vkhobor/bullseye-gocv-multiplatform -f bullseye-gocv-multiplatform .
+
   docker:new-builder:
     cmds:
       - docker buildx create --name builderx --use

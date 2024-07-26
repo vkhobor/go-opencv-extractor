@@ -3,7 +3,6 @@ package path
 import (
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 func MustEnsurePath(path string, isDir bool) {
@@ -14,15 +13,6 @@ func MustEnsurePath(path string, isDir bool) {
 }
 
 func EnsurePath(path string, isDir bool) error {
-	if strings.HasPrefix(path, "~/") {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return err
-		}
-
-		path = filepath.Join(home, path[2:])
-	}
-
 	if !isDir {
 		path = filepath.Dir(path)
 	}

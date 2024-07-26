@@ -5,6 +5,7 @@ import (
 	"database/sql"
 
 	"github.com/samber/lo"
+	"github.com/vkhobor/go-opencv/api/util"
 	"github.com/vkhobor/go-opencv/db"
 )
 
@@ -25,9 +26,13 @@ type ImagesRequest struct {
 	YoutubeID string `query:"youtube_id"`
 }
 
-func HandleImages(queries *db.Queries) Handler[ImagesRequest, WithBody[Response]] {
+type HandleImagesResponse struct {
+	Body Response
+}
 
-	return func(ctx context.Context, e *ImagesRequest) (*WithBody[Response], error) {
+func HandleImages(queries *db.Queries) util.Handler[ImagesRequest, HandleImagesResponse] {
+
+	return func(ctx context.Context, e *ImagesRequest) (*HandleImagesResponse, error) {
 
 		res, err := queries.GetPictures(ctx, db.GetPicturesParams{
 			Limit:               int64(e.Limit),
@@ -64,6 +69,6 @@ func HandleImages(queries *db.Queries) Handler[ImagesRequest, WithBody[Response]
 			}),
 		}
 
-		return &WithBody[Response]{Body: resp}, nil
+		return &HandleImagesResponse{Body: resp}, nil
 	}
 }

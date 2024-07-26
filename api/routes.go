@@ -6,6 +6,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 	"github.com/kevincobain2000/gol"
+	"github.com/vkhobor/go-opencv/api/filters"
+	"github.com/vkhobor/go-opencv/api/jobs"
 	"github.com/vkhobor/go-opencv/config"
 	"github.com/vkhobor/go-opencv/db"
 )
@@ -14,7 +16,7 @@ func NewRouter(
 	queries *db.Queries,
 	wakeJobs chan<- struct{},
 	config config.DirectoryConfig,
-	programConfig config.ProgramConfig,
+	programConfig config.ServerConfig,
 ) chi.Router {
 	router := chi.NewMux()
 
@@ -42,29 +44,28 @@ func NewRouter(
 		Path:          "/api/jobs",
 		DefaultStatus: 201,
 		Summary:       "Create a new job",
-	}, HandleCreateJob(queries, wakeJobs, programConfig))
+	}, jobs.HandleCreateJob(queries, wakeJobs, programConfig))
 
 	huma.Register(api, huma.Operation{
 		Method:        "POST",
 		Path:          "/api/jobs/{id}/actions/restart",
 		DefaultStatus: 202,
 		Summary:       "Restart the job pipeline",
-	}, HandleRestartJobPipeline(wakeJobs))
+	}, jobs.HandleRestartJobPipeline(wakeJobs))
 
-	huma.Post(api, "/api/jobs/{id}/actions/update-limit", HandleUpdateJobLimit(queries, wakeJobs))
+	huma.Post(api, "/api/jobs/{id}/actions/update-limit", jobs.HandleUpdateJobLimit(queries, wakeJobs))
 
-	huma.Get(api, "/api/jobs", HandleListJobs(queries))
-	huma.Get(api, "/api/jobs/{id}", HandleJobDetails(queries))
-	huma.Get(api, "/api/jobs/{id}/videos", HandleJobVideosFound(queries))
+	huma.Get(api, "/api/jobs", jobs.HandleListJobs(queries))
+	huma.Get(api, "/api/jobs/{id}", jobs.HandleJobDetails(queries))
+	huma.Get(api, "/api/jobs/{id}/videos", jobs.HandleJobVideosFound(queries))
 	huma.Get(api, "/api/images", HandleImages(queries))
 
-	// TODO separate endpoints to files possibly packages
 	// TODO migrate legacy routes
-	router.Post("/api/references", HandleReferenceUpload(queries, config))
-	router.Get("/api/references", HandleGetReferences(queries))
-	router.Delete("/api/references", HandleDeleteAllReferences(queries))
+	router.Post("/api/references", filters.HandleReferenceUpload(queries, config))
+	router.Get("/api/references", filters.HandleGetReferences(queries))
+	router.Delete("/api/references", filters.HandleDeleteAllReferences(queries))
 
-	router.Get("/api/filters", HandleGetFilters(queries))
+	router.Get("/api/filters", filters.HandleGetFilters(queries))
 
 	router.Get("/api/files/{id}", HandleFileServeById(queries))
 	router.Get("/api/zipped", ExportWorkspace(config))

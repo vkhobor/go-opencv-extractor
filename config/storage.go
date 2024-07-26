@@ -14,7 +14,7 @@ type DirectoryConfig struct {
 	BaseDir string
 }
 
-func NewDirectoryConfig(baseDir string) (DirectoryConfig, error) {
+func newDirectoryConfig(baseDir string) (DirectoryConfig, error) {
 	err := pathutils.EnsurePath(baseDir, true)
 
 	if err != nil {

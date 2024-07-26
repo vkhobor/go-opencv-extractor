@@ -1,9 +1,12 @@
 package video
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"path/filepath"
+	"runtime"
+	"sync"
 	"time"
 
 	"github.com/vkhobor/go-opencv/image"
@@ -15,65 +18,123 @@ import (
 	"gocv.io/x/gocv"
 )
 
-func HandleVideoFromPath(path string, outputDir string, fpsWant int, refImagePaths []string, progress func(float64)) ([]string, error) {
-	iterator, err := videoiter.NewVideoIterator(path, fpsWant)
+type result struct {
+	Error  error
+	Result []string
+}
+
+func HandleVideoFromPath(
+	path string,
+	outputDir string,
+	fpsWant int,
+	refImagePaths []string,
+	progress func(p videoiter.Progress)) ([]string, error) {
+
+	video, err := videoiter.NewVideo(path, fpsWant, 500, progress)
 	if err != nil {
 		return nil, err
 	}
-	mlog.Log().Debug("VideoIterator created", "path", path, "fps", fpsWant)
 
+	chunkLength := runtime.GOMAXPROCS(0)
+	chunkLength = 1
+	chunks := video.SplitToChunks(chunkLength)
+
+	mlog.Log().Debug("Video created",
+		"path", path,
+		"fps", fpsWant,
+		"chunks", chunks,
+		"maxFrame", video.MaxFrame(),
+		"chunkLength", chunkLength)
+
+	wg := sync.WaitGroup{}
+	wg.Add(chunkLength)
+
+	var results = make([]result, chunkLength)
+	for i := range results {
+		results[i] = result{Error: nil, Result: []string{}}
+	}
+
+	for index, chunk := range chunks {
+		mlog.Log().Debug("Processing chunk", "path", chunk.Path())
+		go func() {
+			singleResult, err := handleVideoIter(refImagePaths, chunk, fpsWant, outputDir)
+			results[index] = result{Error: err, Result: singleResult}
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+
+	return collectResults(results[:])
+}
+
+func collectResults(results []result) ([]string, error) {
+	errs := make([]error, 0)
+	filePaths := make([]string, 0)
+	for _, result := range results {
+		if result.Error != nil {
+			errs = append(errs, result.Error)
+		} else {
+			filePaths = append(filePaths, result.Result...)
+		}
+	}
+	return filePaths, errors.Join(errs...)
+}
+
+func handleVideoIter(refImagePaths []string, video videoiter.Video, fpsWant int, outputDir string) ([]string, error) {
 	checker, err := image.NewChecker(refImagePaths)
 	if err != nil {
 		return nil, err
 	}
 	defer checker.Close()
-
 	mlog.Log().Debug("Checker created", "refImagePaths", refImagePaths)
 
-	surfMatch := iter.Filter2(iterator.IterateWithPrevious, func(info videoiter.FrameInfoWithPrevious, err error) bool {
-		progress(float64(info.Current.FrameNum) / float64(iterator.MaxFrame()) * 100)
-		if err != nil {
+	frames := video.AllFramesWithPrevious()
+
+	frames = iter.FilterWithError2(
+		frames,
+		func(info videoiter.FrameInfoWithPrevious, err error) (bool, error) {
+			if err == nil {
+				if distanceIsLessThanDuration(info.Previous, info.Current, time.Minute*2) {
+					diff, err := image.CompareImages(info.Previous.Frame, info.Current.Frame)
+					if err != nil {
+						return true, err
+					}
+
+					if diff < 0.2 {
+						return false, nil
+					}
+				}
+				return true, nil
+			}
+
+			return true, err
+		})
+
+	frames = iter.Filter2(
+		frames,
+		func(info videoiter.FrameInfoWithPrevious, err error) bool {
+			if err == nil {
+				return checker.IsImageMatch(*info.Current.Frame)
+			}
 			return true
-		}
-
-		return checker.IsImageMatch(*info.Current.Frame)
-	})
-
-	surfMatchEnoughDifference := iter.FilterCanError(surfMatch, func(info videoiter.FrameInfoWithPrevious, err error) (bool, error) {
-		if err != nil {
-			return false, err
-		}
-		if distanceIsLessThanDuration(info.Current, info.Previous, time.Minute*2) {
-			diff, err := image.CompareImages(info.Previous.Frame, info.Current.Frame)
-			if err != nil {
-				return true, err
-			}
-
-			// if diff is too small, skip
-			if diff < 0.2 {
-				return false, nil
-			}
-		}
-		return true, nil
-	})
+		})
 
 	filePaths := make([]string, 0)
 	var iterationError error
-	surfMatchEnoughDifference(func(value videoiter.FrameInfoWithPrevious, err error) bool {
+
+	for value, err := range frames {
 		if err != nil {
 			iterationError = err
-			return false
+			break
 		}
 
-		filePath, ok := saveFrameWithUUIDName(outputDir, value.Current)
+		filePath, ok := saveFrameWithUUIDName(outputDir, value.Current.Frame)
 		if !ok {
-			iterationError = fmt.Errorf("failed to write image to file: %v", filePath)
-			return false
+			iterationError = errors.New("failed to save frame")
+			break
 		}
 		filePaths = append(filePaths, filePath)
-
-		return true
-	})
+	}
 
 	if iterationError != nil {
 		return nil, iterationError
@@ -83,13 +144,15 @@ func HandleVideoFromPath(path string, outputDir string, fpsWant int, refImagePat
 	return filePaths, nil
 }
 
-func saveFrameWithUUIDName(outputDir string, value videoiter.FrameInfo) (string, bool) {
+func saveFrameWithUUIDName(outputDir string, value *gocv.Mat) (string, bool) {
 	fileName := fmt.Sprintf("%v.jpg", uuid.New().String())
 	filePath := filepath.Join(outputDir, fileName)
-	ok := gocv.IMWrite(filePath, *value.Frame)
+	mlog.Log().Debug("Saving frame", "filePath", filePath)
+	ok := gocv.IMWrite(filePath, *value)
 	return filePath, ok
 }
 
-func distanceIsLessThanDuration(frame1 videoiter.FrameInfo, frame2 videoiter.FrameInfo, duration time.Duration) bool {
-	return frame2.TimeFromStart-frame1.TimeFromStart < duration
+func distanceIsLessThanDuration(one, two videoiter.FrameInfo, duration time.Duration) bool {
+	dist := one.TimeFromStart - two.TimeFromStart
+	return dist.Abs() < duration
 }

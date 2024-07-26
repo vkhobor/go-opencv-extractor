@@ -27,7 +27,9 @@ func Zip(src string, target io.Writer, skipFolders []string) error {
 		header.Name = filepath.Join(filepath.Base(src), path[len(src):])
 
 		if info.IsDir() {
-			skip := lo.SomeBy(skipFolders, func(s string) bool { return strings.Contains(info.Name(), s) })
+			skip := lo.SomeBy(skipFolders, func(s string) bool {
+				return strings.Contains(info.Name(), s)
+			})
 			if skip {
 				return filepath.SkipDir
 			}
