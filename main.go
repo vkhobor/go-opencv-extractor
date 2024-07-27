@@ -30,6 +30,9 @@ func main() {
 					},
 					&cli.IntFlag{
 						Name: "port",
+						Aliases: []string{
+							"p",
+						},
 					},
 					&cli.StringFlag{
 						Name: "log-folder",
@@ -74,7 +77,7 @@ func main() {
 					for _, name := range cCtx.FlagNames() {
 						if cCtx.IsSet(name) {
 							val := cCtx.Value(name)
-							normalized := strings.Replace(name, "-", " ", -1)
+							normalized := strings.Replace(name, "-", "", -1)
 							k.Set(normalized, val)
 						}
 					}

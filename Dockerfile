@@ -41,4 +41,4 @@ COPY --from=server-builder /go/src/go-opencv-extractor/db/migrations ./db/migrat
 EXPOSE 7000
 
 ENTRYPOINT ["/build/extractor"]
-CMD ["serve", "--port", "7000", "--db", "/DATA/db.sqlite3","--blob-storage", "/DATA/blobs"]
+CMD ["serve", "--port", "7000", "--db", "/DATA/db.sqlite3","--blob-storage", "/DATA/blobs", "--log-folder", "/DATA/logs"]
