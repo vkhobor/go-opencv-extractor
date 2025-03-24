@@ -3,20 +3,28 @@ package background
 import (
 	"sync"
 
+	"github.com/vkhobor/go-opencv/config"
 	"github.com/vkhobor/go-opencv/mlog"
 	"github.com/vkhobor/go-opencv/queries"
+	"github.com/vkhobor/go-opencv/scraper"
 )
 
 type DbMonitor struct {
-	// TODO separate into different channels for each type of work
-	Wake          chan struct{}
-	Queries       *queries.Queries
-	ScrapeInput   chan<- queries.Job
-	DownloadInput chan<- queries.ScrapedVideo
-	ImportInput   chan<- queries.DownlodedVideo
+	Wake    chan struct{}
+	Queries *queries.Queries
+	scraper.Scraper
+	ScrapeInput          chan queries.Job
+	DownloadInput        chan queries.ScrapedVideo
+	ImportInput          chan queries.DownlodedVideo
+	Config               config.DirectoryConfig
+	MaxErrorStopRetrying int
 }
 
 func (jm *DbMonitor) Start() {
+	go jm.StartDownload()
+	go jm.StartImport()
+	go jm.StartScrape()
+
 	for range jm.Wake {
 		jm.PullWorkItemsFromDb()
 	}

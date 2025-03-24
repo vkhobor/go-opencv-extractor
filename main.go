@@ -103,10 +103,12 @@ func main() {
 				Name: "openapi",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name: "output",
+						Name:    "output",
+						Aliases: []string{"o"},
 					},
 					&cli.IntFlag{
-						Name: "port",
+						Name:    "port",
+						Aliases: []string{"p"},
 					},
 				},
 				Action: func(cCtx *cli.Context) error {

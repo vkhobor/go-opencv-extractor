@@ -34,7 +34,9 @@ SELECT
   yt_videos.id AS yt_video_id,
   jobs.id AS job_id,
   jobs.search_query,
-  jobs.filter_id
+  jobs.filter_id,
+  jobs."limit",
+  jobs.youtube_id
 FROM
   yt_videos
   LEFT JOIN download_attempts ON yt_videos.id = download_attempts.yt_video_id
@@ -48,6 +50,8 @@ type GetScrapedVideosRow struct {
 	JobID       string
 	SearchQuery sql.NullString
 	FilterID    sql.NullString
+	Limit       sql.NullInt64
+	YoutubeID   sql.NullString
 }
 
 func (q *Queries) GetScrapedVideos(ctx context.Context) ([]GetScrapedVideosRow, error) {
@@ -64,6 +68,8 @@ func (q *Queries) GetScrapedVideos(ctx context.Context) ([]GetScrapedVideosRow, 
 			&i.JobID,
 			&i.SearchQuery,
 			&i.FilterID,
+			&i.Limit,
+			&i.YoutubeID,
 		); err != nil {
 			return nil, err
 		}
@@ -186,6 +192,8 @@ SELECT
   jobs.id AS job_id,
   jobs.search_query,
   jobs.filter_id,
+  jobs."limit",
+  jobs.youtube_id,
   blob_storage.path AS path
 FROM
   yt_videos
@@ -204,6 +212,8 @@ type GetVideosDownloadedRow struct {
 	JobID       string
 	SearchQuery sql.NullString
 	FilterID    sql.NullString
+	Limit       sql.NullInt64
+	YoutubeID   sql.NullString
 	Path        string
 }
 
@@ -221,6 +231,8 @@ func (q *Queries) GetVideosDownloaded(ctx context.Context) ([]GetVideosDownloade
 			&i.JobID,
 			&i.SearchQuery,
 			&i.FilterID,
+			&i.Limit,
+			&i.YoutubeID,
 			&i.Path,
 		); err != nil {
 			return nil, err
@@ -238,7 +250,7 @@ func (q *Queries) GetVideosDownloaded(ctx context.Context) ([]GetVideosDownloade
 
 const getYtVideoWithJob = `-- name: GetYtVideoWithJob :one
 SELECT
-  yt_videos.id, job_id, jobs.id, search_query, filter_id, "limit"
+  yt_videos.id, job_id, jobs.id, search_query, filter_id, youtube_id, "limit"
 FROM
   yt_videos
   JOIN jobs ON yt_videos.job_id = jobs.id
@@ -252,6 +264,7 @@ type GetYtVideoWithJobRow struct {
 	ID_2        string
 	SearchQuery sql.NullString
 	FilterID    sql.NullString
+	YoutubeID   sql.NullString
 	Limit       sql.NullInt64
 }
 
@@ -264,6 +277,7 @@ func (q *Queries) GetYtVideoWithJob(ctx context.Context, id string) (GetYtVideoW
 		&i.ID_2,
 		&i.SearchQuery,
 		&i.FilterID,
+		&i.YoutubeID,
 		&i.Limit,
 	)
 	return i, err

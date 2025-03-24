@@ -43,14 +43,14 @@ export class JobDetaisScreenComponent {
     videos = computed(() => {
         return this.videosOrig().data?.videos?.sort((a, b) => {
             if (
-                a.download_status === 'success' &&
-                b.download_status !== 'success'
+                a.downloadStatus === 'success' &&
+                b.downloadStatus !== 'success'
             ) {
                 return -1;
             }
             if (
-                a.download_status !== 'success' &&
-                b.download_status === 'success'
+                a.downloadStatus !== 'success' &&
+                b.downloadStatus === 'success'
             ) {
                 return 1;
             }
@@ -76,7 +76,7 @@ export class JobDetaisScreenComponent {
     increaseLimit() {
         this.jobService.updateJobLimit.mutateAsync({
             id: this.details().data?.id!,
-            value: this.details().data?.video_target! + 1,
+            value: this.details().data?.videoTarget! + 1,
         });
     }
 }

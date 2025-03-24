@@ -1,4 +1,4 @@
-package image
+package surf
 
 import (
 	"errors"
@@ -8,47 +8,47 @@ import (
 	"gocv.io/x/gocv/contrib"
 )
 
-type CheckerConfig struct {
-	ratioTestThreshold float64
-	minThreshold       float64
-	minMatches         int
+type SURFImageMatcherConfig struct {
+	ratioTestThreshold         float64
+	minThresholdForSURFMatches float64
+	minSURFMatches             int
 }
 
-var defaultCheckerConfig = CheckerConfig{
-	ratioTestThreshold: 0.5,
-	minThreshold:       0.3,
-	minMatches:         3,
+var defaultCheckerConfig = SURFImageMatcherConfig{
+	ratioTestThreshold:         0.5,
+	minThresholdForSURFMatches: 0.3,
+	minSURFMatches:             3,
 }
 
-func WithRatioThreshold(ratio float64) CheckerOption {
-	return func(c *Checker) {
+func WithRatioThreshold(ratio float64) SURFImageMatcherOption {
+	return func(c *SURFImageMatcher) {
 		c.ratioTestThreshold = ratio
 	}
 }
 
-func WithMinThreshold(threshold float64) CheckerOption {
-	return func(c *Checker) {
-		c.minThreshold = threshold
+func WithMinThreshold(threshold float64) SURFImageMatcherOption {
+	return func(c *SURFImageMatcher) {
+		c.minThresholdForSURFMatches = threshold
 	}
 }
 
-func WithMinMatches(numOfMatches int) CheckerOption {
-	return func(c *Checker) {
-		c.minMatches = numOfMatches
+func WithMinMatches(numOfMatches int) SURFImageMatcherOption {
+	return func(c *SURFImageMatcher) {
+		c.minSURFMatches = numOfMatches
 	}
 }
 
-type CheckerOption func(*Checker)
+type SURFImageMatcherOption func(*SURFImageMatcher)
 
-type Checker struct {
-	CheckerConfig
+type SURFImageMatcher struct {
+	SURFImageMatcherConfig
 	descriptors   []gocv.Mat
 	matcher       gocv.BFMatcher
 	surfAlgorithm contrib.SURF
 	Close         func() error
 }
 
-func NewChecker(refs []string, options ...CheckerOption) (*Checker, error) {
+func NewSURFImageMatcher(refs []string, options ...SURFImageMatcherOption) (*SURFImageMatcher, error) {
 	refImages, err := getImagesFromPaths(refs)
 	if err != nil {
 		return nil, err
@@ -68,11 +68,11 @@ func NewChecker(refs []string, options ...CheckerOption) (*Checker, error) {
 
 	matcher := gocv.NewBFMatcher()
 
-	checker := &Checker{
-		CheckerConfig: defaultCheckerConfig,
-		descriptors:   descriptors,
-		matcher:       matcher,
-		surfAlgorithm: surfAlgorithm,
+	checker := &SURFImageMatcher{
+		SURFImageMatcherConfig: defaultCheckerConfig,
+		descriptors:            descriptors,
+		matcher:                matcher,
+		surfAlgorithm:          surfAlgorithm,
 		Close: func() error {
 			surfAlgorithm.Close()
 			matcher.Close()
@@ -93,12 +93,12 @@ func NewChecker(refs []string, options ...CheckerOption) (*Checker, error) {
 	return checker, nil
 }
 
-func (e *Checker) IsImageMatch(frame gocv.Mat) bool {
+func (e *SURFImageMatcher) IsImageMatch(frame *gocv.Mat) bool {
 	frameInGrayscale := gocv.NewMat()
 	defer frameInGrayscale.Close()
 
 	if frame.Channels() == 3 {
-		gocv.CvtColor(frame, &frameInGrayscale, gocv.ColorBGRToGray)
+		gocv.CvtColor(*frame, &frameInGrayscale, gocv.ColorBGRToGray)
 	} else {
 		frame.CopyTo(&frameInGrayscale)
 	}
@@ -109,12 +109,10 @@ func (e *Checker) IsImageMatch(frame gocv.Mat) bool {
 	defer descriptorsFrame.Close()
 
 	knnMatches := getKnnMatches(e.matcher, e.descriptors, descriptorsFrame)
-	const ratioThreshold = 0.5
 	goodMatches := filterByDawidLoweRatioTest(knnMatches, e.ratioTestThreshold)
 
-	const minThreshold, minMatches = 0.3, 3
 	everyHasSufficient := lo.EveryBy(goodMatches, func(item []gocv.DMatch) bool {
-		return hasSufficientGoodMatches(item, e.minThreshold, e.minMatches)
+		return hasSufficientGoodMatches(item, e.minThresholdForSURFMatches, e.minSURFMatches)
 	})
 
 	return everyHasSufficient

@@ -7,29 +7,26 @@ vars:
   GO_EXTRACTOR_DEV_CLIENT_PORT: 4200
 
 tasks:
-  # Basic development related tasks
-
-  dev:
-    deps:
-      - server
-      - client:dev
-
-  server:
+  dev:server:
+    desc: "Run the server, uses ./tmp as storage, port is {{.GO_EXTRACTOR_DEV_SERVER_PORT}}"
     cmds:
       - go run . serve -p {{.GO_EXTRACTOR_DEV_SERVER_PORT}} --blob-storage ./.tmp/blob --db ./.tmp/db.sqlite3 --log-folder ./.tmp/logs
 
-  client:dev:
+  dev:client:
+    desc: "Run the client, port is {{.GO_EXTRACTOR_DEV_CLIENT_PORT}}"
     dir: web
     cmds:
       - NG_APP_API_URL=http://localhost:{{.GO_EXTRACTOR_DEV_SERVER_PORT}}/api npm run start -- --port {{.GO_EXTRACTOR_DEV_CLIENT_PORT}}
 
   preview:
-    deps: ["client:build"]
+    desc: "Build the client and serve it embedded in the server"
+    deps: ["build:client"]
     cmds:
-      - task: server
+      - task: dev:server
 
-  generate-openapi:
-    aliases: [gen-openapi]
+  dev:generate-openapi:
+    desc: "Generate OpenAPI documentation to ./doc folder"
+    aliases: [openapi]
     vars:
       PORT: "{{randInt 1000 10000}}"
     cmds:
@@ -38,32 +35,39 @@ tasks:
   # Advanced development related tasks
 
   compose-up:
+    desc: "Run docker compose up"
     aliases: [up]
     cmds:
       - docker compose up
-      -
+
   compose-up:build:
+    desc: "Run docker compose up --build"
     aliases: [upb]
     cmds:
       - docker compose up --build
 
-  install-sqlc:
+  dev:install-sqlc:
+    desc: "Install sqlc"
     cmds:
       - go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
     status:
       - sqlc --help
-  install-migrate:
+
+  dev:install-migrate:
+    desc: "Install migrate tool for database migrations"
     status:
       - migrate -version
     cmds:
       - go install -tags 'sqlite3' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
 
-  install-dev-deps:
-    deps: [install-sqlc, install-migrate]
+  dev:install-dev-deps:
+    desc: "Install all development dependencies"
+    deps: [dev:install-sqlc, dev:install-migrate]
 
-  generate-sqlc-methods:
+  dev:generate-sqlc-methods:
+    desc: "Generate go code from SQL queries and schema using sqlc"
     aliases: [sqlc]
-    deps: [install-sqlc]
+    deps: [dev:install-sqlc]
     watch: true
     sources:
       - db/migrations/*.sql
@@ -75,8 +79,10 @@ tasks:
     cmds:
       - sqlc generate
 
-  generate-migration:
-    deps: [install-migrate]
+  dev:generate-migration:
+    desc: "Adds a new migration"
+    aliases: [mgen]
+    deps: [dev:install-migrate]
     dir: db/migrations
     preconditions:
       - sh: test -n "{{.CLI_ARGS}}"
@@ -84,14 +90,18 @@ tasks:
     cmds:
       - migrate create -ext sql {{.CLI_ARGS}}
 
-  delete-last-migration:
+  dev:delete-last-migration:
+    aliases: [mdel]
+    desc: "Deletes the last migration"
     dir: db/migrations
     cmds:
       - rm -f $(ls -t | head -n2)
 
-  redo-last-migration:
+  dev:redo-last-migration:
+    aliases: [mredo]
+    desc: "Delete the last migration and generate it again"
     dir: db/migrations
-    deps: [delete-last-migration]
+    deps: [dev:delete-last-migration]
     preconditions:
       - sh: test -n "{{.CLI_ARGS}}"
         msg: "Please provide a name for the migration"
@@ -100,7 +110,8 @@ tasks:
 
   # Production related tasks
 
-  client:build:
+  build:client:
+    desc: "Build the client"
     dir: web
     sources:
       - src/**/*.*
@@ -109,29 +120,39 @@ tasks:
     cmds:
       - npm run build
 
-  docker:build:starter:
+  docker:build:base:
+    desc: "Build the base image containing compile and runtime dependencies"
     cmds:
       - docker build --platform linux/amd64,linux/arm64 --push -t vkhobor/bullseye-gocv-multiplatform -f bullseye-gocv-multiplatform.Dockerfile .
 
   docker:new-builder:
+    desc: "Create a new builder"
     cmds:
       - docker buildx create --name builderx --use
 
   docker:build:amd:
+    desc: "Build the image for amd64"
     cmds:
       - docker buildx build --platform linux/amd64 -t vkhobor/extractor:latest --pull --load .
 
-  docker:rebuild:amd:
+  docker:build:amd:no-cache:
+    desc: "Build the image for amd64 without cache"
     cmds:
       - docker buildx build --platform linux/amd64  --no-cache -t vkhobor/extractor:latest --pull --load .
 
-  docker:build:all:
-    aliases: [dockb]
+  docker:publish:
+    desc: "Build and publish the image using multiplatorm to Docker Hub"
+    aliases: [p]
     cmds:
       - docker buildx build --platform linux/amd64,linux/arm64 -t vkhobor/extractor:latest --pull --push .
 
-  # Run the following after: docker container run --rm -it build-context /bin/sh
   docker:test-dockerignore:
+    desc: "Test the .dockerignore file in a bare container"
+    summary: |
+      Run the following after: `docker container run --rm -it build-context /bin/sh`
+      --rm removes the container after
+      -it runs it in interactive
+      busybox is just a small image
     cmds:
       - docker image build --no-cache -t build-context --load -f - . <<EOF
       - FROM busybox

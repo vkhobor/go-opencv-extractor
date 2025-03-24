@@ -77,7 +77,7 @@ export class FoundImagesScreenComponent {
 
     referencesUrls = computed(() =>
         this.imagePage().data!.pictures!.map(
-            (r) => `${enviroment.api}/files/${r.blob_id}`
+            (r) => `${enviroment.api}/files/${r.blobId}`
         )
     );
 

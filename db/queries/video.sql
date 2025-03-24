@@ -18,7 +18,9 @@ SELECT
   yt_videos.id AS yt_video_id,
   jobs.id AS job_id,
   jobs.search_query,
-  jobs.filter_id
+  jobs.filter_id,
+  jobs."limit",
+  jobs.youtube_id
 FROM
   yt_videos
   LEFT JOIN download_attempts ON yt_videos.id = download_attempts.yt_video_id
@@ -32,6 +34,8 @@ SELECT
   jobs.id AS job_id,
   jobs.search_query,
   jobs.filter_id,
+  jobs."limit",
+  jobs.youtube_id,
   blob_storage.path AS path
 FROM
   yt_videos

@@ -10,7 +10,7 @@ import (
 	"github.com/samber/lo"
 )
 
-func Zip(src string, target io.Writer, skipFolders []string) error {
+func ZipFromPath(src string, target io.Writer, skipFolders []string) error {
 	archive := zip.NewWriter(target)
 	defer archive.Close()
 

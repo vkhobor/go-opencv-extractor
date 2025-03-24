@@ -19,7 +19,7 @@ func ExportWorkspace(config config.DirectoryConfig) http.HandlerFunc {
 
 			// Set the Content-Disposition header so the browser knows it's an attachment
 			w.Header().Set("Content-Disposition", "attachment; filename=images.zip")
-			zip.Zip(config.GetImagesDir(), w, []string{"videos", "references"})
+			zip.ZipFromPath(config.GetImagesDir(), w, []string{"videos", "references"})
 		},
 	)
 }

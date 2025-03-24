@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { injectMutation, injectQuery, injectQueryClient } from '@ngneat/query';
 import { client } from './http/kiota';
-import { CreateJob, ListJobResponse } from '../../api/models';
+import { CreateJob, ListJobBody } from '../../api/models';
 import { undefToErr } from './http/undefToErr';
 
 @Injectable({
@@ -45,7 +45,7 @@ export class JobsService {
         return this.#query({
             queryKey: ['jobs'] as const,
             refetchInterval: 5000,
-            initialData: [] as ListJobResponse[],
+            initialData: [] as ListJobBody[],
             queryFn: () => undefToErr(client.api.jobs.get()),
         });
     }

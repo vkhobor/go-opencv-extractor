@@ -30,6 +30,10 @@ func HandleUpdateJobLimit(queries *db.Queries, wakeJobs chan<- struct{}) u.Handl
 			return nil, huma.Error400BadRequest("Limit is already set to this value or larger")
 		}
 
+		if job.YoutubeID.Valid {
+			return nil, huma.Error400BadRequest("Limit is fixed to 1 for simple jobs")
+		}
+
 		err = queries.UpdateJobLimit(ctx, db.UpdateJobLimitParams{
 			Limit: sql.NullInt64{
 				Int64: int64(wb.Body.Limit),

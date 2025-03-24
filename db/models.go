@@ -43,6 +43,7 @@ type Job struct {
 	ID          string
 	SearchQuery sql.NullString
 	FilterID    sql.NullString
+	YoutubeID   sql.NullString
 	Limit       sql.NullInt64
 }
 

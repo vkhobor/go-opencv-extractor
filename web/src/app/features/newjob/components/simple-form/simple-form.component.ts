@@ -1,51 +1,30 @@
-import {
-    Component,
-    EventEmitter,
-    Output,
-    computed,
-    effect,
-    inject,
-    signal,
-} from '@angular/core';
+import { Component, computed, EventEmitter, Output } from '@angular/core';
+import { CreateJob } from '../../../../../api/models';
 import {
     FormBuilder,
     FormControl,
-    FormGroup,
     FormsModule,
     ReactiveFormsModule,
     Validators,
 } from '@angular/forms';
 import { FilterService } from '../../../../services/filter.service';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { injectQuery } from '@ngneat/query';
-import { DefaultHttpProxyService } from '../../../../services/http/default-http-proxy.service';
-import { Observable } from 'rxjs';
-import { Filter } from '../../../../models/Filter';
-import enviroment from '../../../../../enviroments/enviroment';
-import { UndefinedInitialDataOptions } from '@ngneat/query/lib/query-options';
-import { CreateJob } from '../../../../../api/models';
 
 @Component({
-    selector: 'app-create-new-job-form',
+    selector: 'app-simple-form',
     standalone: true,
     imports: [FormsModule, ReactiveFormsModule],
-    templateUrl: './create-new-job-form.component.html',
-    styleUrl: './create-new-job-form.component.css',
+    templateUrl: './simple-form.component.html',
+    styleUrl: './simple-form.component.css',
 })
-export class CreateNewJobFormComponent {
+export class SimpleFormComponent {
     @Output() valid = new EventEmitter<boolean>();
     @Output() data = new EventEmitter<CreateJob | undefined>();
 
     form = this.fb.group(
         {
-            searchQuery: new FormControl<string | null>(null, [
+            youtubeId: new FormControl<string | null>(null, [
                 Validators.required,
                 Validators.minLength(5),
-            ]),
-            limit: new FormControl<number | null>(null, [
-                Validators.required,
-                Validators.min(1),
-                Validators.max(1000),
             ]),
             filter: new FormControl<string | null>('', [
                 Validators.required,
@@ -65,11 +44,8 @@ export class CreateNewJobFormComponent {
         private filterService: FilterService
     ) {}
 
-    public get searchQuery() {
-        return this.form.get('searchQuery');
-    }
-    public get limit() {
-        return this.form.get('limit');
+    public get youtubeId() {
+        return this.form.get('youtubeId');
     }
 
     touchAll() {
@@ -86,10 +62,9 @@ export class CreateNewJobFormComponent {
 
             if (this.form.valid) {
                 this.data.emit({
-                    isSingleVideo: false,
-                    isQueryBased: true,
-                    searchQuery: data.searchQuery!,
-                    limit: data.limit!,
+                    isSingleVideo: true,
+                    isQueryBased: false,
+                    youtubeId: data.youtubeId!,
                     filterId: data.filter!,
                 });
             } else {

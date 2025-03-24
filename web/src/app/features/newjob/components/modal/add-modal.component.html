@@ -1,10 +1,21 @@
 <app-modal-container #modal>
-    <app-modal-layout [title]="'Add new Job'" (closeModal)="closeModal()">
-        <app-create-new-job-form
-            #form
-            (valid)="valid = $event"
-            (data)="data = $event"
-        ></app-create-new-job-form>
+    <app-modal-layout [title]="title()" (closeModal)="closeModal()">
+        @switch (type()) {
+            @case ('query') {
+                <app-create-new-job-form
+                    #form
+                    (valid)="valid = $event"
+                    (data)="data = $event"
+                ></app-create-new-job-form>
+            }
+            @case ('simple') {
+                <app-simple-form
+                    #form
+                    (valid)="valid = $event"
+                    (data)="data = $event"
+                ></app-simple-form>
+            }
+        }
 
         <div footer>
             <app-button
@@ -13,6 +24,10 @@
                 [isLoading]="saveResult().isPending"
                 >Add job</app-button
             >
+
+            <app-button [type]="'secondary'" (click)="onSwitchButtonClick()">
+                {{ switchButtonText() }}
+            </app-button>
 
             <app-button (click)="closeModal()" [type]="'secondary'"
                 >Cancel</app-button

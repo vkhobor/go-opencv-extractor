@@ -10,8 +10,8 @@ import (
 	"github.com/vkhobor/go-opencv/db"
 )
 
-func (jc *Queries) GetRefImages(video DownlodedVideo) ([]string, error) {
-	res, err := jc.Queries.GetFilterForJob(context.Background(), video.JobID)
+func (jc *Queries) GetRefImages(jobId string) ([]string, error) {
+	res, err := jc.Queries.GetFilterForJob(context.Background(), jobId)
 	if err != nil {
 		return []string{}, err
 	}
@@ -21,8 +21,8 @@ func (jc *Queries) GetRefImages(video DownlodedVideo) ([]string, error) {
 	}), nil
 }
 
-func (jc *Queries) StartImportAttempt(video DownlodedVideo) (string, error) {
-	imported, err := jc.CheckImportedAlready(context.Background(), video.ID)
+func (jc *Queries) StartImportAttempt(videoID string, filterID string) (string, error) {
+	imported, err := jc.CheckImportedAlready(context.Background(), videoID)
 	if err != nil {
 		return "", err
 	}
@@ -35,11 +35,11 @@ func (jc *Queries) StartImportAttempt(video DownlodedVideo) (string, error) {
 	_, err = jc.Queries.AddImportAttempt(context.Background(), db.AddImportAttemptParams{
 		ID: importAttemptId,
 		YtVideoID: sql.NullString{
-			String: video.ID,
+			String: videoID,
 			Valid:  true,
 		},
 		FilterID: sql.NullString{
-			String: video.FilterID,
+			String: filterID,
 			Valid:  true,
 		},
 		Progress: sql.NullInt64{
@@ -109,8 +109,8 @@ func (jc *Queries) CheckImportedAlready(ctx context.Context, videoID string) (bo
 	return false, nil
 }
 
-func (jc *Queries) FinishImport(video ImportedVideo, importAttemptId string) error {
-	imported, err := jc.CheckImportedAlready(context.Background(), video.ID)
+func (jc *Queries) FinishImport(videoID string, frames []Frame, importAttemptId string) error {
+	imported, err := jc.CheckImportedAlready(context.Background(), videoID)
 	if err != nil {
 		return err
 	}
@@ -125,7 +125,7 @@ func (jc *Queries) FinishImport(video ImportedVideo, importAttemptId string) err
 		return err
 	}
 
-	for _, frame := range video.ExtractedFrames {
+	for _, frame := range frames {
 		blobID := uuid.New()
 		_ = jc.Queries.AddBlob(context.Background(), db.AddBlobParams{
 			ID:   blobID.String(),

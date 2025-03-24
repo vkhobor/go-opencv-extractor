@@ -12,15 +12,16 @@ import (
 
 const createJob = `-- name: CreateJob :one
 INSERT INTO
-    jobs (id, search_query, "limit", filter_id)
+    jobs (id, search_query, "limit",youtube_id, filter_id)
 VALUES
-    (?, ?, ?, ?) RETURNING id, search_query, filter_id, "limit"
+    (?, ?, ?,?, ?) RETURNING id, search_query, filter_id, youtube_id, "limit"
 `
 
 type CreateJobParams struct {
 	ID          string
 	SearchQuery sql.NullString
 	Limit       sql.NullInt64
+	YoutubeID   sql.NullString
 	FilterID    sql.NullString
 }
 
@@ -29,6 +30,7 @@ func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (Job, erro
 		arg.ID,
 		arg.SearchQuery,
 		arg.Limit,
+		arg.YoutubeID,
 		arg.FilterID,
 	)
 	var i Job
@@ -36,6 +38,7 @@ func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (Job, erro
 		&i.ID,
 		&i.SearchQuery,
 		&i.FilterID,
+		&i.YoutubeID,
 		&i.Limit,
 	)
 	return i, err
@@ -46,6 +49,7 @@ SELECT
     j.id AS id,
     j.search_query AS search_query,
     j."limit" AS "limit",
+    j.youtube_id AS youtube_id,
     COUNT(v.id) AS videos_found
 FROM
     jobs j
@@ -62,6 +66,7 @@ type GetJobRow struct {
 	ID          string
 	SearchQuery sql.NullString
 	Limit       sql.NullInt64
+	YoutubeID   sql.NullString
 	VideosFound int64
 }
 
@@ -72,6 +77,7 @@ func (q *Queries) GetJob(ctx context.Context, id string) (GetJobRow, error) {
 		&i.ID,
 		&i.SearchQuery,
 		&i.Limit,
+		&i.YoutubeID,
 		&i.VideosFound,
 	)
 	return i, err
@@ -83,7 +89,8 @@ SELECT
     jobs.id,
     jobs."limit",
     jobs.search_query,
-    jobs.filter_id
+    jobs.filter_id,
+    jobs.youtube_id
 FROM
     jobs
     LEFT JOIN yt_videos ON jobs.id = yt_videos.job_id
@@ -97,6 +104,7 @@ type GetJobsRow struct {
 	Limit       sql.NullInt64
 	SearchQuery sql.NullString
 	FilterID    sql.NullString
+	YoutubeID   sql.NullString
 }
 
 func (q *Queries) GetJobs(ctx context.Context) ([]GetJobsRow, error) {
@@ -114,6 +122,7 @@ func (q *Queries) GetJobs(ctx context.Context) ([]GetJobsRow, error) {
 			&i.Limit,
 			&i.SearchQuery,
 			&i.FilterID,
+			&i.YoutubeID,
 		); err != nil {
 			return nil, err
 		}
@@ -217,7 +226,7 @@ func (q *Queries) GetVideosForJob(ctx context.Context, id string) ([]GetVideosFo
 
 const listJobsWithVideos = `-- name: ListJobsWithVideos :many
 SELECT
-    jobs.id, search_query, filter_id, "limit", yt_videos.id, job_id
+    jobs.id, search_query, filter_id, youtube_id, "limit", yt_videos.id, job_id
 FROM
     jobs
     LEFT JOIN yt_videos ON jobs.id = yt_videos.job_id
@@ -227,6 +236,7 @@ type ListJobsWithVideosRow struct {
 	ID          string
 	SearchQuery sql.NullString
 	FilterID    sql.NullString
+	YoutubeID   sql.NullString
 	Limit       sql.NullInt64
 	ID_2        sql.NullString
 	JobID       sql.NullString
@@ -245,6 +255,7 @@ func (q *Queries) ListJobsWithVideos(ctx context.Context) ([]ListJobsWithVideosR
 			&i.ID,
 			&i.SearchQuery,
 			&i.FilterID,
+			&i.YoutubeID,
 			&i.Limit,
 			&i.ID_2,
 			&i.JobID,

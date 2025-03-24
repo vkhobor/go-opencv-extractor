@@ -27,6 +27,8 @@ func (jc *Queries) GetDownloadedVideos() []DownlodedVideo {
 					JobID:       v.JobID,
 					SearchQuery: v.SearchQuery.String,
 					FilterID:    v.FilterID.String,
+					Limit:       int(v.Limit.Int64),
+					YouTubeID:   v.YtVideoID,
 				}},
 			SavePath: v.Path,
 		}
@@ -36,8 +38,8 @@ func (jc *Queries) GetDownloadedVideos() []DownlodedVideo {
 
 var ErrHasDownloaded = errors.New("already downloaded")
 
-func (jc *Queries) SaveDownloadAttempt(video DownlodedVideo) error {
-	attempts, err := jc.Queries.GetVideoWithDownloadAttempts(context.Background(), video.ID)
+func (jc *Queries) SaveDownloadAttempt(videoID string, savePath string, downloadError error) error {
+	attempts, err := jc.Queries.GetVideoWithDownloadAttempts(context.Background(), videoID)
 	if err != nil {
 		return err
 	}
@@ -51,15 +53,15 @@ func (jc *Queries) SaveDownloadAttempt(video DownlodedVideo) error {
 		}
 	}
 
-	if video.Error != nil {
+	if downloadError != nil {
 		err := jc.Queries.AddDownloadAttempt(context.Background(), db.AddDownloadAttemptParams{
 			ID: uuid.New().String(),
 			YtVideoID: sql.NullString{
-				String: video.ID,
+				String: videoID,
 				Valid:  true,
 			},
 			Error: sql.NullString{
-				String: video.Error.Error(),
+				String: downloadError.Error(),
 				Valid:  true,
 			},
 			BlobStorageID: sql.NullString{
@@ -73,7 +75,7 @@ func (jc *Queries) SaveDownloadAttempt(video DownlodedVideo) error {
 	blobId := uuid.New()
 	err = jc.Queries.AddBlob(context.Background(), db.AddBlobParams{
 		ID:   blobId.String(),
-		Path: video.SavePath,
+		Path: savePath,
 	})
 	if err != nil {
 		return err
@@ -82,7 +84,7 @@ func (jc *Queries) SaveDownloadAttempt(video DownlodedVideo) error {
 	err = jc.Queries.AddDownloadAttempt(context.Background(), db.AddDownloadAttemptParams{
 		ID: uuid.New().String(),
 		YtVideoID: sql.NullString{
-			String: video.ID,
+			String: videoID,
 			Valid:  true,
 		},
 		Error: sql.NullString{

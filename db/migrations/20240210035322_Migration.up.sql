@@ -3,6 +3,7 @@ CREATE TABLE
         id TEXT PRIMARY KEY,
         search_query TEXT,
         filter_id TEXT,
+        youtube_id TEXT,
         "limit" INT,
         FOREIGN KEY (filter_id) REFERENCES filters (id)
     );

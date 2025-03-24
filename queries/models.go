@@ -17,10 +17,10 @@ type DownlodedVideo struct {
 }
 
 type Job struct {
-	// TODO remove limit
 	Limit       int
 	JobID       string
 	SearchQuery string
+	YouTubeID   string
 	FilterID    string
 }
 

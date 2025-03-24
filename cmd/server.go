@@ -92,57 +92,28 @@ func RunServer(ctx context.Context, w io.Writer, args []string, programConfig co
 
 	scrapeArgsChan := make(chan queries.Job, 100)
 	defer close(scrapeArgsChan)
-
 	scrapedVideoChan := make(chan queries.ScrapedVideo, 100)
 	defer close(scrapedVideoChan)
-
 	downloadedChan := make(chan queries.DownlodedVideo, 100)
 	defer close(downloadedChan)
-
 	wakeJobs := make(chan struct{}, 1)
 	defer close(wakeJobs)
 
-	downloader := background.Downloader{
-		Queries:  &highLevelQueries,
-		Throttle: time.Second * 15,
-		Config:   dirConfig,
-		Input:    scrapedVideoChan,
-		Output:   downloadedChan,
-	}
-
-	importer := background.Importer{
-		Queries:  &highLevelQueries,
-		Throttle: time.Second * 1,
-		Config:   dirConfig,
-		Input:    downloadedChan,
-	}
-
-	scraperJob := background.ScraperJob{
+	jobManager := background.DbMonitor{
+		Config: dirConfig,
 		Scraper: scraper.Scraper{
 			Throttle: time.Second * 5,
 			Domain:   "yewtu.be",
 		},
-		Queries:              &highLevelQueries,
-		Input:                scrapeArgsChan,
 		MaxErrorStopRetrying: 5,
-		Output:               scrapedVideoChan,
-		Config:               dirConfig,
-	}
-
-	jobManager := background.DbMonitor{
-		Wake:          wakeJobs,
-		Queries:       &highLevelQueries,
-		ScrapeInput:   scrapeArgsChan,
-		DownloadInput: scrapedVideoChan,
-		ImportInput:   downloadedChan,
+		Wake:                 wakeJobs,
+		Queries:              &highLevelQueries,
+		ScrapeInput:          scrapeArgsChan,
+		DownloadInput:        scrapedVideoChan,
+		ImportInput:          downloadedChan,
 	}
 
 	mlog.Log().Info("Starting jobs")
-
-	go scraperJob.Start()
-	go downloader.Start()
-	go importer.Start()
-
 	go jobManager.Start()
 	jobManager.Wake <- struct{}{}
 

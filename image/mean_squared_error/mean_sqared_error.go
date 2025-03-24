@@ -1,4 +1,4 @@
-package image
+package mse
 
 import (
 	"math"
@@ -8,7 +8,7 @@ import (
 	"gocv.io/x/gocv"
 )
 
-func CompareImages(img1, img2 *gocv.Mat) (float64, error) {
+func GetMeanSquaredError(img1, img2 *gocv.Mat) (float64, error) {
 	if img1.Rows() != img2.Rows() || img1.Cols() != img2.Cols() {
 		return 0, errors.New("images do not have the same size")
 	}
@@ -48,19 +48,4 @@ func CompareImages(img1, img2 *gocv.Mat) (float64, error) {
 	mse = math.Sqrt(mse) / 255.0
 
 	return mse, nil
-}
-
-func show(mat ...*gocv.Mat) {
-	dest := mat[0]
-	for _, m := range mat[1:] {
-		new := gocv.NewMat()
-		gocv.Hconcat(*m, *dest, &new)
-		dest.Close()
-		dest = &new
-	}
-
-	window := gocv.NewWindow("Hello")
-	window.ResizeWindow(500, 500)
-	window.IMShow(*dest)
-	window.WaitKey(0)
 }

@@ -10,6 +10,7 @@ SELECT
     j.id AS id,
     j.search_query AS search_query,
     j."limit" AS "limit",
+    j.youtube_id AS youtube_id,
     COUNT(v.id) AS videos_found
 FROM
     jobs j
@@ -23,9 +24,9 @@ GROUP BY
 
 -- name: CreateJob :one
 INSERT INTO
-    jobs (id, search_query, "limit", filter_id)
+    jobs (id, search_query, "limit",youtube_id, filter_id)
 VALUES
-    (?, ?, ?, ?) RETURNING *;
+    (?, ?, ?,?, ?) RETURNING *;
 
 -- name: GetJobs :many
 SELECT
@@ -33,7 +34,8 @@ SELECT
     jobs.id,
     jobs."limit",
     jobs.search_query,
-    jobs.filter_id
+    jobs.filter_id,
+    jobs.youtube_id
 FROM
     jobs
     LEFT JOIN yt_videos ON jobs.id = yt_videos.job_id
