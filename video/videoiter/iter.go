@@ -14,9 +14,12 @@ type FrameInfo struct {
 	TimeFromStart time.Duration
 }
 
-type FrameInfoWithPrevious struct {
-	Current  FrameInfo
-	Previous FrameInfo
+func (fi FrameInfo) Clone() FrameInfo {
+	return FrameInfo{
+		Frame:         fi.Frame.Clone(),
+		FrameNum:      fi.FrameNum,
+		TimeFromStart: fi.TimeFromStart,
+	}
 }
 
 func moduloToAchieveTargetFps(originalFPS, targetFPS float64) int {

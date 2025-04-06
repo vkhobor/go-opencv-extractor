@@ -40,11 +40,25 @@ func NewRouter(
 	api := humachi.New(router, huma.DefaultConfig("My API", "1.0.0"))
 
 	huma.Register(api, huma.Operation{
+		Method:        "GET",
+		Path:          "/api/videos",
+		DefaultStatus: 200,
+		Summary:       "List downloaded videos",
+	}, HandleListVideos(queries))
+
+	huma.Register(api, huma.Operation{
 		Method:        "POST",
 		Path:          "/api/jobs",
 		DefaultStatus: 201,
 		Summary:       "Create a new job",
 	}, jobs.HandleCreateJob(queries, wakeJobs, programConfig))
+
+	huma.Register(api, huma.Operation{
+		Method:        "POST",
+		Path:          "/api/jobs/video",
+		DefaultStatus: 201,
+		Summary:       "Create a direct video job",
+	}, HandleImportJob(queries, programConfig, wakeJobs))
 
 	huma.Register(api, huma.Operation{
 		Method:        "POST",

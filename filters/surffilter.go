@@ -7,7 +7,6 @@ import (
 	mse "github.com/vkhobor/go-opencv/image/mean_squared_error"
 	"github.com/vkhobor/go-opencv/image/surf"
 	"github.com/vkhobor/go-opencv/video/videoiter"
-	"gocv.io/x/gocv"
 )
 
 type SURFVideoFilter struct {
@@ -25,53 +24,58 @@ func (f *SURFVideoFilter) SamplingWantFPS() int {
 }
 
 func (f *SURFVideoFilter) FrameFilter(frames iter.Seq2[videoiter.FrameInfo, error]) iter.Seq2[videoiter.FrameInfo, error] {
-	previousFrame := videoiter.FrameInfo{
-		Frame: gocv.NewMat(),
-	}
+	previousFrame := videoiter.FrameInfo{}
 	var firstFrame bool = true
 
 	return func(yield func(videoiter.FrameInfo, error) bool) {
 		for frame, error := range frames {
 			if firstFrame {
-				previousFrame.Frame = frame.Frame.Clone()
-				previousFrame.FrameNum = frame.FrameNum
-				previousFrame.TimeFromStart = frame.TimeFromStart
+				previousFrame = frame.Clone()
 				firstFrame = false
 				continue
-			} else {
-				previousFrame = frame
 			}
 
 			if error != nil {
 				yield(videoiter.FrameInfo{}, error)
+				// Abort iteration on error
 				return
 			}
 
-			if distanceIsLessThanDuration(previousFrame, frame, time.Minute*2) {
-				diff, err := mse.GetMeanSquaredError(&previousFrame.Frame, &frame.Frame)
-				if err != nil {
-					yield(videoiter.FrameInfo{}, err)
-					return
-				}
-
-				if diff < 0.2 {
+			// If time distance is large enough, we expect frames to be different
+			// so worth checking if they are what we need
+			if distanceIsMoreThanDuration(previousFrame, frame, time.Minute*2) {
+				if f.surfMatcher.IsImageMatch(&frame.Frame) {
+					previousFrame = frame.Clone()
+					yield(frame, nil)
 					continue
 				}
 			}
 
-			if !f.surfMatcher.IsImageMatch(&frame.Frame) {
-				yield(videoiter.FrameInfo{}, nil)
+			// If time distance is small, we expect to get the exact same frame,
+			// so it is worth skipping if they are super similar with the previous frame
+			diff, err := mse.GetMeanSquaredError(&previousFrame.Frame, &frame.Frame)
+			if err != nil {
+				yield(videoiter.FrameInfo{}, err)
+				// Abort iteration on error
 				return
 			}
+			if diff < 0.2 {
+				previousFrame = frame.Clone()
+				continue
+			}
 
-			if !yield(frame, nil) {
-				return
+			// We got here because the frames were close in time,
+			// but probably the camera cut so worth checking that we need it or not
+			if f.surfMatcher.IsImageMatch(&frame.Frame) {
+				previousFrame = frame.Clone()
+				yield(frame, nil)
+				continue
 			}
 		}
 	}
 }
 
-func distanceIsLessThanDuration(one, two videoiter.FrameInfo, duration time.Duration) bool {
+func distanceIsMoreThanDuration(one, two videoiter.FrameInfo, duration time.Duration) bool {
 	dist := one.TimeFromStart - two.TimeFromStart
-	return dist.Abs() < duration
+	return dist.Abs() >= duration
 }

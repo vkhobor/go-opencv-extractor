@@ -6,7 +6,7 @@
         "start": "ng serve",
         "build": "ng build --configuration production",
         "watch": "ng build --watch --configuration development",
-        "gen-client": "kiota generate -d ../doc/openapi.json -c ApiClient --output ./src/api/ -l typescript",
+        "gen-client": "cd src/api; npx swagger-typescript-api generate --path ../../../doc/openapi-3.0.json",
         "test": "ng test"
     },
     "private": true,

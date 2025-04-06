@@ -1,9 +1,6 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { LayoutComponent } from '../../../components/layout/layout.component';
-import {
-    ImagePageQueryParams,
-    ImagesService,
-} from '../../../services/images.service';
+import { ImagesService } from '../../../services/images.service';
 import { JsonPipe } from '@angular/common';
 import enviroment from '../../../../enviroments/enviroment';
 import { ZipService } from '../../../services/zip.service';
@@ -27,9 +24,9 @@ export class FoundImagesScreenComponent {
 
     activatedRouteParams = toSignal(this.activatedRoute.queryParams);
     __ = effect(() => {
-        console.log(this.activatedRouteParams());
+        console.log(this.imagePage());
     });
-    requestParams = computed<ImagePageQueryParams>(() => ({
+    requestParams = computed<{ youtubeId: string }>(() => ({
         youtubeId:
             this.activatedRouteParams() !== undefined
                 ? this.activatedRouteParams()!['youtube_id']
@@ -52,7 +49,7 @@ export class FoundImagesScreenComponent {
     imagePageQuery = this.imagesService.getImagePage(
         this.currentPageNumber(),
         this.pageSize,
-        this.requestParams()
+        this.requestParams().youtubeId
     );
     imagePage = this.imagePageQuery.result;
 
@@ -70,15 +67,16 @@ export class FoundImagesScreenComponent {
                 this.imagesService.getImagePageApi(
                     this.currentPageNumber(),
                     this.pageSize,
-                    this.requestParams()
+                    this.requestParams().youtubeId
                 ),
         });
     });
 
-    referencesUrls = computed(() =>
-        this.imagePage().data!.pictures!.map(
-            (r) => `${enviroment.api}/files/${r.blobId}`
-        )
+    referencesUrls = computed(
+        () =>
+            this.imagePage().data?.pictures?.map(
+                (r) => `${enviroment.api}/files/${r.blob_id}`
+            ) ?? []
     );
 
     filters = computed(() => [

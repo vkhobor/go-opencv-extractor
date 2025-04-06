@@ -9,7 +9,7 @@ import (
 
 func (d *DbMonitor) StartScrape() {
 	for video := range d.ScrapeInput {
-		if video.YouTubeID == "" {
+		if video.YouTubeID != "" {
 			scraper := features.ScrapeByIdFeature{
 				Queries:              d.Queries,
 				MaxErrorStopRetrying: d.MaxErrorStopRetrying,

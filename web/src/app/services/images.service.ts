@@ -8,17 +8,7 @@ import {
     QueryObserverResult,
 } from '@ngneat/query';
 import { client } from './http/kiota';
-
 import { undefToErr } from './http/undefToErr';
-import { CreateInfiniteQueryOptions } from '@ngneat/query/lib/infinite-query';
-import { Response } from '../../api/models';
-import { Result } from '@ngneat/query/lib/types';
-import { ImagesRequestBuilderGetQueryParameters } from '../../api/api/images';
-
-export type ImagePageQueryParams = Omit<
-    ImagesRequestBuilderGetQueryParameters,
-    'limit' | 'offset'
->;
 
 @Injectable({
     providedIn: 'root',
@@ -26,34 +16,27 @@ export type ImagePageQueryParams = Omit<
 export class ImagesService {
     #query = injectQuery();
 
-    getImagePage(
-        pageParam: number,
-        pageSize: number,
-        params: ImagePageQueryParams
-    ) {
+    getImagePage(pageParam: number, pageSize: number, youtube_id: string) {
         return this.#query({
-            queryKey: ['images', params, pageParam, pageSize] as const,
+            queryKey: ['images', youtube_id, pageParam, pageSize] as const,
             enabled: false,
-            queryFn: () => this.getImagePageApi(pageParam, pageSize, params),
+            queryFn: () =>
+                this.getImagePageApi(pageParam, pageSize, youtube_id),
         });
     }
 
-    getImagePageApi(
-        pageNumber: number,
-        pageSize: number,
-        params: ImagePageQueryParams
-    ) {
+    getImagePageApi(pageNumber: number, pageSize: number, youtube_id: string) {
         const offset = pageNumber * pageSize;
         const limit = pageSize;
 
         return undefToErr(
-            client.api.images.get({
-                queryParameters: {
+            client.api
+                .getApiImages({
                     limit,
                     offset,
-                    ...params,
-                },
-            })
+                    youtube_id,
+                })
+                .then((x) => x.data)
         );
     }
 }

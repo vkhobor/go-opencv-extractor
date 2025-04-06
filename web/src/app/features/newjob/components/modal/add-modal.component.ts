@@ -6,8 +6,7 @@ import { CreateNewJobFormComponent } from '../form/create-new-job-form.component
 import { CommonModule } from '@angular/common';
 import { JobsService } from '../../../../services/jobs.service';
 import { ButtonComponent } from '../../../../components/button/button.component';
-import { CreateJob } from '../../../../../api/models';
-import { SimpleFormComponent } from '../simple-form/simple-form.component';
+import { CreateJob } from '../../../../../api/Api';
 
 @Component({
     selector: 'app-add-modal',
@@ -17,7 +16,6 @@ import { SimpleFormComponent } from '../simple-form/simple-form.component';
         ModalLayoutComponent,
         ModalContainerComponent,
         CreateNewJobFormComponent,
-        SimpleFormComponent,
         ButtonComponent,
     ],
     templateUrl: './add-modal.component.html',
@@ -25,27 +23,15 @@ import { SimpleFormComponent } from '../simple-form/simple-form.component';
 })
 export class AddModalComponent implements Modal {
     @ViewChild('modal') modal!: ModalContainerComponent;
-    @ViewChild('form') form!: CreateNewJobFormComponent | SimpleFormComponent;
+    @ViewChild('form') form!: CreateNewJobFormComponent;
 
     constructor(private jobsService: JobsService) {}
 
-    data: CreateJob | undefined = undefined;
+    data: { name: string; file: File; filterId: string } | undefined =
+        undefined;
     valid: boolean = false;
-    saveResult = this.jobsService.addJob.result;
+    saveResult = this.jobsService.addVideoJob.result;
     type = signal<'query' | 'simple'>('query');
-
-    switchButtonText = computed(() => {
-        return this.type() === 'query' ? 'Switch to Simple' : 'Switch to Query';
-    });
-
-    title = computed(() => {
-        return this.type() === 'query' ? 'Add Query Job' : 'Add Simple Job';
-    });
-
-    onSwitchButtonClick(): void {
-        this.form.reset();
-        this.type.set(this.type() === 'query' ? 'simple' : 'query');
-    }
 
     openModal(): void {
         this.modal.openModal();
@@ -54,8 +40,12 @@ export class AddModalComponent implements Modal {
     save(): void {
         this.form.touchAll();
         if (this.data && this.form.valid) {
-            this.jobsService.addJob
-                .mutateAsync(this.data)
+            this.jobsService.addVideoJob
+                .mutateAsync({
+                    blob: this.data.file,
+                    filterId: this.data.filterId,
+                    name: this.data.name,
+                })
                 .then(() => this.closeModal());
         }
     }

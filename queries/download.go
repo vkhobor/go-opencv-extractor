@@ -12,25 +12,52 @@ import (
 	"github.com/vkhobor/go-opencv/db"
 )
 
-func (jc *Queries) GetDownloadedVideos() []DownlodedVideo {
-	val, err := jc.Queries.GetVideosDownloaded(context.Background())
-	if err != nil {
-		slog.Error("GetDownloadedVideos: Error while getting downloaded videos", "error", err)
-		return []DownlodedVideo{}
-	}
-	result := make([]DownlodedVideo, len(val))
-	for i, v := range val {
-		result[i] = DownlodedVideo{
-			ScrapedVideo: ScrapedVideo{
-				ID: v.YtVideoID,
-				Job: Job{
-					JobID:       v.JobID,
-					SearchQuery: v.SearchQuery.String,
-					FilterID:    v.FilterID.String,
-					Limit:       int(v.Limit.Int64),
-					YouTubeID:   v.YtVideoID,
-				}},
-			SavePath: v.Path,
+func (jc *Queries) GetDownloadedVideos(includeImported bool) []DownlodedVideo {
+	var result []DownlodedVideo
+	if includeImported {
+		val, err := jc.Queries.GetVideosDownloaded(context.Background())
+		if err != nil {
+			slog.Error("GetDownloadedVideos: Error while getting downloaded videos", "error", err)
+			return []DownlodedVideo{}
+		}
+		result = make([]DownlodedVideo, len(val))
+		for i, v := range val {
+			result[i] = DownlodedVideo{
+				ScrapedVideo: ScrapedVideo{
+					ID: v.YtVideoID,
+					Job: Job{
+						JobID:       v.JobID,
+						SearchQuery: v.SearchQuery.String,
+						FilterID:    v.FilterID.String,
+						Limit:       int(v.Limit.Int64),
+						YouTubeID:   v.YtVideoID,
+						Name:        v.YtVideoName.String,
+					}},
+				SavePath:       v.Path,
+				ImportProgress: int64(v.ImportProgress.(int64)),
+			}
+		}
+	} else {
+		val, err := jc.Queries.GetVideosDownloadedButNotImported(context.Background())
+		if err != nil {
+			slog.Error("GetDownloadedVideos: Error while getting downloaded videos", "error", err)
+			return []DownlodedVideo{}
+		}
+		result = make([]DownlodedVideo, len(val))
+		for i, v := range val {
+			result[i] = DownlodedVideo{
+				ScrapedVideo: ScrapedVideo{
+					ID: v.YtVideoID,
+					Job: Job{
+						JobID:       v.JobID,
+						SearchQuery: v.SearchQuery.String,
+						FilterID:    v.FilterID.String,
+						Limit:       int(v.Limit.Int64),
+						YouTubeID:   v.YtVideoID,
+					}},
+				SavePath:       v.Path,
+				ImportProgress: v.ImportProgress.Int64,
+			}
 		}
 	}
 	return result
@@ -102,4 +129,8 @@ func RemoveAllPaths(files ...string) {
 	for _, file := range files {
 		_ = os.Remove(file)
 	}
+}
+
+func AddDownloadedVideo(v DownlodedVideo) {
+
 }

@@ -12,7 +12,7 @@ type Progress struct {
 }
 
 func (p Progress) Percent() float64 {
-	return float64(p.Done) / float64(p.Max)
+	return float64(p.Done) / float64(p.Max) * 100
 }
 
 func (p Progress) FPS(other Progress) float64 {

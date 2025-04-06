@@ -12,8 +12,9 @@ type ImportedVideo struct {
 
 type DownlodedVideo struct {
 	ScrapedVideo
-	SavePath string
-	Error    error
+	SavePath       string
+	Error          error
+	ImportProgress int64
 }
 
 type Job struct {
@@ -21,6 +22,7 @@ type Job struct {
 	JobID       string
 	SearchQuery string
 	YouTubeID   string
+	Name        string
 	FilterID    string
 }
 

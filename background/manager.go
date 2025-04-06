@@ -59,7 +59,7 @@ func (jm *DbMonitor) PullWorkItemsFromDb() {
 	go func() {
 		defer waitGroup.Done()
 
-		downloadedVideos := jm.Queries.GetDownloadedVideos()
+		downloadedVideos := jm.Queries.GetDownloadedVideos(false)
 
 		mlog.Log().Debug("PullWorkItemsFromDb", "downloadedVideos", downloadedVideos)
 		for _, video := range downloadedVideos {

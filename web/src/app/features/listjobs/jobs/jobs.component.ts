@@ -28,7 +28,7 @@ export class JobsComponent {
     @ViewChild(SettingsModalComponent) settingsModal!: SettingsModalComponent;
 
     constructor(private jobService: JobsService) {}
-    data = this.jobService.getJobs().result;
+    data = this.jobService.getVideos().result;
 
     actions: Action[] = [
         {
@@ -54,7 +54,7 @@ export class JobsComponent {
 
     dataMapped = computed(() => {
         const sorted = this.data().data.sort((a, b) =>
-            a.id!.localeCompare(b.id!)
+            a.video_id!.localeCompare(b.video_id!)
         );
 
         return sorted.map((job) => ({

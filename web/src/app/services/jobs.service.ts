@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { injectMutation, injectQuery, injectQueryClient } from '@ngneat/query';
 import { client } from './http/kiota';
-import { CreateJob, ListJobBody } from '../../api/models';
+import { CreateJob, ListJobBody, ListVideoBody } from '../../api/Api';
 import { undefToErr } from './http/undefToErr';
 
 @Injectable({
@@ -12,8 +12,26 @@ export class JobsService {
     #mutate = injectMutation();
     #queryClient = injectQueryClient();
 
+    // TODO remove
     addJob = this.#mutate({
-        mutationFn: (job: CreateJob) => client.api.jobs.post(job),
+        mutationFn: (job: CreateJob) => {
+            return new Promise(() => {});
+        },
+        onSuccess: () => {
+            this.#queryClient.invalidateQueries({
+                queryKey: ['jobs'],
+            });
+        },
+    });
+
+    addVideoJob = this.#mutate({
+        mutationFn: (job: { blob: File; filterId: string; name: string }) => {
+            return client.api.jobsVideoCreate({
+                file: job.blob,
+                filter_id: job.filterId,
+                name: job.name,
+            });
+        },
         onSuccess: () => {
             this.#queryClient.invalidateQueries({
                 queryKey: ['jobs'],
@@ -22,8 +40,7 @@ export class JobsService {
     });
 
     restartJob = this.#mutate({
-        mutationFn: (id: string) =>
-            client.api.jobs.byId(id).actions.restart.post(),
+        mutationFn: (id: string) => new Promise(() => {}),
         onSuccess: () => {
             this.#queryClient.invalidateQueries({
                 queryKey: ['jobs'],
@@ -33,7 +50,7 @@ export class JobsService {
 
     updateJobLimit = this.#mutate({
         mutationFn: ({ id, value }: { id: string; value: number }) =>
-            client.api.jobs.byId(id).actions.updateLimit.post({ limit: value }),
+            new Promise(() => {}),
         onSuccess: (_, { id }) => {
             this.#queryClient.invalidateQueries({
                 queryKey: ['jobs', id],
@@ -41,12 +58,13 @@ export class JobsService {
         },
     });
 
-    getJobs() {
+    getVideos() {
         return this.#query({
             queryKey: ['jobs'] as const,
             refetchInterval: 5000,
-            initialData: [] as ListJobBody[],
-            queryFn: () => undefToErr(client.api.jobs.get()),
+            initialData: [] as ListVideoBody[],
+            queryFn: () =>
+                undefToErr(client.api.videosList().then((x) => x.data)),
         });
     }
 
@@ -54,7 +72,7 @@ export class JobsService {
         return this.#query({
             queryKey: ['jobs', id] as const,
             refetchInterval: 5000,
-            queryFn: () => undefToErr(client.api.jobs.byId(id).get()),
+            queryFn: () => undefToErr(new Promise(() => {})),
         });
     }
 
@@ -62,7 +80,7 @@ export class JobsService {
         return this.#query({
             queryKey: ['jobs', id, 'videos'] as const,
             refetchInterval: 5000,
-            queryFn: () => undefToErr(client.api.jobs.byId(id).videos.get()),
+            queryFn: () => undefToErr(new Promise(() => {})),
         });
     }
 }

@@ -226,7 +226,7 @@ func (q *Queries) GetVideosForJob(ctx context.Context, id string) ([]GetVideosFo
 
 const listJobsWithVideos = `-- name: ListJobsWithVideos :many
 SELECT
-    jobs.id, search_query, filter_id, youtube_id, "limit", yt_videos.id, job_id
+    jobs.id, search_query, filter_id, youtube_id, "limit", yt_videos.id, name, job_id
 FROM
     jobs
     LEFT JOIN yt_videos ON jobs.id = yt_videos.job_id
@@ -239,6 +239,7 @@ type ListJobsWithVideosRow struct {
 	YoutubeID   sql.NullString
 	Limit       sql.NullInt64
 	ID_2        sql.NullString
+	Name        sql.NullString
 	JobID       sql.NullString
 }
 
@@ -258,6 +259,7 @@ func (q *Queries) ListJobsWithVideos(ctx context.Context) ([]ListJobsWithVideosR
 			&i.YoutubeID,
 			&i.Limit,
 			&i.ID_2,
+			&i.Name,
 			&i.JobID,
 		); err != nil {
 			return nil, err

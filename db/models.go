@@ -56,5 +56,6 @@ type Picture struct {
 
 type YtVideo struct {
 	ID    string
+	Name  sql.NullString
 	JobID sql.NullString
 }

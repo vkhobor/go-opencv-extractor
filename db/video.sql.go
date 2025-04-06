@@ -12,37 +12,38 @@ import (
 
 const addYtVideo = `-- name: AddYtVideo :one
 INSERT INTO
-  yt_videos (id, job_id)
+    yt_videos (id, job_id, name)
 VALUES
-  (?, ?) RETURNING id, job_id
+    (?, ?, ?) RETURNING id, name, job_id
 `
 
 type AddYtVideoParams struct {
 	ID    string
 	JobID sql.NullString
+	Name  sql.NullString
 }
 
 func (q *Queries) AddYtVideo(ctx context.Context, arg AddYtVideoParams) (YtVideo, error) {
-	row := q.db.QueryRowContext(ctx, addYtVideo, arg.ID, arg.JobID)
+	row := q.db.QueryRowContext(ctx, addYtVideo, arg.ID, arg.JobID, arg.Name)
 	var i YtVideo
-	err := row.Scan(&i.ID, &i.JobID)
+	err := row.Scan(&i.ID, &i.Name, &i.JobID)
 	return i, err
 }
 
 const getScrapedVideos = `-- name: GetScrapedVideos :many
 SELECT
-  yt_videos.id AS yt_video_id,
-  jobs.id AS job_id,
-  jobs.search_query,
-  jobs.filter_id,
-  jobs."limit",
-  jobs.youtube_id
+    yt_videos.id AS yt_video_id,
+    jobs.id AS job_id,
+    jobs.search_query,
+    jobs.filter_id,
+    jobs."limit",
+    jobs.youtube_id
 FROM
-  yt_videos
-  LEFT JOIN download_attempts ON yt_videos.id = download_attempts.yt_video_id
-  JOIN jobs ON jobs.id = yt_videos.job_id
+    yt_videos
+    LEFT JOIN download_attempts ON yt_videos.id = download_attempts.yt_video_id
+    JOIN jobs ON jobs.id = yt_videos.job_id
 WHERE
-  download_attempts.yt_video_id IS NULL
+    download_attempts.yt_video_id IS NULL
 `
 
 type GetScrapedVideosRow struct {
@@ -86,16 +87,17 @@ func (q *Queries) GetScrapedVideos(ctx context.Context) ([]GetScrapedVideosRow, 
 
 const getVideoWithDownloadAttempts = `-- name: GetVideoWithDownloadAttempts :many
 SELECT
-  yt_videos.id, job_id, download_attempts.id, yt_video_id, progress, blob_storage_id, error
+    yt_videos.id, name, job_id, download_attempts.id, yt_video_id, progress, blob_storage_id, error
 FROM
-  yt_videos
-  JOIN download_attempts ON yt_videos.id = download_attempts.yt_video_id
+    yt_videos
+    JOIN download_attempts ON yt_videos.id = download_attempts.yt_video_id
 WHERE
-  yt_videos.id = ?
+    yt_videos.id = ?
 `
 
 type GetVideoWithDownloadAttemptsRow struct {
 	ID            string
+	Name          sql.NullString
 	JobID         sql.NullString
 	ID_2          string
 	YtVideoID     sql.NullString
@@ -115,6 +117,7 @@ func (q *Queries) GetVideoWithDownloadAttempts(ctx context.Context, id string) (
 		var i GetVideoWithDownloadAttemptsRow
 		if err := rows.Scan(
 			&i.ID,
+			&i.Name,
 			&i.JobID,
 			&i.ID_2,
 			&i.YtVideoID,
@@ -137,16 +140,17 @@ func (q *Queries) GetVideoWithDownloadAttempts(ctx context.Context, id string) (
 
 const getVideoWithImportAttempts = `-- name: GetVideoWithImportAttempts :many
 SELECT
-  yt_videos.id, job_id, import_attempts.id, yt_video_id, filter_id, progress, error
+    yt_videos.id, name, job_id, import_attempts.id, yt_video_id, filter_id, progress, error
 FROM
-  yt_videos
-  JOIN import_attempts ON yt_videos.id = import_attempts.yt_video_id
+    yt_videos
+    JOIN import_attempts ON yt_videos.id = import_attempts.yt_video_id
 WHERE
-  yt_videos.id = ?
+    yt_videos.id = ?
 `
 
 type GetVideoWithImportAttemptsRow struct {
 	ID        string
+	Name      sql.NullString
 	JobID     sql.NullString
 	ID_2      string
 	YtVideoID sql.NullString
@@ -166,6 +170,7 @@ func (q *Queries) GetVideoWithImportAttempts(ctx context.Context, id string) ([]
 		var i GetVideoWithImportAttemptsRow
 		if err := rows.Scan(
 			&i.ID,
+			&i.Name,
 			&i.JobID,
 			&i.ID_2,
 			&i.YtVideoID,
@@ -188,33 +193,38 @@ func (q *Queries) GetVideoWithImportAttempts(ctx context.Context, id string) ([]
 
 const getVideosDownloaded = `-- name: GetVideosDownloaded :many
 SELECT
-  yt_videos.id as yt_video_id,
-  jobs.id AS job_id,
-  jobs.search_query,
-  jobs.filter_id,
-  jobs."limit",
-  jobs.youtube_id,
-  blob_storage.path AS path
+    yt_videos.id as yt_video_id,
+    jobs.id AS job_id,
+    jobs.search_query,
+    jobs.filter_id,
+    jobs."limit",
+    jobs.youtube_id,
+    yt_videos.name as yt_video_name,
+    blob_storage.path AS path,
+    MAX(import_attempts.progress) AS import_progress
 FROM
-  yt_videos
-  JOIN download_attempts ON yt_videos.id = download_attempts.yt_video_id
-  JOIN blob_storage ON download_attempts.blob_storage_id = blob_storage.id
-  LEFT JOIN import_attempts ON yt_videos.id = import_attempts.yt_video_id
-  JOIN jobs ON jobs.id = yt_videos.job_id
-WHERE
-  import_attempts.progress is not 100
+    yt_videos
+    JOIN download_attempts ON yt_videos.id = download_attempts.yt_video_id
+    JOIN blob_storage ON download_attempts.blob_storage_id = blob_storage.id
+    LEFT JOIN import_attempts ON yt_videos.id = import_attempts.yt_video_id
+    JOIN jobs ON jobs.id = yt_videos.job_id
 GROUP BY
-  yt_videos.id
+    yt_videos.id,
+    jobs.id,
+    yt_videos.name,
+    blob_storage.path
 `
 
 type GetVideosDownloadedRow struct {
-	YtVideoID   string
-	JobID       string
-	SearchQuery sql.NullString
-	FilterID    sql.NullString
-	Limit       sql.NullInt64
-	YoutubeID   sql.NullString
-	Path        string
+	YtVideoID      string
+	JobID          string
+	SearchQuery    sql.NullString
+	FilterID       sql.NullString
+	Limit          sql.NullInt64
+	YoutubeID      sql.NullString
+	YtVideoName    sql.NullString
+	Path           string
+	ImportProgress interface{}
 }
 
 func (q *Queries) GetVideosDownloaded(ctx context.Context) ([]GetVideosDownloadedRow, error) {
@@ -233,7 +243,74 @@ func (q *Queries) GetVideosDownloaded(ctx context.Context) ([]GetVideosDownloade
 			&i.FilterID,
 			&i.Limit,
 			&i.YoutubeID,
+			&i.YtVideoName,
 			&i.Path,
+			&i.ImportProgress,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getVideosDownloadedButNotImported = `-- name: GetVideosDownloadedButNotImported :many
+SELECT
+    yt_videos.id as yt_video_id,
+    jobs.id AS job_id,
+    jobs.search_query,
+    jobs.filter_id,
+    jobs."limit",
+    jobs.youtube_id,
+    blob_storage.path AS path,
+    import_attempts.progress AS import_progress
+FROM
+    yt_videos
+    JOIN download_attempts ON yt_videos.id = download_attempts.yt_video_id
+    JOIN blob_storage ON download_attempts.blob_storage_id = blob_storage.id
+    LEFT JOIN import_attempts ON yt_videos.id = import_attempts.yt_video_id
+    JOIN jobs ON jobs.id = yt_videos.job_id
+WHERE
+    import_attempts.progress is not 100
+GROUP BY
+    yt_videos.id
+`
+
+type GetVideosDownloadedButNotImportedRow struct {
+	YtVideoID      string
+	JobID          string
+	SearchQuery    sql.NullString
+	FilterID       sql.NullString
+	Limit          sql.NullInt64
+	YoutubeID      sql.NullString
+	Path           string
+	ImportProgress sql.NullInt64
+}
+
+func (q *Queries) GetVideosDownloadedButNotImported(ctx context.Context) ([]GetVideosDownloadedButNotImportedRow, error) {
+	rows, err := q.db.QueryContext(ctx, getVideosDownloadedButNotImported)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetVideosDownloadedButNotImportedRow
+	for rows.Next() {
+		var i GetVideosDownloadedButNotImportedRow
+		if err := rows.Scan(
+			&i.YtVideoID,
+			&i.JobID,
+			&i.SearchQuery,
+			&i.FilterID,
+			&i.Limit,
+			&i.YoutubeID,
+			&i.Path,
+			&i.ImportProgress,
 		); err != nil {
 			return nil, err
 		}
@@ -250,16 +327,17 @@ func (q *Queries) GetVideosDownloaded(ctx context.Context) ([]GetVideosDownloade
 
 const getYtVideoWithJob = `-- name: GetYtVideoWithJob :one
 SELECT
-  yt_videos.id, job_id, jobs.id, search_query, filter_id, youtube_id, "limit"
+    yt_videos.id, name, job_id, jobs.id, search_query, filter_id, youtube_id, "limit"
 FROM
-  yt_videos
-  JOIN jobs ON yt_videos.job_id = jobs.id
+    yt_videos
+    JOIN jobs ON yt_videos.job_id = jobs.id
 WHERE
-  yt_videos.id = ?
+    yt_videos.id = ?
 `
 
 type GetYtVideoWithJobRow struct {
 	ID          string
+	Name        sql.NullString
 	JobID       sql.NullString
 	ID_2        string
 	SearchQuery sql.NullString
@@ -273,6 +351,7 @@ func (q *Queries) GetYtVideoWithJob(ctx context.Context, id string) (GetYtVideoW
 	var i GetYtVideoWithJobRow
 	err := row.Scan(
 		&i.ID,
+		&i.Name,
 		&i.JobID,
 		&i.ID_2,
 		&i.SearchQuery,

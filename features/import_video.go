@@ -27,7 +27,7 @@ func (d *ImportVideoFeature) ImportVideo(videoID string, jobID string, filterID 
 	// TODO check if video is already imported, optionally abort while progressing
 
 	// TODO make this more efficient, no need to query for every video
-	downloadedVideos := d.Queries.GetDownloadedVideos()
+	downloadedVideos := d.Queries.GetDownloadedVideos(false)
 	if len(downloadedVideos) == 0 {
 		return errors.New("no downloaded videos")
 	}
@@ -129,11 +129,15 @@ func (d *ImportVideoFeature) importProgressHandler(
 	for item := range progressChan {
 		select {
 		case <-ticker.C:
-			_ = d.Queries.UpdateProgress(importAttemptId, int(item.Percent()))
+			err := d.Queries.UpdateProgress(importAttemptId, int(item.Percent()))
+			if err != nil {
+				mlog.Log().Error("Failed to update progress", "error", err)
+			}
 			mlog.Log().Info("importProgressHandler",
 				"id", videoID,
 				"progress", item,
-				"speed fps", item.FPS(previous))
+				"speed fps", item.FPS(previous),
+				"percent", item.Percent())
 			previous = item
 		default:
 		}
@@ -182,6 +186,7 @@ func collectFramesToDisk(frames iter.Seq2[videoiter.FrameInfo, error], outputDir
 		if !ok {
 			return nil, errors.New("failed to save frame")
 		}
+		mlog.Log().Info("Saving frame", "filePath", filePath)
 		filePaths = append(filePaths, filePath)
 	}
 
