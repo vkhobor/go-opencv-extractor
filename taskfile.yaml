@@ -7,67 +7,38 @@ vars:
   GO_EXTRACTOR_DEV_CLIENT_PORT: 4200
 
 tasks:
-  dev:server:
+  server:
     desc: "Run the server, uses ./tmp as storage, port is {{.GO_EXTRACTOR_DEV_SERVER_PORT}}"
+    aliases: [s]
     cmds:
       - go run . serve -p {{.GO_EXTRACTOR_DEV_SERVER_PORT}} --blob-storage ./.tmp/blob --db ./.tmp/db.sqlite3 --log-folder ./.tmp/logs
 
-  dev:client:
+  client:
     desc: "Run the client, port is {{.GO_EXTRACTOR_DEV_CLIENT_PORT}}"
     dir: web
+    aliases: [c]
     cmds:
       - NG_APP_API_URL=http://localhost:{{.GO_EXTRACTOR_DEV_SERVER_PORT}}/api npm run start -- --port {{.GO_EXTRACTOR_DEV_CLIENT_PORT}}
 
   preview:
     desc: "Build the client and serve it embedded in the server"
     deps: ["build:client"]
+    aliases: [p]
     cmds:
-      - task: dev:server
+      - task: server
 
-  dev:generate-openapi:
+  generate-openapi:
     desc: "Generate OpenAPI documentation to ./doc folder"
-    aliases: [openapi]
+    aliases: [o, openapi]
     vars:
       PORT: "{{randInt 1000 10000}}"
     cmds:
       - go run . openapi -p {{.PORT}} -o ./doc
 
-  # Advanced development related tasks
-
-  compose-up:
-    desc: "Run docker compose up"
-    aliases: [up]
-    cmds:
-      - docker compose up
-
-  compose-up:build:
-    desc: "Run docker compose up --build"
-    aliases: [upb]
-    cmds:
-      - docker compose up --build
-
-  dev:install-sqlc:
-    desc: "Install sqlc"
-    cmds:
-      - go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
-    status:
-      - sqlc --help
-
-  dev:install-migrate:
-    desc: "Install migrate tool for database migrations"
-    status:
-      - migrate -version
-    cmds:
-      - go install -tags 'sqlite3' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
-
-  dev:install-dev-deps:
-    desc: "Install all development dependencies"
-    deps: [dev:install-sqlc, dev:install-migrate]
-
-  dev:generate-sqlc-methods:
+  sql:generate-sqlc-methods:
     desc: "Generate go code from SQL queries and schema using sqlc"
-    aliases: [sqlc]
-    deps: [dev:install-sqlc]
+    aliases: [s:gen]
+    deps: [install:sqlc]
     watch: true
     sources:
       - db/migrations/*.sql
@@ -79,10 +50,10 @@ tasks:
     cmds:
       - sqlc generate
 
-  dev:generate-migration:
+  sql:generate-migration:
     desc: "Adds a new migration"
-    aliases: [mgen]
-    deps: [dev:install-migrate]
+    aliases: [s:m]
+    deps: [install:migrate]
     dir: db/migrations
     preconditions:
       - sh: test -n "{{.CLI_ARGS}}"
@@ -90,29 +61,63 @@ tasks:
     cmds:
       - migrate create -ext sql {{.CLI_ARGS}}
 
-  dev:delete-last-migration:
-    aliases: [mdel]
+  sql:delete-last-migration:
+    aliases: [s:delete]
     desc: "Deletes the last migration"
     dir: db/migrations
     cmds:
       - rm -f $(ls -t | head -n2)
 
-  dev:redo-last-migration:
-    aliases: [mredo]
+  sql:redo-last-migration:
+    aliases: [s:redo]
     desc: "Delete the last migration and generate it again"
     dir: db/migrations
-    deps: [dev:delete-last-migration]
+    deps: [sql:delete-last-migration]
     preconditions:
       - sh: test -n "{{.CLI_ARGS}}"
         msg: "Please provide a name for the migration"
     cmds:
       - task: generate-migration
 
+  # Advanced development related tasks
+
+  compose-up:
+    desc: "Run docker compose up"
+    aliases: [up]
+    cmds:
+      - docker compose up
+
+  compose-up:build:
+    desc: "Run docker compose up --build"
+    aliases: [up:b]
+    cmds:
+      - docker compose up --build
+
+  install:sqlc:
+    desc: "Install sqlc"
+    cmds:
+      - go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+    status:
+      - sqlc --help
+
+  install:golang-migrate:
+    desc: "Install migrate tool for database migrations"
+    status:
+      - migrate -version
+    cmds:
+      - go install -tags 'sqlite3' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+
+  install:all:
+    aliases: [i:a]
+    desc: "Install all development dependencies"
+    deps: [install:sqlc, install:golang-migrate]
+
   # Production related tasks
 
-  build:client:
+  client:build:
     desc: "Build the client"
     dir: web
+    aliases: [c:b]
     sources:
       - src/**/*.*
     generates:

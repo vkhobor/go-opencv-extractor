@@ -12,20 +12,49 @@ import (
 
 const addFilter = `-- name: AddFilter :one
 INSERT INTO
-    filters (id, "name")
+    filters (
+        id,
+        "name",
+        discriminator,
+        ratioTestThreshold,
+        minThresholdForSURFMatches,
+        minSURFMatches,
+        MSESkip
+    )
 VALUES
-    (?, ?) RETURNING id, name
+    (?, ?, ?, ?, ?, ?, ?) RETURNING id, name, discriminator, ratiotestthreshold, minthresholdforsurfmatches, minsurfmatches, mseskip
 `
 
 type AddFilterParams struct {
-	ID   string
-	Name sql.NullString
+	ID                         string
+	Name                       sql.NullString
+	Discriminator              sql.NullString
+	Ratiotestthreshold         sql.NullFloat64
+	Minthresholdforsurfmatches sql.NullFloat64
+	Minsurfmatches             sql.NullInt64
+	Mseskip                    sql.NullFloat64
 }
 
 func (q *Queries) AddFilter(ctx context.Context, arg AddFilterParams) (Filter, error) {
-	row := q.db.QueryRowContext(ctx, addFilter, arg.ID, arg.Name)
+	row := q.db.QueryRowContext(ctx, addFilter,
+		arg.ID,
+		arg.Name,
+		arg.Discriminator,
+		arg.Ratiotestthreshold,
+		arg.Minthresholdforsurfmatches,
+		arg.Minsurfmatches,
+		arg.Mseskip,
+	)
 	var i Filter
-	err := row.Scan(&i.ID, &i.Name)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Discriminator,
+		&i.Ratiotestthreshold,
+		&i.Minthresholdforsurfmatches,
+		&i.Minsurfmatches,
+		&i.Mseskip,
+	)
 	return i, err
 }
 
@@ -61,7 +90,7 @@ func (q *Queries) DeleteImagesOnFilter(ctx context.Context, filterID sql.NullStr
 
 const getFilterForJob = `-- name: GetFilterForJob :many
 SELECT
-    filters.id, filters.name,
+    filters.id, filters.name, filters.discriminator, filters.ratiotestthreshold, filters.minthresholdforsurfmatches, filters.minsurfmatches, filters.mseskip,
     blob_storage.id, blob_storage.path
 FROM
     jobs
@@ -73,10 +102,15 @@ WHERE
 `
 
 type GetFilterForJobRow struct {
-	ID   string
-	Name sql.NullString
-	ID_2 string
-	Path string
+	ID                         string
+	Name                       sql.NullString
+	Discriminator              sql.NullString
+	Ratiotestthreshold         sql.NullFloat64
+	Minthresholdforsurfmatches sql.NullFloat64
+	Minsurfmatches             sql.NullInt64
+	Mseskip                    sql.NullFloat64
+	ID_2                       string
+	Path                       string
 }
 
 func (q *Queries) GetFilterForJob(ctx context.Context, id string) ([]GetFilterForJobRow, error) {
@@ -91,6 +125,11 @@ func (q *Queries) GetFilterForJob(ctx context.Context, id string) ([]GetFilterFo
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
+			&i.Discriminator,
+			&i.Ratiotestthreshold,
+			&i.Minthresholdforsurfmatches,
+			&i.Minsurfmatches,
+			&i.Mseskip,
 			&i.ID_2,
 			&i.Path,
 		); err != nil {
@@ -110,7 +149,7 @@ func (q *Queries) GetFilterForJob(ctx context.Context, id string) ([]GetFilterFo
 const getFilters = `-- name: GetFilters :many
 SELECT
     blob_storage.id as blob_id,
-    filters.id, name, filter_id, blob_storage_id, blob_storage.id, path
+    filters.id, name, discriminator, ratiotestthreshold, minthresholdforsurfmatches, minsurfmatches, mseskip, filter_id, blob_storage_id, blob_storage.id, path
 FROM
     filters
     LEFT JOIN filter_images ON filters.id = filter_images.filter_id
@@ -118,13 +157,18 @@ FROM
 `
 
 type GetFiltersRow struct {
-	BlobID        sql.NullString
-	ID            string
-	Name          sql.NullString
-	FilterID      sql.NullString
-	BlobStorageID sql.NullString
-	ID_2          sql.NullString
-	Path          sql.NullString
+	BlobID                     sql.NullString
+	ID                         string
+	Name                       sql.NullString
+	Discriminator              sql.NullString
+	Ratiotestthreshold         sql.NullFloat64
+	Minthresholdforsurfmatches sql.NullFloat64
+	Minsurfmatches             sql.NullInt64
+	Mseskip                    sql.NullFloat64
+	FilterID                   sql.NullString
+	BlobStorageID              sql.NullString
+	ID_2                       sql.NullString
+	Path                       sql.NullString
 }
 
 func (q *Queries) GetFilters(ctx context.Context) ([]GetFiltersRow, error) {
@@ -140,6 +184,11 @@ func (q *Queries) GetFilters(ctx context.Context) ([]GetFiltersRow, error) {
 			&i.BlobID,
 			&i.ID,
 			&i.Name,
+			&i.Discriminator,
+			&i.Ratiotestthreshold,
+			&i.Minthresholdforsurfmatches,
+			&i.Minsurfmatches,
+			&i.Mseskip,
 			&i.FilterID,
 			&i.BlobStorageID,
 			&i.ID_2,

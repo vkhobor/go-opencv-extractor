@@ -2,10 +2,9 @@
     <div
         class="flex items-center justify-start flex-column flex-wrap md:flex-row space-y-4 md:space-y-0 pb-4 bg-white dark:bg-gray-900"
     >
-        <app-actions
-            [actions]="actions"
-            (actionSelected)="onActionSelected($event)"
-        ></app-actions>
+        <app-actions            [actions]="actions"     (actionSelected)="onActionSelected($event)"
+        >
+        </app-actions>
         @if (filtersEnabled().length > 0) {
             <span class="ml-4 mr-3 text-sm text-gray-900 dark:text-white">
                 Filters:
@@ -19,8 +18,7 @@
         }
     </div>
     @if (imagePage().data; as images) {
-        <div class="grid items gap-8 mb-7">
-            @for (image of referencesUrls(); track image) {
+        <div class="grid items gap-8 mb-7">          @for (image of referencesUrls(); track image) {
                 <img width="1000px" [src]="image" />
             }
         </div>

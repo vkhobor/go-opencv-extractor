@@ -34,7 +34,15 @@ CREATE TABLE import_attempts (
     FOREIGN KEY (yt_video_id) REFERENCES yt_videos (id)
 );
 
-CREATE TABLE filters (id TEXT PRIMARY KEY, name TEXT);
+CREATE TABLE filters (
+    id TEXT PRIMARY KEY,
+    name TEXT,
+    discriminator TEXT,
+    ratioTestThreshold FLOAT,
+    minThresholdForSURFMatches FLOAT,
+    minSURFMatches INT,
+    MSESkip FLOAT
+);
 
 CREATE TABLE filter_images (
     filter_id TEXT,

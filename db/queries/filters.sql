@@ -1,8 +1,16 @@
 -- name: AddFilter :one
 INSERT INTO
-    filters (id, "name")
+    filters (
+        id,
+        "name",
+        discriminator,
+        ratioTestThreshold,
+        minThresholdForSURFMatches,
+        minSURFMatches,
+        MSESkip
+    )
 VALUES
-    (?, ?) RETURNING *;
+    (?, ?, ?, ?, ?, ?, ?) RETURNING *;
 
 -- name: AttachImageToFilter :one
 INSERT INTO

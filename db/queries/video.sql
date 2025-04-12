@@ -59,7 +59,9 @@ SELECT
     jobs.youtube_id,
     yt_videos.name as yt_video_name,
     blob_storage.path AS path,
-    MAX(import_attempts.progress) AS import_progress
+    CAST(
+        COALESCE(MAX(import_attempts.progress), 0) AS INTEGER
+    ) AS import_progress
 FROM
     yt_videos
     JOIN download_attempts ON yt_videos.id = download_attempts.yt_video_id

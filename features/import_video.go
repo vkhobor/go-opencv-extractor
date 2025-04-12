@@ -25,7 +25,6 @@ type ImportVideoFeature struct {
 
 func (d *ImportVideoFeature) ImportVideo(videoID string, jobID string, filterID string) error {
 	// TODO check if video is already imported, optionally abort while progressing
-
 	// TODO make this more efficient, no need to query for every video
 	downloadedVideos := d.Queries.GetDownloadedVideos(false)
 	if len(downloadedVideos) == 0 {
@@ -53,7 +52,7 @@ func (d *ImportVideoFeature) ImportVideo(videoID string, jobID string, filterID 
 		return err
 	}
 
-	frames, err := d.handleSingle(id, refs, videoID, videoSavePath)
+	err = d.handleSingle(id, refs, videoID, videoSavePath)
 	if err != nil {
 		innerErr := d.Queries.UpdateError(id, err)
 		if innerErr != nil {
@@ -62,7 +61,7 @@ func (d *ImportVideoFeature) ImportVideo(videoID string, jobID string, filterID 
 		return err
 	}
 
-	err = d.Queries.FinishImport(videoID, frames, id)
+	err = d.Queries.FinishImport(videoID, id)
 	if err != nil {
 		if errors.Is(err, queries.ErrHasImported) {
 			innerErr := d.Queries.UpdateError(id, err)
@@ -81,7 +80,7 @@ func (d *ImportVideoFeature) handleSingle(
 	importAttemptId string,
 	refs []string,
 	videoID string,
-	videoSavePath string) ([]queries.Frame, error) {
+	videoSavePath string) error {
 
 	// Make progress handling async
 	progress := make(chan videoiter.Progress, 1)
@@ -94,28 +93,31 @@ func (d *ImportVideoFeature) handleSingle(
 	// TODO map different filters if implemented in database
 	matcher, err := surf.NewSURFImageMatcher(refs)
 	if err != nil {
-		return []queries.Frame{}, err
+		return err
 	}
 	defer matcher.Close()
 
 	filter := filters.NewSURFVideoFilter(matcher)
 
-	filePaths, err := handleVideoFromPath(
-		videoSavePath,
-		d.Config.GetImagesDir(),
-		filter,
-		progressHandler)
-
+	video, err := videoiter.NewVideo(videoSavePath)
 	if err != nil {
-		return []queries.Frame{}, err
+		return err
 	}
 
-	mlog.Log().Info("Imported video", "video", filePaths, "id", videoID)
-	frames := make([]queries.Frame, 0)
-	for _, v := range filePaths {
-		frames = append(frames, queries.Frame{FrameNumber: 0, Path: v})
+	fpsWant := filter.SamplingWantFPS()
+
+	frames := videoiter.AllSampledFrames(video, fpsWant, progressHandler)
+	wantFrames := filter.FrameFilter(frames)
+
+	err = d.collectFramesToDisk(wantFrames, d.Config.GetImagesDir(), videoID, importAttemptId)
+	if err != nil {
+		return err
 	}
-	return frames, nil
+
+	slog.Info("Processed images", "outputDir", d.Config.GetImagesDir(), "fpsWant", fpsWant)
+
+	mlog.Log().Info("Imported video", "id", videoID)
+	return nil
 }
 
 func (d *ImportVideoFeature) importProgressHandler(
@@ -149,48 +151,25 @@ type Filter interface {
 	SamplingWantFPS() int
 }
 
-func handleVideoFromPath(
-	path string,
-	outputDir string,
-	filter Filter,
-	progress func(p videoiter.Progress)) ([]string, error) {
-
-	video, err := videoiter.NewVideo(path)
-	if err != nil {
-		return nil, err
-	}
-
-	fpsWant := filter.SamplingWantFPS()
-
-	frames := videoiter.AllSampledFrames(video, fpsWant, progress)
-	wantFrames := filter.FrameFilter(frames)
-
-	filePaths, err := collectFramesToDisk(wantFrames, outputDir)
-	if err != nil {
-		return nil, err
-	}
-
-	slog.Info("Processed images", "fileNames", filePaths, "outputDir", outputDir, "fpsWant", fpsWant, "count", len(filePaths))
-	return filePaths, nil
-}
-
-func collectFramesToDisk(frames iter.Seq2[videoiter.FrameInfo, error], outputDir string) ([]string, error) {
-	filePaths := make([]string, 0)
-
+func (d *ImportVideoFeature) collectFramesToDisk(frames iter.Seq2[videoiter.FrameInfo, error], outputDir string, videoId string, importAttemptId string) error {
 	for value, err := range frames {
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		filePath, ok := saveFrameWithUUIDName(outputDir, &value.Frame)
 		if !ok {
-			return nil, errors.New("failed to save frame")
+			return errors.New("failed to save frame")
 		}
+
+		d.Queries.AddFrameToVideo(videoId, queries.Frame{
+			FrameNumber: value.FrameNum,
+			Path:        filePath,
+		}, importAttemptId)
 		mlog.Log().Info("Saving frame", "filePath", filePath)
-		filePaths = append(filePaths, filePath)
 	}
 
-	return filePaths, nil
+	return nil
 }
 
 func saveFrameWithUUIDName(outputDir string, value *gocv.Mat) (string, bool) {

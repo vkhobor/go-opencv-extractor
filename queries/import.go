@@ -109,7 +109,38 @@ func (jc *Queries) CheckImportedAlready(ctx context.Context, videoID string) (bo
 	return false, nil
 }
 
-func (jc *Queries) FinishImport(videoID string, frames []Frame, importAttemptId string) error {
+func (jc *Queries) AddFrameToVideo(videoID string, frame Frame, importAttemptId string) error {
+	if imported, err := jc.CheckImportedAlready(context.Background(), videoID); err != nil {
+		return err
+	} else if imported {
+		return ErrHasImported
+	}
+
+	blobID := uuid.New()
+	_ = jc.Queries.AddBlob(context.Background(), db.AddBlobParams{
+		ID:   blobID.String(),
+		Path: frame.Path,
+	})
+	_ = jc.Queries.AddPicture(context.Background(), db.AddPictureParams{
+		ID: uuid.New().String(),
+		ImportAttemptID: sql.NullString{
+			String: importAttemptId,
+			Valid:  true,
+		},
+		FrameNumber: sql.NullInt64{
+			Int64: int64(frame.FrameNumber),
+			Valid: true,
+		},
+		BlobStorageID: sql.NullString{
+			String: blobID.String(),
+			Valid:  true,
+		},
+	})
+
+	return nil
+}
+
+func (jc *Queries) FinishImport(videoID string, importAttemptId string) error {
 	imported, err := jc.CheckImportedAlready(context.Background(), videoID)
 	if err != nil {
 		return err
@@ -125,27 +156,5 @@ func (jc *Queries) FinishImport(videoID string, frames []Frame, importAttemptId 
 		return err
 	}
 
-	for _, frame := range frames {
-		blobID := uuid.New()
-		_ = jc.Queries.AddBlob(context.Background(), db.AddBlobParams{
-			ID:   blobID.String(),
-			Path: frame.Path,
-		})
-		_ = jc.Queries.AddPicture(context.Background(), db.AddPictureParams{
-			ID: uuid.New().String(),
-			ImportAttemptID: sql.NullString{
-				String: importAttemptId,
-				Valid:  true,
-			},
-			FrameNumber: sql.NullInt64{
-				Int64: int64(frame.FrameNumber),
-				Valid: true,
-			},
-			BlobStorageID: sql.NullString{
-				String: blobID.String(),
-				Valid:  true,
-			},
-		})
-	}
 	return nil
 }

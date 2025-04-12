@@ -22,8 +22,13 @@ type DownloadAttempt struct {
 }
 
 type Filter struct {
-	ID   string
-	Name sql.NullString
+	ID                         string
+	Name                       sql.NullString
+	Discriminator              sql.NullString
+	Ratiotestthreshold         sql.NullFloat64
+	Minthresholdforsurfmatches sql.NullFloat64
+	Minsurfmatches             sql.NullInt64
+	Mseskip                    sql.NullFloat64
 }
 
 type FilterImage struct {

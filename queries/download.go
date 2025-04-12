@@ -34,7 +34,7 @@ func (jc *Queries) GetDownloadedVideos(includeImported bool) []DownlodedVideo {
 						Name:        v.YtVideoName.String,
 					}},
 				SavePath:       v.Path,
-				ImportProgress: int64(v.ImportProgress.(int64)),
+				ImportProgress: v.ImportProgress,
 			}
 		}
 	} else {

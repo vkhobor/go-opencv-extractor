@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/go-chi/render"
 	"github.com/google/uuid"
@@ -27,7 +28,36 @@ func HandleReferenceUpload(queries *db.Queries, config config.DirectoryConfig) h
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			r.ParseMultipartForm(10 * megabyte)
+			err := r.ParseMultipartForm(10 * megabyte)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			ratioTestThreshold, err := strconv.ParseFloat(r.FormValue("ratioTestThreshold"), 64)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			minThresholdForSURFMatches, err := strconv.ParseFloat(r.FormValue("minThresholdForSURFMatches"), 64)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			minSURFMatches, err := strconv.ParseInt(r.FormValue("minSURFMatches"), 10, 64)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			mseSkip, err := strconv.ParseFloat(r.FormValue("mseSkip"), 64)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
 			files := r.MultipartForm.File
 			for _, headers := range files {
 				for _, header := range headers {
@@ -44,7 +74,14 @@ func HandleReferenceUpload(queries *db.Queries, config config.DirectoryConfig) h
 						return
 					}
 
-					err = saveToDb(r.Context(), queries, path)
+					err = saveToDb(
+						r.Context(),
+						queries,
+						path,
+						ratioTestThreshold,
+						minThresholdForSURFMatches,
+						minSURFMatches,
+						mseSkip)
 					if err != nil {
 						http.Error(w, err.Error(), http.StatusInternalServerError)
 						return
@@ -56,7 +93,14 @@ func HandleReferenceUpload(queries *db.Queries, config config.DirectoryConfig) h
 	)
 }
 
-func saveToDb(ctx context.Context, queries *db.Queries, path string) error {
+func saveToDb(
+	ctx context.Context,
+	queries *db.Queries,
+	path string,
+	ratioTestThreshold float64,
+	minThresholdForSURFMatches float64,
+	minSURFMatches int64,
+	mseSkip float64) error {
 	id := defaultFilterId
 
 	filters, err := queries.GetFilters(ctx)
@@ -75,7 +119,28 @@ func saveToDb(ctx context.Context, queries *db.Queries, path string) error {
 			Name: sql.NullString{
 				String: "Default",
 				Valid:  true,
-			}})
+			},
+			Discriminator: sql.NullString{
+				String: "SURF",
+				Valid:  true,
+			},
+			Ratiotestthreshold: sql.NullFloat64{
+				Float64: ratioTestThreshold,
+				Valid:   true,
+			},
+			Minthresholdforsurfmatches: sql.NullFloat64{
+				Float64: minThresholdForSURFMatches,
+				Valid:   true,
+			},
+			Minsurfmatches: sql.NullInt64{
+				Int64: minSURFMatches,
+				Valid: true,
+			},
+			Mseskip: sql.NullFloat64{
+				Float64: mseSkip,
+				Valid:   true,
+			},
+		})
 
 		if err != nil {
 			return err

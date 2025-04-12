@@ -22,7 +22,6 @@ import (
 	"github.com/vkhobor/go-opencv/mlog"
 	pathutils "github.com/vkhobor/go-opencv/path"
 	"github.com/vkhobor/go-opencv/queries"
-	"github.com/vkhobor/go-opencv/scraper"
 
 	database "github.com/vkhobor/go-opencv/db"
 )
@@ -90,26 +89,16 @@ func RunServer(ctx context.Context, w io.Writer, args []string, programConfig co
 		return err
 	}
 
-	scrapeArgsChan := make(chan queries.Job, 100)
-	defer close(scrapeArgsChan)
-	scrapedVideoChan := make(chan queries.ScrapedVideo, 100)
-	defer close(scrapedVideoChan)
 	downloadedChan := make(chan queries.DownlodedVideo, 100)
 	defer close(downloadedChan)
 	wakeJobs := make(chan struct{}, 1)
 	defer close(wakeJobs)
 
 	jobManager := background.DbMonitor{
-		Config: dirConfig,
-		Scraper: scraper.Scraper{
-			Throttle: time.Second * 5,
-			Domain:   "yewtu.be",
-		},
+		Config:               dirConfig,
 		MaxErrorStopRetrying: 5,
 		Wake:                 wakeJobs,
 		Queries:              &highLevelQueries,
-		ScrapeInput:          scrapeArgsChan,
-		DownloadInput:        scrapedVideoChan,
 		ImportInput:          downloadedChan,
 	}
 
