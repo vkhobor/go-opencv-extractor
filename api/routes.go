@@ -74,8 +74,14 @@ func NewRouter(
 	huma.Get(api, "/api/jobs/{id}/videos", jobs.HandleJobVideosFound(queries))
 	huma.Get(api, "/api/images", HandleImages(queries))
 
+	huma.Register(api, huma.Operation{
+		Method:        "POST",
+		Path:          "/api/references",
+		DefaultStatus: 201,
+		Summary:       "Upload reference images",
+	}, filters.HandleReferenceUpload(queries, config))
+
 	// TODO migrate legacy routes
-	router.Post("/api/references", filters.HandleReferenceUpload(queries, config))
 	router.Get("/api/references", filters.HandleGetReferences(queries))
 	router.Delete("/api/references", filters.HandleDeleteAllReferences(queries))
 

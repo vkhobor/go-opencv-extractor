@@ -8,11 +8,12 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"strconv"
 
+	"github.com/danielgtaylor/huma/v2"
 	"github.com/go-chi/render"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
+	u "github.com/vkhobor/go-opencv/api/util"
 	"github.com/vkhobor/go-opencv/config"
 	"github.com/vkhobor/go-opencv/db"
 )
@@ -21,76 +22,43 @@ const (
 	megabyte = 1 << 20 // 1 megabyte = 2^20 bytes
 )
 
+type ReferenceUploadRequest struct {
+	RawBody huma.MultipartFormFiles[struct {
+		File                       huma.FormFile `form:"file" required:"true"`
+		RatioTestThreshold         float64       `form:"ratioTestThreshold" required:"true"`
+		MinThresholdForSURFMatches float64       `form:"minThresholdForSURFMatches" required:"true"`
+		MinSURFMatches             int64         `form:"minSURFMatches" required:"true"`
+		MseSkip                    float64       `form:"mseSkip" required:"true"`
+	}]
+}
+
+type ReferenceUploadResponse struct {
+	Status string `json:"status"`
+}
+
 // TODO migrate to fully dynamic filters
 var defaultFilterId = "1fed33d4-0ea3-4b84-909c-261e4b2a3d43"
 
-func HandleReferenceUpload(queries *db.Queries, config config.DirectoryConfig) http.HandlerFunc {
+func HandleReferenceUpload(queries *db.Queries, config config.DirectoryConfig) u.Handler[ReferenceUploadRequest, ReferenceUploadResponse] {
+	return func(ctx context.Context, req *ReferenceUploadRequest) (*ReferenceUploadResponse, error) {
+		data := req.RawBody.Data()
 
-	return http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
-			err := r.ParseMultipartForm(10 * megabyte)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
+		path, err := saveToDisk(data.File.File, config, data.File.Filename)
+		if err != nil {
+			return nil, err
+		}
 
-			ratioTestThreshold, err := strconv.ParseFloat(r.FormValue("ratioTestThreshold"), 64)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
+		err = saveToDb(ctx, queries, path,
+			data.RatioTestThreshold,
+			data.MinThresholdForSURFMatches,
+			data.MinSURFMatches,
+			data.MseSkip)
+		if err != nil {
+			return nil, err
+		}
 
-			minThresholdForSURFMatches, err := strconv.ParseFloat(r.FormValue("minThresholdForSURFMatches"), 64)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-
-			minSURFMatches, err := strconv.ParseInt(r.FormValue("minSURFMatches"), 10, 64)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-
-			mseSkip, err := strconv.ParseFloat(r.FormValue("mseSkip"), 64)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-
-			files := r.MultipartForm.File
-			for _, headers := range files {
-				for _, header := range headers {
-					file, err := header.Open()
-					if err != nil {
-						http.Error(w, err.Error(), http.StatusInternalServerError)
-						return
-					}
-					defer file.Close()
-
-					path, err := saveToDisk(file, config, header.Filename)
-					if err != nil {
-						http.Error(w, err.Error(), http.StatusInternalServerError)
-						return
-					}
-
-					err = saveToDb(
-						r.Context(),
-						queries,
-						path,
-						ratioTestThreshold,
-						minThresholdForSURFMatches,
-						minSURFMatches,
-						mseSkip)
-					if err != nil {
-						http.Error(w, err.Error(), http.StatusInternalServerError)
-						return
-					}
-				}
-			}
-			render.Status(r, http.StatusCreated)
-		},
-	)
+		return &ReferenceUploadResponse{Status: "created"}, nil
+	}
 }
 
 func saveToDb(
