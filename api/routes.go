@@ -82,6 +82,34 @@ func NewRouter(
 	}, filters.HandleReferenceUpload(queries, config))
 	huma.Get(api, "/api/references/{id}", filters.HandleReferenceGet(queries))
 
+	huma.Register(api, huma.Operation{
+		Method:        "POST",
+		Path:          "/testsurf",
+		DefaultStatus: 200,
+		Summary:       "Upload test video and delete previous one",
+	}, HandleTestSurfUpload(queries, programConfig))
+
+	huma.Register(api, huma.Operation{
+		Method:        "GET",
+		Path:          "/testsurf/test",
+		DefaultStatus: 200,
+		Summary:       "Check matching",
+	}, HandleTestSurfCheck(queries))
+
+	huma.Register(api, huma.Operation{
+		Method:        "GET",
+		Path:          "/testsurf/frame",
+		DefaultStatus: 200,
+		Summary:       "Serve image for frame",
+	}, HandleTestSurfFrame(queries))
+
+	huma.Register(api, huma.Operation{
+		Method:        "GET",
+		Path:          "/testsurf",
+		DefaultStatus: 200,
+		Summary:       "Get max frame",
+	}, HandleTestSurfMaxFrame(queries))
+
 	// TODO migrate legacy routes
 	router.Get("/api/references", filters.HandleGetReferences(queries))
 
