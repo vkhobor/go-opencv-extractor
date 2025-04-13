@@ -11,11 +11,14 @@ import (
 
 type SURFVideoFilter struct {
 	surfMatcher *surf.SURFImageMatcher
+	// Good default is 0.2
+	MSEThreshold float64
 }
 
-func NewSURFVideoFilter(surfMatcher *surf.SURFImageMatcher) *SURFVideoFilter {
+func NewSURFVideoFilter(surfMatcher *surf.SURFImageMatcher, MSEThreshold float64) *SURFVideoFilter {
 	return &SURFVideoFilter{
-		surfMatcher: surfMatcher,
+		surfMatcher:  surfMatcher,
+		MSEThreshold: MSEThreshold,
 	}
 }
 
@@ -59,7 +62,7 @@ func (f *SURFVideoFilter) FrameFilter(frames iter.Seq2[videoiter.FrameInfo, erro
 				// Abort iteration on error
 				return
 			}
-			if diff < 0.2 {
+			if diff < f.MSEThreshold {
 				previousFrame = frame.Clone()
 				continue
 			}

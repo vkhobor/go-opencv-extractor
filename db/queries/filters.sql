@@ -1,14 +1,14 @@
 -- name: AddFilter :one
-INSERT INTO
-    filters (
-        id,
-        "name",
-        discriminator,
-        ratioTestThreshold,
-        minThresholdForSURFMatches,
-        minSURFMatches,
-        MSESkip
-    )
+INSERT
+OR REPLACE INTO filters (
+    id,
+    "name",
+    discriminator,
+    ratioTestThreshold,
+    minThresholdForSURFMatches,
+    minSURFMatches,
+    MSESkip
+)
 VALUES
     (?, ?, ?, ?, ?, ?, ?) RETURNING *;
 
@@ -43,6 +43,16 @@ FROM
     filters
     LEFT JOIN filter_images ON filters.id = filter_images.filter_id
     LEFT JOIN blob_storage ON filter_images.blob_storage_id = blob_storage.id;
+
+-- name: GetFilterById :many
+SELECT
+    f.*,
+    fi.blob_storage_id
+FROM
+    filters f
+    LEFT JOIN filter_images fi ON f.id = fi.filter_id
+WHERE
+    f.id = ?;
 
 -- name: GetFilterForJob :many
 SELECT

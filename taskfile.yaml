@@ -30,10 +30,26 @@ tasks:
   generate-openapi:
     desc: "Generate OpenAPI documentation to ./doc folder"
     aliases: [o, openapi]
+    sources:
+      - ./api/*.go
+    generates:
+      - ./doc/openapi.yaml
     vars:
       PORT: "{{randInt 1000 10000}}"
     cmds:
       - go run . openapi -p {{.PORT}} -o ./doc
+
+  client:generate:
+    desc: "Generate client code from OpenAPI specification"
+    aliases: [c:gen]
+    deps: [generate-openapi]
+    sources:
+      - ./doc/openapi.yaml
+    generates:
+      - web/src/api.ts
+    dir: web
+    cmds:
+      - npm run gen-client
 
   sql:generate-sqlc-methods:
     desc: "Generate go code from SQL queries and schema using sqlc"

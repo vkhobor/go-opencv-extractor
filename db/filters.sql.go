@@ -11,16 +11,16 @@ import (
 )
 
 const addFilter = `-- name: AddFilter :one
-INSERT INTO
-    filters (
-        id,
-        "name",
-        discriminator,
-        ratioTestThreshold,
-        minThresholdForSURFMatches,
-        minSURFMatches,
-        MSESkip
-    )
+INSERT
+OR REPLACE INTO filters (
+    id,
+    "name",
+    discriminator,
+    ratioTestThreshold,
+    minThresholdForSURFMatches,
+    minSURFMatches,
+    MSESkip
+)
 VALUES
     (?, ?, ?, ?, ?, ?, ?) RETURNING id, name, discriminator, ratiotestthreshold, minthresholdforsurfmatches, minsurfmatches, mseskip
 `
@@ -86,6 +86,60 @@ WHERE
 func (q *Queries) DeleteImagesOnFilter(ctx context.Context, filterID sql.NullString) error {
 	_, err := q.db.ExecContext(ctx, deleteImagesOnFilter, filterID)
 	return err
+}
+
+const getFilterById = `-- name: GetFilterById :many
+SELECT
+    f.id, f.name, f.discriminator, f.ratiotestthreshold, f.minthresholdforsurfmatches, f.minsurfmatches, f.mseskip,
+    fi.blob_storage_id
+FROM
+    filters f
+    LEFT JOIN filter_images fi ON f.id = fi.filter_id
+WHERE
+    f.id = ?
+`
+
+type GetFilterByIdRow struct {
+	ID                         string
+	Name                       sql.NullString
+	Discriminator              sql.NullString
+	Ratiotestthreshold         sql.NullFloat64
+	Minthresholdforsurfmatches sql.NullFloat64
+	Minsurfmatches             sql.NullInt64
+	Mseskip                    sql.NullFloat64
+	BlobStorageID              sql.NullString
+}
+
+func (q *Queries) GetFilterById(ctx context.Context, id string) ([]GetFilterByIdRow, error) {
+	rows, err := q.db.QueryContext(ctx, getFilterById, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetFilterByIdRow
+	for rows.Next() {
+		var i GetFilterByIdRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Discriminator,
+			&i.Ratiotestthreshold,
+			&i.Minthresholdforsurfmatches,
+			&i.Minsurfmatches,
+			&i.Mseskip,
+			&i.BlobStorageID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getFilterForJob = `-- name: GetFilterForJob :many

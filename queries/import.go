@@ -10,15 +10,40 @@ import (
 	"github.com/vkhobor/go-opencv/db"
 )
 
-func (jc *Queries) GetRefImages(jobId string) ([]string, error) {
+type FilterWithPaths struct {
+	ID                         string
+	Name                       string
+	Discriminator              string
+	RatioTestThreshold         float64
+	MinThresholdForSURFMatches float64
+	MinSURFMatches             int64
+	MSESkip                    float64
+	Paths                      []string
+}
+
+func (jc *Queries) GetRefImages(jobId string) (FilterWithPaths, error) {
 	res, err := jc.Queries.GetFilterForJob(context.Background(), jobId)
 	if err != nil {
-		return []string{}, err
+		return FilterWithPaths{}, err
 	}
 
-	return lo.Map(res, func(item db.GetFilterForJobRow, i int) string {
-		return item.Path
-	}), nil
+	if len(res) == 0 {
+		return FilterWithPaths{}, nil
+	}
+
+	first := res[0]
+	return FilterWithPaths{
+		ID:                         first.ID,
+		Name:                       first.Name.String,
+		Discriminator:              first.Discriminator.String,
+		RatioTestThreshold:         first.Ratiotestthreshold.Float64,
+		MinThresholdForSURFMatches: first.Minthresholdforsurfmatches.Float64,
+		MinSURFMatches:             first.Minsurfmatches.Int64,
+		MSESkip:                    first.Mseskip.Float64,
+		Paths: lo.Map(res, func(item db.GetFilterForJobRow, _ int) string {
+			return item.Path
+		}),
+	}, nil
 }
 
 func (jc *Queries) StartImportAttempt(videoID string, filterID string) (string, error) {

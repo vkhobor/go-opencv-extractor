@@ -80,10 +80,10 @@ func NewRouter(
 		DefaultStatus: 201,
 		Summary:       "Upload reference images",
 	}, filters.HandleReferenceUpload(queries, config))
+	huma.Get(api, "/api/references/{id}", filters.HandleReferenceGet(queries))
 
 	// TODO migrate legacy routes
 	router.Get("/api/references", filters.HandleGetReferences(queries))
-	router.Delete("/api/references", filters.HandleDeleteAllReferences(queries))
 
 	router.Get("/api/filters", filters.HandleGetFilters(queries))
 

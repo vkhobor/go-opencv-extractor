@@ -1,61 +1,60 @@
-import { HttpClient } from '@angular/common/http';
-import { Injectable, inject } from '@angular/core';
-import { injectMutation, injectQuery, injectQueryClient } from '@ngneat/query';
-import { DefaultHttpProxyService } from './http/default-http-proxy.service';
-import { Observable } from 'rxjs';
+import { HttpClient } from "@angular/common/http";
+import { Injectable, inject } from "@angular/core";
+import { injectMutation, injectQuery, injectQueryClient } from "@ngneat/query";
+import { DefaultHttpProxyService } from "./http/default-http-proxy.service";
+import { Observable } from "rxjs";
+import { client } from "./http/kiota";
 
 @Injectable({
-    providedIn: 'root',
+	providedIn: "root",
 })
 export class ReferencesService {
-    #http = inject(DefaultHttpProxyService);
-    #query = injectQuery();
-    #mutate = injectMutation();
-    #queryClient = injectQueryClient();
+	#http = inject(DefaultHttpProxyService);
+	#query = injectQuery();
+	#mutate = injectMutation();
+	#queryClient = injectQueryClient();
 
-    upload = this.#mutate({
-        mutationFn: (files: File[]) => {
-            const formData = new FormData();
-            for (const file of files) {
-                formData.append(file.name, file);
-            }
-            return this.#http.post('/references', formData) as Observable<void>;
-        },
+	upload = this.#mutate({
+		mutationFn: (params: {
+			files: File[];
+			minSURFMatches: number;
+			minThresholdForSURFMatches: number;
+			mseSkip: number;
+			ratioTestThreshold: number;
+		}) => {
+			return client.api.referencesCreate({
+				file: params.files[0],
+				minSURFMatches: params.minSURFMatches,
+				minThresholdForSURFMatches: params.minThresholdForSURFMatches,
+				mseSkip: params.mseSkip,
+				ratioTestThreshold: params.ratioTestThreshold,
+			});
+		},
+		onSuccess: () => {
+			this.#queryClient.invalidateQueries({
+				queryKey: ["references"],
+			});
+			this.#queryClient.invalidateQueries({
+				queryKey: ["filters"],
+			});
+		},
+	});
 
-        onSuccess: () => {
-            this.#queryClient.invalidateQueries({
-                queryKey: ['references'],
-            });
-            this.#queryClient.invalidateQueries({
-                queryKey: ['filters'],
-            });
-        },
-    });
+	getReferences() {
+		return this.#query({
+			queryKey: ["references"] as const,
+			queryFn: () => {
+				return this.#http.get("/references") as Observable<{ id: string }[]>;
+			},
+		});
+	}
 
-    deleteAll = this.#mutate({
-        mutationFn: () => {
-            return this.#http.delete(`/references`) as Observable<void>;
-        },
-        onSuccess: () => {
-            this.#queryClient.invalidateQueries({
-                queryKey: ['references'],
-            });
-            this.#queryClient.invalidateQueries({
-                queryKey: ['filters'],
-            });
-        },
-    });
+	getReferenceById(id: string) {
+		return this.#query({
+			queryKey: ["references", id],
+			queryFn: () => client.api.getApiReferencesById(id).then((x) => x.data),
+		});
+	}
 
-    getReferences() {
-        return this.#query({
-            queryKey: ['references'] as const,
-            queryFn: () => {
-                return this.#http.get('/references') as Observable<
-                    { id: string }[]
-                >;
-            },
-        });
-    }
-
-    constructor() {}
+	constructor() {}
 }

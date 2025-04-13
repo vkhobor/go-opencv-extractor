@@ -43,7 +43,7 @@ func (d *ImportVideoFeature) ImportVideo(videoID string, jobID string, filterID 
 	if err != nil {
 		return err
 	}
-	if len(refs) == 0 {
+	if len(refs.Paths) == 0 {
 		return errors.New("no ref images found")
 	}
 
@@ -78,7 +78,7 @@ func (d *ImportVideoFeature) ImportVideo(videoID string, jobID string, filterID 
 
 func (d *ImportVideoFeature) handleSingle(
 	importAttemptId string,
-	refs []string,
+	refs queries.FilterWithPaths,
 	videoID string,
 	videoSavePath string) error {
 
@@ -90,14 +90,22 @@ func (d *ImportVideoFeature) handleSingle(
 		progress <- p
 	}
 
+	options := []surf.SURFImageMatcherOption{
+		surf.WithMinMatches(int(refs.MinSURFMatches)),
+		surf.WithMinThreshold(refs.MinThresholdForSURFMatches),
+		surf.WithRatioThreshold(refs.RatioTestThreshold),
+	}
+	mlog.Log().Info("Initializing SURF image matcher with options", "minThreshold", refs.MinThresholdForSURFMatches, "minMatches", refs.MinSURFMatches, "ratioThreshold", refs.RatioTestThreshold)
+
 	// TODO map different filters if implemented in database
-	matcher, err := surf.NewSURFImageMatcher(refs)
+	matcher, err := surf.NewSURFImageMatcher(refs.Paths[:], options...)
 	if err != nil {
 		return err
 	}
 	defer matcher.Close()
 
-	filter := filters.NewSURFVideoFilter(matcher)
+	mlog.Log().Info("Using mseskip", "mseskip", refs.MSESkip)
+	filter := filters.NewSURFVideoFilter(matcher, refs.MSESkip)
 
 	video, err := videoiter.NewVideo(videoSavePath)
 	if err != nil {

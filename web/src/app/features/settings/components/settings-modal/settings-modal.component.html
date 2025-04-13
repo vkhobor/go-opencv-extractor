@@ -12,31 +12,138 @@
                     </li>
                 }
             </ul>
-            <app-button
-                [isLoading]="deleteAllResult().isPending"
-                (click)="deleteAll()"
-                w-auto
-                >Delete all</app-button
-            >
         }
 
-        <form>
-            <label
-                class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-                for="multiple_files"
-                >Upload multiple pictures</label
-            >
-            <input
-                (change)="fileSelected($event)"
-                class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400"
-                id="multiple_files"
-                type="file"
-                multiple
-            />
+        <form class="space-y-4" [formGroup]="form">
+            <div>
+                <label
+                    class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                    for="multiple_files"
+                    >Upload a picture</label
+                >
+                <input
+                    class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400"
+                    id="multiple_files"
+                    (change)="fileSelected($event)"
+                    type="file"
+                />
+            </div>
+
+            <div>
+                <label
+                    class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                >
+                    Minimum SURF Matches
+                </label>
+                <input
+                    type="number"
+                    formControlName="minSURFMatches"
+                    [value]="params().minSURFMatches"
+                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                    placeholder="Enter a whole number"
+                />
+                <div class="text-red-500 text-sm mt-1">
+                    @if (form.get('minSURFMatches')?.errors?.['required']) {
+                        <p>This field is required</p>
+                    }
+                    @if (form.get('minSURFMatches')?.errors?.['min']) {
+                        <p>Must be 0 or greater</p>
+                    }
+                    @if (form.get('minSURFMatches')?.errors?.['pattern']) {
+                        <p>Must be a whole number</p>
+                    }
+                </div>
+            </div>
+
+            <div>
+                <label
+                    class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                >
+                    Minimum Threshold for SURF Matches
+                </label>
+                <input
+                    type="text"
+                    formControlName="minThresholdForSURFMatches"
+                    [value]="params().minThresholdForSURFMatches"
+                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                    placeholder="Enter a float between 0-1"
+                />
+                <div class="text-red-500 text-sm mt-1">
+                    @if (
+                        form.get('minThresholdForSURFMatches')?.errors?.[
+                            'required'
+                        ]
+                    ) {
+                        <p>This field is required</p>
+                    }
+                    @if (
+                        form.get('minThresholdForSURFMatches')?.errors?.['min']
+                    ) {
+                        <p>Must be 0 or greater</p>
+                    }
+                    @if (
+                        form.get('minThresholdForSURFMatches')?.errors?.['max']
+                    ) {
+                        <p>Must be 1 or less</p>
+                    }
+                </div>
+            </div>
+
+            <div>
+                <label
+                    class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                >
+                    MSE Skip Value
+                </label>
+                <input
+                    type="text"
+                    formControlName="mseSkip"
+                    [value]="params().mseSkip"
+                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                    placeholder="Enter a float between 0-1"
+                />
+                <div class="text-red-500 text-sm mt-1">
+                    @if (form.get('mseSkip')?.errors?.['required']) {
+                        <p>This field is required</p>
+                    }
+                    @if (form.get('mseSkip')?.errors?.['min']) {
+                        <p>Must be 0 or greater</p>
+                    }
+                    @if (form.get('mseSkip')?.errors?.['max']) {
+                        <p>Must be 1 or less</p>
+                    }
+                </div>
+            </div>
+
+            <div>
+                <label
+                    class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                >
+                    Ratio Test Threshold
+                </label>
+                <input
+                    type="text"
+                    formControlName="ratioTestThreshold"
+                    [value]="params().ratioTestThreshold"
+                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                    placeholder="Enter a float between 0-1"
+                />
+                <div class="text-red-500 text-sm mt-1">
+                    @if (form.get('ratioTestThreshold')?.errors?.['required']) {
+                        <p>This field is required</p>
+                    }
+                    @if (form.get('ratioTestThreshold')?.errors?.['min']) {
+                        <p>Must be 0 or greater</p>
+                    }
+                    @if (form.get('ratioTestThreshold')?.errors?.['max']) {
+                        <p>Must be 1 or less</p>
+                    }
+                </div>
+            </div>
         </form>
         <div>
             <app-button [isLoading]="uploadResult().isPending" (click)="save()"
-                >Add</app-button
+                >Save</app-button
             >
         </div>
     </app-modal-layout>

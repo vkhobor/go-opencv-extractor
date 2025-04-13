@@ -104,11 +104,20 @@ func (e *SURFImageMatcher) IsImageMatch(frame *gocv.Mat) bool {
 	}
 
 	whiteMask := fullWhiteMaskInSize(&frameInGrayscale)
+	defer whiteMask.Close()
 
 	_, descriptorsFrame := e.surfAlgorithm.DetectAndCompute(frameInGrayscale, whiteMask)
 	defer descriptorsFrame.Close()
 
-	knnMatches := getKnnMatches(e.matcher, e.descriptors, descriptorsFrame)
+	// Each keypoint of the first image is matched with
+	// a number of keypoints from the second image.
+	// We keep the 2 best matches for each keypoint
+	// (best matches = the ones with the smallest distance measurement).
+	// Lowe's test checks that the two distances are sufficiently different.
+	// If they are not, then the keypoint is eliminated and
+	// will not be used for further calculations.
+	knnMatches := getKnnMatches(e.matcher, e.descriptors, descriptorsFrame, 2)
+	// David Lowe proposed a simple method for filtering keypoint matches by eliminating matches when the second-best match is almost as good.
 	goodMatches := filterByDawidLoweRatioTest(knnMatches, e.ratioTestThreshold)
 
 	everyHasSufficient := lo.EveryBy(goodMatches, func(item []gocv.DMatch) bool {
@@ -136,7 +145,9 @@ func getImagesFromPaths(paths []string) ([]gocv.Mat, error) {
 func getDescriptorsFromImages(surf contrib.SURF, images []gocv.Mat) ([]gocv.Mat, error) {
 	var descriptors []gocv.Mat
 	for _, img := range images {
-		_, descriptor := surf.DetectAndCompute(img, gocv.NewMat())
+		mask := gocv.NewMat()
+		defer mask.Close()
+		_, descriptor := surf.DetectAndCompute(img, mask)
 		if descriptor.Empty() {
 			for _, img := range descriptors {
 				img.Close()
@@ -148,10 +159,11 @@ func getDescriptorsFromImages(surf contrib.SURF, images []gocv.Mat) ([]gocv.Mat,
 	return descriptors, nil
 }
 
-func getKnnMatches(matcher gocv.BFMatcher, descriptors []gocv.Mat, descriptorsFrame gocv.Mat) [][][]gocv.DMatch {
+// Gets the best k matches from the query descriptors
+func getKnnMatches(matcher gocv.BFMatcher, queryDescriptors []gocv.Mat, descriptorsFrame gocv.Mat, k int) [][][]gocv.DMatch {
 	var knnMatches [][][]gocv.DMatch
-	for _, descriptor := range descriptors {
-		knnMatches = append(knnMatches, matcher.KnnMatch(descriptorsFrame, descriptor, 2))
+	for _, descriptor := range queryDescriptors {
+		knnMatches = append(knnMatches, matcher.KnnMatch(descriptorsFrame, descriptor, k))
 	}
 	return knnMatches
 }
@@ -161,6 +173,8 @@ func filterByDawidLoweRatioTest(knnMatches [][][]gocv.DMatch, threshold float64)
 	for _, matches := range knnMatches {
 		var goodMatch []gocv.DMatch
 		for _, m := range matches {
+			// Distances are sorted in ascending order, so the first match is the closest
+			// 0 means identical, 1 means completely different
 			if len(m) == 2 && m[0].Distance < threshold*m[1].Distance {
 				goodMatch = append(goodMatch, m[0])
 			}
