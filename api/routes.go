@@ -1,6 +1,8 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	"github.com/go-chi/chi/v5"
@@ -8,6 +10,7 @@ import (
 	"github.com/kevincobain2000/gol"
 	"github.com/vkhobor/go-opencv/api/filters"
 	"github.com/vkhobor/go-opencv/api/jobs"
+	"github.com/vkhobor/go-opencv/api/testsurf"
 	"github.com/vkhobor/go-opencv/config"
 	"github.com/vkhobor/go-opencv/db"
 )
@@ -41,6 +44,7 @@ func NewRouter(
 
 	huma.Register(api, huma.Operation{
 		Method:        "GET",
+		Tags:          []string{"Videos"},
 		Path:          "/api/videos",
 		DefaultStatus: 200,
 		Summary:       "List downloaded videos",
@@ -48,6 +52,7 @@ func NewRouter(
 
 	huma.Register(api, huma.Operation{
 		Method:        "POST",
+		Tags:          []string{"Jobs"},
 		Path:          "/api/jobs",
 		DefaultStatus: 201,
 		Summary:       "Create a new job",
@@ -55,6 +60,7 @@ func NewRouter(
 
 	huma.Register(api, huma.Operation{
 		Method:        "POST",
+		Tags:          []string{"Jobs"},
 		Path:          "/api/jobs/video",
 		DefaultStatus: 201,
 		Summary:       "Create a direct video job",
@@ -62,35 +68,136 @@ func NewRouter(
 
 	huma.Register(api, huma.Operation{
 		Method:        "POST",
+		Tags:          []string{"Jobs"},
 		Path:          "/api/jobs/{id}/actions/restart",
 		DefaultStatus: 202,
 		Summary:       "Restart the job pipeline",
 	}, jobs.HandleRestartJobPipeline(wakeJobs))
 
-	huma.Post(api, "/api/jobs/{id}/actions/update-limit", jobs.HandleUpdateJobLimit(queries, wakeJobs))
-
-	huma.Get(api, "/api/jobs", jobs.HandleListJobs(queries))
-	huma.Get(api, "/api/jobs/{id}", jobs.HandleJobDetails(queries))
-	huma.Get(api, "/api/jobs/{id}/videos", jobs.HandleJobVideosFound(queries))
-	huma.Get(api, "/api/images", HandleImages(queries))
-
 	huma.Register(api, huma.Operation{
 		Method:        "POST",
+		Tags:          []string{"References"},
 		Path:          "/api/references",
 		DefaultStatus: 201,
 		Summary:       "Upload reference images",
 	}, filters.HandleReferenceUpload(queries, config))
-	huma.Get(api, "/api/references/{id}", filters.HandleReferenceGet(queries))
 
-	// TODO migrate legacy routes
-	router.Get("/api/references", filters.HandleGetReferences(queries))
+	huma.Register(api, huma.Operation{
+		Method:        "POST",
+		Tags:          []string{"TestSurf"},
+		Path:          "/testsurf",
+		DefaultStatus: 201,
+		Summary:       "Upload a video file",
+	}, testsurf.HandleUploadVideo())
 
-	router.Get("/api/filters", filters.HandleGetFilters(queries))
+	huma.Register(api, huma.Operation{
+		Method:        "GET",
+		Tags:          []string{"TestSurf"},
+		Path:          "/testsurf/test",
+		DefaultStatus: 200,
+		Summary:       "Test frame matching",
+	}, testsurf.HandleFrameMatchingTest())
 
-	router.Get("/api/files/{id}", HandleFileServeById(queries))
-	router.Get("/api/zipped", ExportWorkspace(config))
+	huma.Register(api, huma.Operation{
+		Method:        "GET",
+		Tags:          []string{"TestSurf"},
+		Path:          "/testsurf/frame",
+		DefaultStatus: 200,
+		Summary:       "Retrieve a specific frame image",
+	}, testsurf.HandleRetrieveFrameImage())
+
+	huma.Register(api, huma.Operation{
+		Method:        "GET",
+		Tags:          []string{"TestSurf"},
+		Path:          "/testsurf",
+		DefaultStatus: 200,
+		Summary:       "Get video metadata",
+	}, testsurf.HandleVideoMetadata())
+
+	registerHumaShorthandRoutes(api, queries, wakeJobs)
+	registerLegacyChiRoutes(router, queries, config)
 
 	router.NotFound(HandleCatchAll())
 
+	router.Get("/docs", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(`<!doctype html>
+<html>
+  <head>
+    <title>API Reference</title>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1" />
+  </head>
+  <body>
+    <script
+      id="api-reference"
+      data-url="/openapi.json"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+  </body>
+</html>`))
+	})
+
 	return router
+}
+
+// registerHumaShorthandRoutes registers additional Huma routes using Operation style
+func registerHumaShorthandRoutes(api huma.API, queries *db.Queries, wakeJobs chan<- struct{}) {
+	huma.Register(api, huma.Operation{
+		Method:        "POST",
+		Tags:          []string{"Jobs"},
+		Path:          "/api/jobs/{id}/actions/update-limit",
+		DefaultStatus: 202,
+		Summary:       "Update job limit",
+	}, jobs.HandleUpdateJobLimit(queries, wakeJobs))
+	
+	huma.Register(api, huma.Operation{
+		Method:        "GET",
+		Tags:          []string{"Jobs"},
+		Path:          "/api/jobs",
+		DefaultStatus: 200,
+		Summary:       "List all jobs",
+	}, jobs.HandleListJobs(queries))
+	
+	huma.Register(api, huma.Operation{
+		Method:        "GET",
+		Tags:          []string{"Jobs"},
+		Path:          "/api/jobs/{id}",
+		DefaultStatus: 200,
+		Summary:       "Get job details",
+	}, jobs.HandleJobDetails(queries))
+	
+	huma.Register(api, huma.Operation{
+		Method:        "GET",
+		Tags:          []string{"Jobs"},
+		Path:          "/api/jobs/{id}/videos",
+		DefaultStatus: 200,
+		Summary:       "List videos found by job",
+	}, jobs.HandleJobVideosFound(queries))
+	
+	huma.Register(api, huma.Operation{
+		Method:        "GET",
+		Tags:          []string{"Images"},
+		Path:          "/api/images",
+		DefaultStatus: 200,
+		Summary:       "List images",
+	}, HandleImages(queries))
+	
+	huma.Register(api, huma.Operation{
+		Method:        "GET",
+		Tags:          []string{"References"},
+		Path:          "/api/references/{id}",
+		DefaultStatus: 200,
+		Summary:       "Get reference by ID",
+	}, filters.HandleReferenceGet(queries))
+}
+
+// registerLegacyChiRoutes registers routes directly using Chi router methods
+func registerLegacyChiRoutes(router chi.Router, queries *db.Queries, config config.DirectoryConfig) {
+	// TODO migrate legacy routes
+	router.Get("/api/references", filters.HandleGetReferences(queries))
+	router.Get("/api/filters", filters.HandleGetFilters(queries))
+	router.Get("/api/files/{id}", HandleFileServeById(queries)) // Files tag would be added when migrated to huma
+	router.Get("/api/zipped", ExportWorkspace(config)) // Export tag would be added when migrated to huma
 }
