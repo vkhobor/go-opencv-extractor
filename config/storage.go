@@ -41,3 +41,9 @@ func (c DirectoryConfig) GetReferencesDir() string {
 	pathutils.MustEnsurePath(specific, true)
 	return specific
 }
+
+func (c DirectoryConfig) GetTestVideoPath() string {
+	specific := path.Join(c.BaseDir, videosFolder)
+	pathutils.MustEnsurePath(specific, true)
+	return path.Join(specific, "testimagevideo.mp4")
+}
