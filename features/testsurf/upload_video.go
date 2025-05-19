@@ -7,6 +7,7 @@ import (
 
 	"github.com/vkhobor/go-opencv/config"
 	"github.com/vkhobor/go-opencv/mlog"
+	"github.com/vkhobor/go-opencv/video"
 )
 
 type UploadVideoFeature struct {
@@ -57,6 +58,12 @@ func (f *UploadVideoFeature) UploadVideo(ctx context.Context, videoData io.Reade
 	}
 
 	mlog.Log().Info("Successfully saved test video", "path", filePath, "bytesWritten", bytesWritten)
+
+	cachedTestVideoExtractor.Close()
+	cachedTestVideoExtractor, err = video.NewFrameExtractor(filePath)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

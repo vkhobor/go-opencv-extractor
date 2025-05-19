@@ -9,7 +9,7 @@ import (
 	"github.com/vkhobor/go-opencv/video"
 )
 
-var currentTestVideoPath string
+var cachedTestVideoExtractor video.FrameExtractor
 
 type RetrieveFrameImageFeature struct {
 	Config config.DirectoryConfig
@@ -18,12 +18,7 @@ type RetrieveFrameImageFeature struct {
 func (f *RetrieveFrameImageFeature) GetFrameImage(ctx context.Context, frameNum int) (io.ReadCloser, error) {
 	mlog.Log().Info("Retrieving frame image", "frameNum", frameNum)
 
-	ext, err := video.NewFrameExtractor(currentTestVideoPath)
-	if err != nil {
-		return nil, err
-	}
-
-	frame, err := ext.GetFrame(frameNum)
+	frame, err := cachedTestVideoExtractor.GetFrame(frameNum)
 	if err != nil {
 		return nil, err
 	}
