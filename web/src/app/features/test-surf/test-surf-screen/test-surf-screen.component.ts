@@ -1,6 +1,6 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { LayoutComponent } from '../../../components/layout/layout.component';
-import { CommonModule } from '@angular/common';
+
 import { ModalLayoutComponent } from '../../../components/modal/modal-layout/modal-layout.component';
 import {
     FormControl,
@@ -16,7 +16,7 @@ import { TestSurfService } from '../../../services/test-surf.service';
 
 @Component({
     selector: 'app-test-surf-screen',
-    imports: [LayoutComponent, CommonModule, ReactiveFormsModule],
+    imports: [LayoutComponent, ReactiveFormsModule],
     templateUrl: './test-surf-screen.component.html',
     styleUrl: './test-surf-screen.component.css'
 })

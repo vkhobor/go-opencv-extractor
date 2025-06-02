@@ -3,7 +3,7 @@ import { ModalLayoutComponent } from '../../../../components/modal/modal-layout/
 import { ModalContainerComponent } from '../../../../components/modal/modal-container/modal-container.component';
 import { Modal } from '../../../../models/Modal';
 import { CreateNewJobFormComponent } from '../form/create-new-job-form.component';
-import { CommonModule } from '@angular/common';
+
 import { JobsService } from '../../../../services/jobs.service';
 import { ButtonComponent } from '../../../../components/button/button.component';
 import { CreateJob } from '../../../../../api/Api';
@@ -11,12 +11,11 @@ import { CreateJob } from '../../../../../api/Api';
 @Component({
     selector: 'app-add-modal',
     imports: [
-        CommonModule,
-        ModalLayoutComponent,
-        ModalContainerComponent,
-        CreateNewJobFormComponent,
-        ButtonComponent,
-    ],
+    ModalLayoutComponent,
+    ModalContainerComponent,
+    CreateNewJobFormComponent,
+    ButtonComponent
+],
     templateUrl: './add-modal.component.html',
     styleUrl: './add-modal.component.css'
 })

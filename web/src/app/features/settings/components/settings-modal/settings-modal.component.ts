@@ -1,7 +1,7 @@
 import { Component, ViewChild, computed, signal } from "@angular/core";
 import { Modal } from "../../../../models/Modal";
 import { ModalContainerComponent } from "../../../../components/modal/modal-container/modal-container.component";
-import { CommonModule } from "@angular/common";
+
 import { ModalLayoutComponent } from "../../../../components/modal/modal-layout/modal-layout.component";
 import { CreateNewJobFormComponent } from "../../../newjob/components/form/create-new-job-form.component";
 import { ButtonComponent } from "../../../../components/button/button.component";
@@ -17,13 +17,12 @@ import {
 @Component({
     selector: "app-settings-modal",
     imports: [
-        CommonModule,
-        ModalLayoutComponent,
-        ModalContainerComponent,
-        CreateNewJobFormComponent,
-        ButtonComponent,
-        ReactiveFormsModule,
-    ],
+    ModalLayoutComponent,
+    ModalContainerComponent,
+    CreateNewJobFormComponent,
+    ButtonComponent,
+    ReactiveFormsModule
+],
     templateUrl: "./settings-modal.component.html",
     styleUrl: "./settings-modal.component.css"
 })

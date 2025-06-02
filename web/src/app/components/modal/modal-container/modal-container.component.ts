@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import {
     Component,
     ElementRef,
@@ -9,7 +9,7 @@ import {
 
 @Component({
     selector: 'app-modal-container',
-    imports: [CommonModule],
+    imports: [],
     templateUrl: './modal-container.component.html',
     styleUrl: './modal-container.component.scss'
 })
