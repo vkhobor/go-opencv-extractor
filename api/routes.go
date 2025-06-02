@@ -85,10 +85,18 @@ func NewRouter(
 	huma.Register(api, huma.Operation{
 		Method:        "POST",
 		Tags:          []string{"TestSurf"},
-		Path:          "/testsurf",
+		Path:          "/testsurf/video",
 		DefaultStatus: 201,
 		Summary:       "Upload a video file",
-	}, testsurf.HandleUploadVideo())
+	}, testsurf.HandleUploadVideo(config))
+
+	huma.Register(api, huma.Operation{
+		Method:        "POST",
+		Tags:          []string{"TestSurf"},
+		Path:          "/testsurf/reference",
+		DefaultStatus: 201,
+		Summary:       "Upload a reference file",
+	}, testsurf.HandleUploadReference())
 
 	huma.Register(api, huma.Operation{
 		Method:        "GET",
@@ -104,7 +112,7 @@ func NewRouter(
 		Path:          "/testsurf/frame",
 		DefaultStatus: 200,
 		Summary:       "Retrieve a specific frame image",
-	}, testsurf.HandleRetrieveFrameImage())
+	}, testsurf.HandleRetrieveFrameImage(config))
 
 	huma.Register(api, huma.Operation{
 		Method:        "GET",
@@ -112,9 +120,56 @@ func NewRouter(
 		Path:          "/testsurf",
 		DefaultStatus: 200,
 		Summary:       "Get video metadata",
-	}, testsurf.HandleVideoMetadata())
+	}, testsurf.HandleVideoMetadata(config))
 
-	registerHumaShorthandRoutes(api, queries, wakeJobs)
+	huma.Register(api, huma.Operation{
+		Method:        "POST",
+		Tags:          []string{"Jobs"},
+		Path:          "/api/jobs/{id}/actions/update-limit",
+		DefaultStatus: 202,
+		Summary:       "Update job limit",
+	}, jobs.HandleUpdateJobLimit(queries, wakeJobs))
+
+	huma.Register(api, huma.Operation{
+		Method:        "GET",
+		Tags:          []string{"Jobs"},
+		Path:          "/api/jobs",
+		DefaultStatus: 200,
+		Summary:       "List all jobs",
+	}, jobs.HandleListJobs(queries))
+
+	huma.Register(api, huma.Operation{
+		Method:        "GET",
+		Tags:          []string{"Jobs"},
+		Path:          "/api/jobs/{id}",
+		DefaultStatus: 200,
+		Summary:       "Get job details",
+	}, jobs.HandleJobDetails(queries))
+
+	huma.Register(api, huma.Operation{
+		Method:        "GET",
+		Tags:          []string{"Jobs"},
+		Path:          "/api/jobs/{id}/videos",
+		DefaultStatus: 200,
+		Summary:       "List videos found by job",
+	}, jobs.HandleJobVideosFound(queries))
+
+	huma.Register(api, huma.Operation{
+		Method:        "GET",
+		Tags:          []string{"Images"},
+		Path:          "/api/images",
+		DefaultStatus: 200,
+		Summary:       "List images",
+	}, HandleImages(queries))
+
+	huma.Register(api, huma.Operation{
+		Method:        "GET",
+		Tags:          []string{"References"},
+		Path:          "/api/references/{id}",
+		DefaultStatus: 200,
+		Summary:       "Get reference by ID",
+	}, filters.HandleReferenceGet(queries))
+
 	registerLegacyChiRoutes(router, queries, config)
 
 	router.NotFound(HandleCatchAll())
@@ -142,62 +197,11 @@ func NewRouter(
 	return router
 }
 
-// registerHumaShorthandRoutes registers additional Huma routes using Operation style
-func registerHumaShorthandRoutes(api huma.API, queries *db.Queries, wakeJobs chan<- struct{}) {
-	huma.Register(api, huma.Operation{
-		Method:        "POST",
-		Tags:          []string{"Jobs"},
-		Path:          "/api/jobs/{id}/actions/update-limit",
-		DefaultStatus: 202,
-		Summary:       "Update job limit",
-	}, jobs.HandleUpdateJobLimit(queries, wakeJobs))
-	
-	huma.Register(api, huma.Operation{
-		Method:        "GET",
-		Tags:          []string{"Jobs"},
-		Path:          "/api/jobs",
-		DefaultStatus: 200,
-		Summary:       "List all jobs",
-	}, jobs.HandleListJobs(queries))
-	
-	huma.Register(api, huma.Operation{
-		Method:        "GET",
-		Tags:          []string{"Jobs"},
-		Path:          "/api/jobs/{id}",
-		DefaultStatus: 200,
-		Summary:       "Get job details",
-	}, jobs.HandleJobDetails(queries))
-	
-	huma.Register(api, huma.Operation{
-		Method:        "GET",
-		Tags:          []string{"Jobs"},
-		Path:          "/api/jobs/{id}/videos",
-		DefaultStatus: 200,
-		Summary:       "List videos found by job",
-	}, jobs.HandleJobVideosFound(queries))
-	
-	huma.Register(api, huma.Operation{
-		Method:        "GET",
-		Tags:          []string{"Images"},
-		Path:          "/api/images",
-		DefaultStatus: 200,
-		Summary:       "List images",
-	}, HandleImages(queries))
-	
-	huma.Register(api, huma.Operation{
-		Method:        "GET",
-		Tags:          []string{"References"},
-		Path:          "/api/references/{id}",
-		DefaultStatus: 200,
-		Summary:       "Get reference by ID",
-	}, filters.HandleReferenceGet(queries))
-}
-
 // registerLegacyChiRoutes registers routes directly using Chi router methods
 func registerLegacyChiRoutes(router chi.Router, queries *db.Queries, config config.DirectoryConfig) {
 	// TODO migrate legacy routes
 	router.Get("/api/references", filters.HandleGetReferences(queries))
 	router.Get("/api/filters", filters.HandleGetFilters(queries))
 	router.Get("/api/files/{id}", HandleFileServeById(queries)) // Files tag would be added when migrated to huma
-	router.Get("/api/zipped", ExportWorkspace(config)) // Export tag would be added when migrated to huma
+	router.Get("/api/zipped", ExportWorkspace(config))          // Export tag would be added when migrated to huma
 }

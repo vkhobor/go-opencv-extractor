@@ -35,29 +35,15 @@ func (f *UploadVideoFeature) UploadVideo(ctx context.Context, videoData io.Reade
 	defer dst.Close()
 
 	mlog.Log().Info("Copying video data to file", "path", filePath)
-	buffer := make([]byte, 1024)
-	bytesWritten := 0
 
-	for {
-		n, err := videoData.Read(buffer)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			mlog.Log().Error("Error reading video data", "error", err)
-			return err
-		}
+	written, err := io.Copy(dst, videoData)
 
-		_, err = dst.Write(buffer[:n])
-		if err != nil {
-			mlog.Log().Error("Error writing video data", "error", err)
-			return err
-		}
-
-		bytesWritten += n
+	if err != nil {
+		mlog.Log().Error("Failed to copy video data", "error", err, "path", filePath)
+		return err
 	}
 
-	mlog.Log().Info("Successfully saved test video", "path", filePath, "bytesWritten", bytesWritten)
+	mlog.Log().Info("Successfully saved test video", "path", filePath, "bytesWritten", written)
 
 	cachedTestVideoExtractor.Close()
 	cachedTestVideoExtractor, err = video.NewFrameExtractor(filePath)
