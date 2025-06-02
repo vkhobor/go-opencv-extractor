@@ -4,10 +4,9 @@ import { Flowbite } from '../../util/flowbiteFix';
 
 @Component({
     selector: 'app-navbar',
-    standalone: true,
     imports: [RouterLink, RouterLinkActive],
     templateUrl: './navbar.component.html',
-    styleUrl: './navbar.component.css',
+    styleUrl: './navbar.component.css'
 })
 @Flowbite()
 export class NavbarComponent {

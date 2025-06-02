@@ -15,18 +15,17 @@ import {
 } from "@angular/forms";
 
 @Component({
-	selector: "app-settings-modal",
-	standalone: true,
-	imports: [
-		CommonModule,
-		ModalLayoutComponent,
-		ModalContainerComponent,
-		CreateNewJobFormComponent,
-		ButtonComponent,
-		ReactiveFormsModule,
-	],
-	templateUrl: "./settings-modal.component.html",
-	styleUrl: "./settings-modal.component.css",
+    selector: "app-settings-modal",
+    imports: [
+        CommonModule,
+        ModalLayoutComponent,
+        ModalContainerComponent,
+        CreateNewJobFormComponent,
+        ButtonComponent,
+        ReactiveFormsModule,
+    ],
+    templateUrl: "./settings-modal.component.html",
+    styleUrl: "./settings-modal.component.css"
 })
 export class SettingsModalComponent implements Modal {
 	@ViewChild("modal") modal!: ModalContainerComponent;

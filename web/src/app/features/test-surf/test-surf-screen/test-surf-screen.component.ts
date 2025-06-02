@@ -16,10 +16,9 @@ import { TestSurfService } from '../../../services/test-surf.service';
 
 @Component({
     selector: 'app-test-surf-screen',
-    standalone: true,
     imports: [LayoutComponent, CommonModule, ReactiveFormsModule],
     templateUrl: './test-surf-screen.component.html',
-    styleUrl: './test-surf-screen.component.css',
+    styleUrl: './test-surf-screen.component.css'
 })
 export class TestSurfScreenComponent {
     testSurfService = inject(TestSurfService);

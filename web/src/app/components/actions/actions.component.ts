@@ -8,10 +8,9 @@ export interface Action {
 
 @Component({
     selector: 'app-actions',
-    standalone: true,
     imports: [],
     templateUrl: './actions.component.html',
-    styleUrl: './actions.component.css',
+    styleUrl: './actions.component.css'
 })
 @Flowbite()
 export class ActionsComponent {

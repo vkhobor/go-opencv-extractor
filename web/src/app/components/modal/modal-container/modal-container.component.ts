@@ -9,10 +9,9 @@ import {
 
 @Component({
     selector: 'app-modal-container',
-    standalone: true,
     imports: [CommonModule],
     templateUrl: './modal-container.component.html',
-    styleUrl: './modal-container.component.scss',
+    styleUrl: './modal-container.component.scss'
 })
 export class ModalContainerComponent {
     @ViewChild('dialog') dialog!: ElementRef<HTMLDialogElement>;

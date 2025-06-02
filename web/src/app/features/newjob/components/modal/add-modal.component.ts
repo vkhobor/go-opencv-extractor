@@ -10,7 +10,6 @@ import { CreateJob } from '../../../../../api/Api';
 
 @Component({
     selector: 'app-add-modal',
-    standalone: true,
     imports: [
         CommonModule,
         ModalLayoutComponent,
@@ -19,7 +18,7 @@ import { CreateJob } from '../../../../../api/Api';
         ButtonComponent,
     ],
     templateUrl: './add-modal.component.html',
-    styleUrl: './add-modal.component.css',
+    styleUrl: './add-modal.component.css'
 })
 export class AddModalComponent implements Modal {
     @ViewChild('modal') modal!: ModalContainerComponent;

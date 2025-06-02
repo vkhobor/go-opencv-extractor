@@ -11,9 +11,8 @@ import { JobsService } from '../../../../services/jobs.service';
 
 @Component({
     selector: 'app-create-new-job-form',
-    standalone: true,
     imports: [FormsModule, ReactiveFormsModule],
-    templateUrl: './create-new-job-form.component.html',
+    templateUrl: './create-new-job-form.component.html'
 })
 export class CreateNewJobFormComponent {
     @Output() valid = new EventEmitter<boolean>();
