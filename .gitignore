@@ -10,3 +10,5 @@
 *.sqlite3
 /.tmp/db.sqlite3
 **/.tmp/
+node_modules
+.DS_Store
