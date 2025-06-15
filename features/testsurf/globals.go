@@ -6,4 +6,4 @@ import (
 )
 
 var cachedTestVideoExtractor video.FrameExtractor
-var cachedReferenceImage gocv.Mat
+var cachedReferenceImage *gocv.Mat

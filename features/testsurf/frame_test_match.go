@@ -32,7 +32,11 @@ func (f *FrameMatchingTestFeature) TestFrameMatch(ctx context.Context, frameNum 
 		surf.WithRatioThreshold(ratioCheck),
 	}
 
-	matcher, err := surf.NewSURFImageMatcherFromMats([]gocv.Mat{cachedReferenceImage}, options...)
+	if cachedReferenceImage.Empty() {
+		return false, errors.New("Reference image is empty")
+	}
+
+	matcher, err := surf.NewSURFImageMatcherFromMats([]gocv.Mat{*cachedReferenceImage}, options...)
 	if err != nil {
 		return false, err
 	}
@@ -45,6 +49,5 @@ func (f *FrameMatchingTestFeature) TestFrameMatch(ctx context.Context, frameNum 
 	defer frame.Close()
 
 	matched := matcher.IsImageMatch(&frame)
-
 	return matched, nil
 }

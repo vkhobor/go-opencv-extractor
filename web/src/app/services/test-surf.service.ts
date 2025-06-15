@@ -26,20 +26,13 @@ export class TestSurfService {
         });
     }
 
-    getMatch() {
-        return this.#query({
-            queryKey: ['test-surf', 'match'] as const,
-            queryFn: () => {
-                //TODO
-                // return undefToErr(
-                //     client.testsurf
-                //         .frameList({
-                //             framenum: 0,
-                //         })
-                //         .then((x) => x.data)
-                // );
-            },
-        });
+    async getMatchApi(req: {
+        framenum: number;
+        ratiocheck: number;
+        minmatches: number;
+        goodmatchthreshold: number;
+    }) {
+        return await client.testsurf.testList(req);
     }
 
     getFrameUrl = (frameNum: number) =>

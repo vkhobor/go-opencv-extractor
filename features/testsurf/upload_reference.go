@@ -2,6 +2,7 @@ package testsurf
 
 import (
 	"context"
+	"errors"
 	"io"
 
 	"github.com/vkhobor/go-opencv/image"
@@ -16,7 +17,13 @@ func (i *UploadReferenceFeature) UploadReference(ctx context.Context, file io.Re
 		return err
 	}
 
-	cachedReferenceImage = ref
+	if ref.Empty() {
+		return errors.New("Reference image is empty")
+	}
+	if cachedReferenceImage != nil {
+		cachedReferenceImage.Close()
+	}
+	cachedReferenceImage = &ref
 
 	return nil
 }

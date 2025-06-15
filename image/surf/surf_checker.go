@@ -50,12 +50,6 @@ type SURFImageMatcher struct {
 }
 
 func newSURFImageMatcher(refs []gocv.Mat, options ...SURFImageMatcherOption) (*SURFImageMatcher, error) {
-	defer func() {
-		for _, img := range refs {
-			img.Close()
-		}
-	}()
-
 	surfAlgorithm := contrib.NewSURF()
 
 	descriptors, err := getDescriptorsFromImages(surfAlgorithm, refs)
@@ -144,9 +138,6 @@ func getDescriptorsFromImages(surf contrib.SURF, images []gocv.Mat) ([]gocv.Mat,
 		defer mask.Close()
 		_, descriptor := surf.DetectAndCompute(img, mask)
 		if descriptor.Empty() {
-			for _, img := range descriptors {
-				img.Close()
-			}
 			return nil, errors.New("Error computing descriptor")
 		}
 		descriptors = append(descriptors, descriptor)

@@ -9,8 +9,6 @@ import {
 } from '@ngneat/query';
 import { Filter } from '../models/Filter';
 import { Observable, of } from 'rxjs';
-import { UndefinedInitialDataOptions } from '@ngneat/query/lib/query-options';
-import { Result } from '@ngneat/query/lib/types';
 
 @Injectable({
     providedIn: 'root',
@@ -32,21 +30,12 @@ export class FilterService {
         return this.#http.get(`/filters/${id}`) as Observable<Filter>;
     }
 
-    selectedFiltersQueryOptions = (
-        id?: string
-    ): UndefinedInitialDataOptions<
-        Filter,
-        Error,
-        Filter,
-        [string, string?]
-    > => ({
-        queryKey: ['filters', id],
-        queryFn: (params) => this.getFilterRaw(params.queryKey[1]!),
-        enabled: !!id,
-    });
-
     getFilter(id?: string) {
-        return this.#query(this.selectedFiltersQueryOptions(id));
+        return this.#query({
+            queryKey: ['filters', id],
+            queryFn: (params) => this.getFilterRaw(params.queryKey[1]!),
+            enabled: !!id,
+        });
     }
 
     addFilter() {

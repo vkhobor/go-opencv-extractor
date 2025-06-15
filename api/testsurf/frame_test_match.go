@@ -4,6 +4,7 @@ import (
 	"context"
 
 	u "github.com/vkhobor/go-opencv/api/util"
+	"github.com/vkhobor/go-opencv/features/testsurf"
 )
 
 type FrameMatchingTestRequest struct {
@@ -23,9 +24,16 @@ type FrameMatchingTestResponse struct {
 
 func HandleFrameMatchingTest() u.Handler[FrameMatchingTestRequest, FrameMatchingTestResponse] {
 	return func(ctx context.Context, req *FrameMatchingTestRequest) (*FrameMatchingTestResponse, error) {
+		feat := testsurf.FrameMatchingTestFeature{}
+
+		ok, err := feat.TestFrameMatch(ctx, req.FrameNum, req.RatioCheck, req.MinMatches, req.GoodMatchThreshold)
+		if err != nil {
+			return nil, err
+		}
+
 		return &FrameMatchingTestResponse{
 			Body: FrameMatchingTestBody{
-				Matched: false,
+				Matched: ok,
 			},
 		}, nil
 	}
