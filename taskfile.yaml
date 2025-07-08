@@ -22,7 +22,7 @@ tasks:
 
   preview:
     desc: "Build the client and serve it embedded in the server"
-    deps: ["build:client"]
+    deps: ["client:build"]
     aliases: [p]
     cmds:
       - task: server

@@ -2,6 +2,7 @@ package video
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"os"
@@ -39,7 +40,10 @@ func NewFrameExtractor(path string) (FrameExtractor, error) {
 	}, nil
 }
 
-func (e *FrameExtractor) GetFrameAsMat(frame int) (gocv.Mat, error) {
+func (e *FrameExtractor) GetFrameAsMat(ctx context.Context, frame int) (gocv.Mat, error) {
+	if err := ctx.Err(); err != nil {
+		return gocv.Mat{}, err
+	}
 	if e.IsZero() {
 		return gocv.Mat{}, errors.New("FrameExtractor is zero")
 	}
@@ -50,11 +54,23 @@ func (e *FrameExtractor) GetFrameAsMat(frame int) (gocv.Mat, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
+	if err := ctx.Err(); err != nil {
+		return gocv.Mat{}, err
+	}
+
 	e.capture.Set(gocv.VideoCapturePosFrames, float64(frame))
+
+	if err := ctx.Err(); err != nil {
+		return gocv.Mat{}, err
+	}
 
 	mat := gocv.NewMat()
 
 	ok := e.capture.Read(&mat)
+
+	if err := ctx.Err(); err != nil {
+		return gocv.Mat{}, err
+	}
 
 	if !ok {
 		return gocv.Mat{}, errors.New("Could not read frame")
@@ -63,7 +79,10 @@ func (e *FrameExtractor) GetFrameAsMat(frame int) (gocv.Mat, error) {
 	return mat, nil
 }
 
-func (e *FrameExtractor) GetFrameAsJpeg(frame int) (io.ReadCloser, error) {
+func (e *FrameExtractor) GetFrameAsJpeg(ctx context.Context, frame int) (io.ReadCloser, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	if e.IsZero() {
 		return nil, errors.New("FrameExtractor is zero")
 	}
@@ -74,12 +93,24 @@ func (e *FrameExtractor) GetFrameAsJpeg(frame int) (io.ReadCloser, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	e.capture.Set(gocv.VideoCapturePosFrames, float64(frame))
+
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 
 	mat := gocv.NewMat()
 	defer mat.Close()
 
 	ok := e.capture.Read(&mat)
+
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 
 	if !ok {
 		return nil, errors.New("Could not read frame")

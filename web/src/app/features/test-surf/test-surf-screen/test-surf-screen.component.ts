@@ -1,5 +1,5 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { LayoutComponent } from '../../../components/layout/layout.component';
 import {
     FormControl,
@@ -9,7 +9,7 @@ import {
 } from '@angular/forms';
 import { resource } from '@angular/core';
 import { TestSurfService } from '../../../services/test-surf.service';
-import { startWith } from 'rxjs';
+import { debounceTime, map, merge, startWith } from 'rxjs';
 
 @Component({
     selector: 'app-test-surf-screen',
@@ -95,14 +95,34 @@ export class TestSurfScreenComponent {
         this.form.valueChanges.pipe(startWith(this.form.value))
     );
 
+    isMatchParams = computed(() => ({
+        framenum: this.selectedFrame(),
+        ratiocheck: this.formValueSignal()?.ratioTestThreshold,
+        minmatches: this.formValueSignal()?.minSURFMatches,
+        goodmatchthreshold: this.formValueSignal()?.minThresholdForSURFMatches,
+    }));
+
+    isMatchParamsDebounced = toSignal(
+        merge(
+            toObservable(this.isMatchParams).pipe(debounceTime(500)),
+            toObservable(this.isMatchParams).pipe(map(() => undefined))
+        ),
+        {
+            initialValue: undefined,
+        }
+    );
+
     isMatch = resource({
-        params: () => ({
-            framenum: this.selectedFrame(),
-            ratiocheck: this.formValueSignal()?.ratioTestThreshold,
-            minmatches: this.formValueSignal()?.minSURFMatches,
-            goodmatchthreshold:
-                this.formValueSignal()?.minThresholdForSURFMatches,
-        }),
+        params: () => {
+            const videoUploaded = this.videoUploaded();
+            const referenceUploaded = this.referenceUploaded();
+
+            if (!videoUploaded || !referenceUploaded) {
+                return undefined;
+            }
+
+            return this.isMatchParamsDebounced();
+        },
         loader: async ({ params }) => {
             if (params.framenum === undefined) {
                 return Promise.reject(new Error('Invalid input'));
@@ -162,7 +182,7 @@ export class TestSurfScreenComponent {
         const error = this.showErrorAlert();
         const status = this.isMatch.status();
 
-        if (!error && status === 'loading') {
+        if (!error && (status === 'loading' || status === 'idle')) {
             return true;
         }
 

@@ -15,7 +15,7 @@ type RetrieveFrameImageFeature struct {
 func (f *RetrieveFrameImageFeature) GetFrameImage(ctx context.Context, frameNum int) (io.ReadCloser, error) {
 	mlog.Log().Info("Retrieving frame image", "frameNum", frameNum)
 
-	frame, err := cachedTestVideoExtractor.GetFrameAsJpeg(frameNum)
+	frame, err := cachedTestVideoExtractor.GetFrameAsJpeg(ctx, frameNum)
 	if err != nil {
 		return nil, err
 	}

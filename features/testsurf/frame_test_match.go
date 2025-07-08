@@ -16,11 +16,19 @@ type FrameMatchingTestFeature struct {
 
 // TestFrameMatch checks if a frame matches the reference image based on SURF features
 func (f *FrameMatchingTestFeature) TestFrameMatch(ctx context.Context, frameNum int, ratioCheck float64, minMatches int, goodMatchThreshold float64) (bool, error) {
+	if err := ctx.Err(); err != nil {
+		return false, err
+	}
+
 	mlog.Log().Info("Testing frame match",
 		"frameNum", frameNum,
 		"ratioCheck", ratioCheck,
 		"minMatches", minMatches,
 		"goodMatchThreshold", goodMatchThreshold)
+
+	if err := ctx.Err(); err != nil {
+		return false, err
+	}
 
 	if frameNum < 0 {
 		return false, errors.New("Frame number must be non-negative")
@@ -30,6 +38,10 @@ func (f *FrameMatchingTestFeature) TestFrameMatch(ctx context.Context, frameNum 
 		surf.WithMinMatches(int(minMatches)),
 		surf.WithMinThreshold(goodMatchThreshold),
 		surf.WithRatioThreshold(ratioCheck),
+	}
+
+	if err := ctx.Err(); err != nil {
+		return false, err
 	}
 
 	if cachedReferenceImage.Empty() {
@@ -42,11 +54,19 @@ func (f *FrameMatchingTestFeature) TestFrameMatch(ctx context.Context, frameNum 
 	}
 	defer matcher.Close()
 
-	frame, err := cachedTestVideoExtractor.GetFrameAsMat(frameNum)
+	if err := ctx.Err(); err != nil {
+		return false, err
+	}
+
+	frame, err := cachedTestVideoExtractor.GetFrameAsMat(ctx, frameNum)
 	if err != nil {
 		return false, err
 	}
 	defer frame.Close()
+
+	if err := ctx.Err(); err != nil {
+		return false, err
+	}
 
 	matched := matcher.IsImageMatch(&frame)
 	return matched, nil
