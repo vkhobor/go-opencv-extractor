@@ -7,11 +7,10 @@ import (
 )
 
 type DbMonitor struct {
-	Wake                 chan struct{}
-	Queries              *queries.Queries
-	ImportInput          chan queries.DownlodedVideo
-	Config               config.DirectoryConfig
-	MaxErrorStopRetrying int
+	Wake        chan struct{}
+	Queries     *queries.Queries
+	ImportInput chan queries.DownlodedVideo
+	Config      config.DirectoryConfig
 }
 
 func (jm *DbMonitor) Start() {

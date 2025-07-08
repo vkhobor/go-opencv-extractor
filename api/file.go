@@ -14,10 +14,8 @@ import (
 func ExportWorkspace(config config.DirectoryConfig) http.HandlerFunc {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			// Set the Content-Type header to application/zip
 			w.Header().Set("Content-Type", "application/zip")
 
-			// Set the Content-Disposition header so the browser knows it's an attachment
 			w.Header().Set("Content-Disposition", "attachment; filename=images.zip")
 			zip.ZipFromPath(config.GetImagesDir(), w, []string{"videos", "references"})
 		},

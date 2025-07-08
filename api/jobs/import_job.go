@@ -1,4 +1,4 @@
-package api
+package jobs
 
 import (
 	"context"

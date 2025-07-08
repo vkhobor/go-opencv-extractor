@@ -95,11 +95,10 @@ func RunServer(ctx context.Context, w io.Writer, args []string, programConfig co
 	defer close(wakeJobs)
 
 	jobManager := background.DbMonitor{
-		Config:               dirConfig,
-		MaxErrorStopRetrying: 5,
-		Wake:                 wakeJobs,
-		Queries:              &highLevelQueries,
-		ImportInput:          downloadedChan,
+		Config:      dirConfig,
+		Wake:        wakeJobs,
+		Queries:     &highLevelQueries,
+		ImportInput: downloadedChan,
 	}
 
 	mlog.Log().Info("Starting jobs")

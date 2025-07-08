@@ -53,26 +53,10 @@ func NewRouter(
 	huma.Register(api, huma.Operation{
 		Method:        "POST",
 		Tags:          []string{"Jobs"},
-		Path:          "/api/jobs",
-		DefaultStatus: 201,
-		Summary:       "Create a new job",
-	}, jobs.HandleCreateJob(queries, wakeJobs, programConfig))
-
-	huma.Register(api, huma.Operation{
-		Method:        "POST",
-		Tags:          []string{"Jobs"},
 		Path:          "/api/jobs/video",
 		DefaultStatus: 201,
 		Summary:       "Create a direct video job",
-	}, HandleImportJob(queries, programConfig, wakeJobs))
-
-	huma.Register(api, huma.Operation{
-		Method:        "POST",
-		Tags:          []string{"Jobs"},
-		Path:          "/api/jobs/{id}/actions/restart",
-		DefaultStatus: 202,
-		Summary:       "Restart the job pipeline",
-	}, jobs.HandleRestartJobPipeline(wakeJobs))
+	}, jobs.HandleImportJob(queries, programConfig, wakeJobs))
 
 	huma.Register(api, huma.Operation{
 		Method:        "POST",
@@ -123,36 +107,12 @@ func NewRouter(
 	}, testsurf.HandleVideoMetadata(config))
 
 	huma.Register(api, huma.Operation{
-		Method:        "POST",
-		Tags:          []string{"Jobs"},
-		Path:          "/api/jobs/{id}/actions/update-limit",
-		DefaultStatus: 202,
-		Summary:       "Update job limit",
-	}, jobs.HandleUpdateJobLimit(queries, wakeJobs))
-
-	huma.Register(api, huma.Operation{
 		Method:        "GET",
 		Tags:          []string{"Jobs"},
 		Path:          "/api/jobs",
 		DefaultStatus: 200,
 		Summary:       "List all jobs",
 	}, jobs.HandleListJobs(queries))
-
-	huma.Register(api, huma.Operation{
-		Method:        "GET",
-		Tags:          []string{"Jobs"},
-		Path:          "/api/jobs/{id}",
-		DefaultStatus: 200,
-		Summary:       "Get job details",
-	}, jobs.HandleJobDetails(queries))
-
-	huma.Register(api, huma.Operation{
-		Method:        "GET",
-		Tags:          []string{"Jobs"},
-		Path:          "/api/jobs/{id}/videos",
-		DefaultStatus: 200,
-		Summary:       "List videos found by job",
-	}, jobs.HandleJobVideosFound(queries))
 
 	huma.Register(api, huma.Operation{
 		Method:        "GET",
