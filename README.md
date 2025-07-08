@@ -1,3 +1,3 @@
 ## Run
 
- `docker run ghcr.io/vkhobor/go-opencv-extractor:main`
+ `docker run -p 7001:7001 ghcr.io/vkhobor/go-opencv-extractor:main`
