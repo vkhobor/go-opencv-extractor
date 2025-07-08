@@ -156,6 +156,11 @@ tasks:
     cmds:
       - docker buildx build --platform linux/amd64 -t vkhobor/extractor:latest --pull --load .
 
+  docker:build:arm:
+    desc: "Build the image for arm"
+    cmds:
+      - docker buildx build --platform linux/arm64 -t vkhobor/extractor:latest --pull --load .
+
   docker:build:amd:no-cache:
     desc: "Build the image for amd64 without cache"
     cmds:
