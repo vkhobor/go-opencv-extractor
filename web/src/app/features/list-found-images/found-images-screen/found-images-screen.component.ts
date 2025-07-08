@@ -11,10 +11,9 @@ import { BadgeComponent } from '../../../components/badge/badge.component';
 
 @Component({
     selector: 'app-found-images-screen',
-    standalone: true,
     imports: [LayoutComponent, BadgeComponent, JsonPipe, ActionsComponent],
     templateUrl: './found-images-screen.component.html',
-    styleUrl: './found-images-screen.component.css',
+    styleUrl: './found-images-screen.component.css'
 })
 export class FoundImagesScreenComponent {
     imagesService = inject(ImagesService);

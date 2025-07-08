@@ -3,7 +3,7 @@ version: "3"
 interval: "500ms"
 
 vars:
-  GO_EXTRACTOR_DEV_SERVER_PORT: 7000
+  GO_EXTRACTOR_DEV_SERVER_PORT: 7001
   GO_EXTRACTOR_DEV_CLIENT_PORT: 4200
 
 tasks:
@@ -155,6 +155,11 @@ tasks:
     desc: "Build the image for amd64"
     cmds:
       - docker buildx build --platform linux/amd64 -t vkhobor/extractor:latest --pull --load .
+
+  docker:build:arm:
+    desc: "Build the image for arm"
+    cmds:
+      - docker buildx build --platform linux/arm64 -t vkhobor/extractor:latest --pull --load .
 
   docker:build:amd:no-cache:
     desc: "Build the image for amd64 without cache"

@@ -12,7 +12,6 @@ import { initFlowbite } from 'flowbite';
 
 @Component({
     selector: 'app-jobs',
-    standalone: true,
     imports: [
         ActionsComponent,
         SettingsModalComponent,
@@ -21,7 +20,7 @@ import { initFlowbite } from 'flowbite';
         AddModalComponent,
     ],
     templateUrl: './jobs.component.html',
-    styleUrl: './jobs.component.css',
+    styleUrl: './jobs.component.css'
 })
 export class JobsComponent {
     @ViewChild(AddModalComponent) addModal!: AddModalComponent;

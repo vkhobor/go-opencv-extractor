@@ -95,6 +95,16 @@ export interface ErrorModel {
   type?: string;
 }
 
+export interface FrameMatchingTestBody {
+  /**
+   * A URL to the JSON Schema for this object.
+   * @format uri
+   * @example "https://example.com/schemas/FrameMatchingTestBody.json"
+   */
+  $schema?: string;
+  matched: boolean;
+}
+
 export interface JobAndVideos {
   /**
    * A URL to the JSON Schema for this object.
@@ -199,6 +209,17 @@ export interface UpdateJobLimitRequestBody {
   $schema?: string;
   /** @format int64 */
   limit: number;
+}
+
+export interface VideoMetadataBody {
+  /**
+   * A URL to the JSON Schema for this object.
+   * @format uri
+   * @example "https://example.com/schemas/VideoMetadataBody.json"
+   */
+  $schema?: string;
+  /** @format int64 */
+  maxframe: number;
 }
 
 export type QueryParamsType = Record<string | number, any>;
@@ -456,11 +477,12 @@ export class Api<
     /**
      * No description
      *
-     * @name GetApiImages
-     * @summary Get API images
+     * @tags Images
+     * @name ImagesList
+     * @summary List images
      * @request GET:/api/images
      */
-    getApiImages: (
+    imagesList: (
       query?: {
         /** @format int64 */
         offset?: number;
@@ -481,11 +503,12 @@ export class Api<
     /**
      * No description
      *
-     * @name ListApiJobs
-     * @summary List API jobs
+     * @tags Jobs
+     * @name JobsList
+     * @summary List all jobs
      * @request GET:/api/jobs
      */
-    listApiJobs: (params: RequestParams = {}) =>
+    jobsList: (params: RequestParams = {}) =>
       this.request<ListJobBody[] | null, ErrorModel>({
         path: `/api/jobs`,
         method: "GET",
@@ -496,6 +519,7 @@ export class Api<
     /**
      * No description
      *
+     * @tags Jobs
      * @name JobsCreate
      * @summary Create a new job
      * @request POST:/api/jobs
@@ -513,6 +537,7 @@ export class Api<
     /**
      * No description
      *
+     * @tags Jobs
      * @name JobsVideoCreate
      * @summary Create a direct video job
      * @request POST:/api/jobs/video
@@ -538,11 +563,12 @@ export class Api<
     /**
      * No description
      *
-     * @name GetApiJobsById
-     * @summary Get API jobs by ID
+     * @tags Jobs
+     * @name JobsDetail
+     * @summary Get job details
      * @request GET:/api/jobs/{id}
      */
-    getApiJobsById: (id: string, params: RequestParams = {}) =>
+    jobsDetail: (id: string, params: RequestParams = {}) =>
       this.request<JobDetails, ErrorModel>({
         path: `/api/jobs/${id}`,
         method: "GET",
@@ -553,6 +579,7 @@ export class Api<
     /**
      * No description
      *
+     * @tags Jobs
      * @name JobsActionsRestartCreate
      * @summary Restart the job pipeline
      * @request POST:/api/jobs/{id}/actions/restart
@@ -567,11 +594,12 @@ export class Api<
     /**
      * No description
      *
-     * @name PostApiJobsByIdActionsUpdateLimit
-     * @summary Post API jobs by ID actions update limit
+     * @tags Jobs
+     * @name JobsActionsUpdateLimitCreate
+     * @summary Update job limit
      * @request POST:/api/jobs/{id}/actions/update-limit
      */
-    postApiJobsByIdActionsUpdateLimit: (
+    jobsActionsUpdateLimitCreate: (
       id: string,
       data: UpdateJobLimitRequestBody,
       params: RequestParams = {},
@@ -587,11 +615,12 @@ export class Api<
     /**
      * No description
      *
-     * @name GetApiJobsByIdVideos
-     * @summary Get API jobs by ID videos
+     * @tags Jobs
+     * @name JobsVideosList
+     * @summary List videos found by job
      * @request GET:/api/jobs/{id}/videos
      */
-    getApiJobsByIdVideos: (id: string, params: RequestParams = {}) =>
+    jobsVideosList: (id: string, params: RequestParams = {}) =>
       this.request<JobAndVideos, ErrorModel>({
         path: `/api/jobs/${id}/videos`,
         method: "GET",
@@ -602,6 +631,7 @@ export class Api<
     /**
      * No description
      *
+     * @tags References
      * @name ReferencesCreate
      * @summary Upload reference images
      * @request POST:/api/references
@@ -633,11 +663,12 @@ export class Api<
     /**
      * No description
      *
-     * @name GetApiReferencesById
-     * @summary Get API references by ID
+     * @tags References
+     * @name ReferencesDetail
+     * @summary Get reference by ID
      * @request GET:/api/references/{id}
      */
-    getApiReferencesById: (id: string, params: RequestParams = {}) =>
+    referencesDetail: (id: string, params: RequestParams = {}) =>
       this.request<ReferenceGetFeatureResponse, ErrorModel>({
         path: `/api/references/${id}`,
         method: "GET",
@@ -648,6 +679,7 @@ export class Api<
     /**
      * No description
      *
+     * @tags Videos
      * @name VideosList
      * @summary List downloaded videos
      * @request GET:/api/videos
@@ -657,6 +689,120 @@ export class Api<
         path: `/api/videos`,
         method: "GET",
         format: "json",
+        ...params,
+      }),
+  };
+  testsurf = {
+    /**
+     * No description
+     *
+     * @tags TestSurf
+     * @name TestsurfList
+     * @summary Get video metadata
+     * @request GET:/testsurf
+     */
+    testsurfList: (params: RequestParams = {}) =>
+      this.request<VideoMetadataBody, ErrorModel>({
+        path: `/testsurf`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags TestSurf
+     * @name FrameList
+     * @summary Retrieve a specific frame image
+     * @request GET:/testsurf/frame
+     */
+    frameList: (
+      query: {
+        /** @format int64 */
+        framenum: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, ErrorModel>({
+        path: `/testsurf/frame`,
+        method: "GET",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags TestSurf
+     * @name ReferenceCreate
+     * @summary Upload a reference file
+     * @request POST:/testsurf/reference
+     */
+    referenceCreate: (
+      data: {
+        /** @format binary */
+        video: File;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, ErrorModel>({
+        path: `/testsurf/reference`,
+        method: "POST",
+        body: data,
+        type: ContentType.FormData,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags TestSurf
+     * @name TestList
+     * @summary Test frame matching
+     * @request GET:/testsurf/test
+     */
+    testList: (
+      query: {
+        /** @format int64 */
+        framenum: number;
+        /** @format double */
+        ratiocheck: number;
+        /** @format int64 */
+        minmatches: number;
+        /** @format double */
+        goodmatchthreshold: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<FrameMatchingTestBody, ErrorModel>({
+        path: `/testsurf/test`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags TestSurf
+     * @name VideoCreate
+     * @summary Upload a video file
+     * @request POST:/testsurf/video
+     */
+    videoCreate: (
+      data: {
+        /** @format binary */
+        video: File;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, ErrorModel>({
+        path: `/testsurf/video`,
+        method: "POST",
+        body: data,
+        type: ContentType.FormData,
         ...params,
       }),
   };

@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import {
     Component,
     ElementRef,
@@ -9,10 +9,9 @@ import {
 
 @Component({
     selector: 'app-modal-container',
-    standalone: true,
-    imports: [CommonModule],
+    imports: [],
     templateUrl: './modal-container.component.html',
-    styleUrl: './modal-container.component.scss',
+    styleUrl: './modal-container.component.scss'
 })
 export class ModalContainerComponent {
     @ViewChild('dialog') dialog!: ElementRef<HTMLDialogElement>;

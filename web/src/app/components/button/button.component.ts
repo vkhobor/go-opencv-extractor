@@ -3,10 +3,9 @@ import { Component, Input, computed, signal } from '@angular/core';
 
 @Component({
     selector: 'app-button',
-    standalone: true,
     imports: [CommonModule],
     templateUrl: './button.component.html',
-    styleUrl: './button.component.css',
+    styleUrl: './button.component.css'
 })
 export class ButtonComponent {
     typeSignal = signal<'primary' | 'secondary'>('primary');

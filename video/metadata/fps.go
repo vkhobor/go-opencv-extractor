@@ -13,7 +13,7 @@ import (
 
 var fpsRegexp = regexp.MustCompile(`\d{2}[.]?\d{0,2} fps`)
 
-func ExtractMetadata(videoPath string) (fps float64, err error) {
+func ExtractFps(videoPath string) (fps float64, err error) {
 	cmd := exec.Command("ffmpeg", "-i", videoPath)
 	output, err := cmd.CombinedOutput()
 	slog.Debug("ffmpeg output", "stdout", string(output))

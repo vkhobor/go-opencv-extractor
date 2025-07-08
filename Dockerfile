@@ -1,11 +1,11 @@
 # build web
-FROM node:20.10.0-alpine3.19 AS web-builder
+FROM node:22-alpine AS web-builder
 RUN corepack enable
 
 WORKDIR /web
 
 COPY web/package.json web/package-lock.json ./
-RUN npm ci
+RUN npm ci --force
 
 COPY web ./
 RUN npm run build

@@ -130,7 +130,3 @@ func RemoveAllPaths(files ...string) {
 		_ = os.Remove(file)
 	}
 }
-
-func AddDownloadedVideo(v DownlodedVideo) {
-
-}
