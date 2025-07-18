@@ -4,14 +4,6 @@ INSERT INTO
 VALUES
   (?, ?, ?, ?, ?) RETURNING *;
 
--- name: GetImportAttempt :one
-SELECT
-  *
-FROM
-  import_attempts
-WHERE
-  id = ?;
-
 -- name: UpdateImportAttemptProgress :exec
 UPDATE import_attempts
 SET

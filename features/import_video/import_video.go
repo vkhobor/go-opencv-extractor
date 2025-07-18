@@ -25,10 +25,10 @@ type ImportVideoFeature struct {
 	Config  config.DirectoryConfig
 }
 
-func (d *ImportVideoFeature) ImportVideo(videoID string, jobID string, filterID string) error {
+func (d *ImportVideoFeature) ImportVideo(ctx context.Context, videoID string, jobID string, filterID string) error {
 	// TODO check if video is already imported, optionally abort while progressing
 	// TODO make this more efficient, no need to query for every video
-	downloadedVideos, err := d.Queries.GetVideosDownloadedButNotImported(context.TODO())
+	downloadedVideos, err := d.Queries.GetVideosDownloadedButNotImported(ctx)
 	if err != nil {
 		slog.Error("GetDownloadedVideos: Error while getting downloaded videos", "error", err)
 		return err
@@ -45,7 +45,7 @@ func (d *ImportVideoFeature) ImportVideo(videoID string, jobID string, filterID 
 		}
 	}
 
-	refs, err := d.GetRefImages(jobID)
+	refs, err := d.GetRefImages(ctx, jobID)
 	if err != nil {
 		return err
 	}
@@ -53,24 +53,24 @@ func (d *ImportVideoFeature) ImportVideo(videoID string, jobID string, filterID 
 		return errors.New("no ref images found")
 	}
 
-	id, err := d.StartImportAttempt(videoID, filterID)
+	id, err := d.StartImportAttempt(ctx, videoID, filterID)
 	if err != nil {
 		return err
 	}
 
-	err = d.handleSingle(id, refs, videoID, videoSavePath)
+	err = d.handleSingle(ctx, id, refs, videoID, videoSavePath)
 	if err != nil {
-		innerErr := d.UpdateError(id, err)
+		innerErr := d.UpdateError(ctx, id, err)
 		if innerErr != nil {
 			return err
 		}
 		return err
 	}
 
-	err = d.FinishImport(videoID, id)
+	err = d.FinishImport(ctx, videoID, id)
 	if err != nil {
 		if errors.Is(err, ErrHasImported) {
-			innerErr := d.UpdateError(id, err)
+			innerErr := d.UpdateError(ctx, id, err)
 			if innerErr != nil {
 				return err
 			}
@@ -83,6 +83,7 @@ func (d *ImportVideoFeature) ImportVideo(videoID string, jobID string, filterID 
 }
 
 func (d *ImportVideoFeature) handleSingle(
+	ctx context.Context,
 	importAttemptId string,
 	refs FilterWithPaths,
 	videoID string,
@@ -91,7 +92,7 @@ func (d *ImportVideoFeature) handleSingle(
 	// Make progress handling async
 	progress := make(chan videoiter.Progress, 1)
 	defer close(progress)
-	go d.importProgressHandler(progress, videoID, importAttemptId)
+	go d.importProgressHandler(ctx, progress, videoID, importAttemptId)
 	progressHandler := func(p videoiter.Progress) {
 		progress <- p
 	}
@@ -123,7 +124,7 @@ func (d *ImportVideoFeature) handleSingle(
 	frames := videoiter.AllSampledFrames(video, fpsWant, progressHandler)
 	wantFrames := filter.FrameFilter(frames)
 
-	err = d.collectFramesToDisk(wantFrames, d.Config.GetImagesDir(), videoID, importAttemptId)
+	err = d.collectFramesToDisk(ctx, wantFrames, d.Config.GetImagesDir(), videoID, importAttemptId)
 	if err != nil {
 		return err
 	}
@@ -135,6 +136,7 @@ func (d *ImportVideoFeature) handleSingle(
 }
 
 func (d *ImportVideoFeature) importProgressHandler(
+	ctx context.Context,
 	progressChan <-chan videoiter.Progress,
 	videoID string,
 	importAttemptId string) {
@@ -145,7 +147,7 @@ func (d *ImportVideoFeature) importProgressHandler(
 	for item := range progressChan {
 		select {
 		case <-ticker.C:
-			err := d.UpdateProgress(importAttemptId, int(item.Percent()))
+			err := d.UpdateProgress(ctx, importAttemptId, int(item.Percent()))
 			if err != nil {
 				mlog.Log().Error("Failed to update progress", "error", err)
 			}
@@ -165,7 +167,7 @@ type Filter interface {
 	SamplingWantFPS() int
 }
 
-func (d *ImportVideoFeature) collectFramesToDisk(frames iter.Seq2[videoiter.FrameInfo, error], outputDir string, videoId string, importAttemptId string) error {
+func (d *ImportVideoFeature) collectFramesToDisk(ctx context.Context, frames iter.Seq2[videoiter.FrameInfo, error], outputDir string, videoId string, importAttemptId string) error {
 	for value, err := range frames {
 		if err != nil {
 			return err
@@ -176,7 +178,7 @@ func (d *ImportVideoFeature) collectFramesToDisk(frames iter.Seq2[videoiter.Fram
 			return errors.New("failed to save frame")
 		}
 
-		d.AddFrameToVideo(videoId, Frame{
+		d.AddFrameToVideo(ctx, videoId, Frame{
 			FrameNumber: value.FrameNum,
 			Path:        filePath,
 		}, importAttemptId)
