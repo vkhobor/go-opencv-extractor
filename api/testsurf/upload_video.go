@@ -21,7 +21,7 @@ func HandleUploadVideo(config config.DirectoryConfig) u.Handler[UploadVideoReque
 			Config: config,
 		}
 
-		err := feat.UploadVideo(context.TODO(), req.RawBody.Data().Video.File)
+		err := feat.UploadVideo(ctx, req.RawBody.Data().Video.File)
 		return &struct{}{}, err
 	}
 }

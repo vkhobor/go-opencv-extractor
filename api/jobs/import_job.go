@@ -45,7 +45,7 @@ func HandleImportJob(q *db.Queries, config config.ServerConfig, wakeJobs chan<- 
 			WakeJobs: wakeJobs,
 		}
 		data := wb.RawBody.Data()
-		path, err := uploadFeature.DownloadVideo(data.Video.File, data.FilterId, data.Name)
+		path, err := uploadFeature.DownloadVideo(ctx, data.Video.File, data.FilterId, data.Name)
 		if err != nil {
 			return nil, err
 		}

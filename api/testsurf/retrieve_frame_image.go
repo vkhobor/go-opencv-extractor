@@ -19,7 +19,7 @@ func HandleRetrieveFrameImage(config config.DirectoryConfig) func(ctx context.Co
 			Config: config,
 		}
 
-		readCloser, err := feat.GetFrameImage(context.TODO(), rfir.FrameNum)
+		readCloser, err := feat.GetFrameImage(ctx, rfir.FrameNum)
 		if err != nil {
 			return nil, huma.Error500InternalServerError("Internal error", err)
 		}

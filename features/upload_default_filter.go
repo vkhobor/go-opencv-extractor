@@ -84,7 +84,7 @@ func (f *ReferenceUploadFeature) saveToDb(ctx context.Context, path string, conf
 		return err
 	}
 
-	err = f.Queries.DeleteImagesOnFilter(context.Background(), sql.NullString{
+	err = f.Queries.DeleteImagesOnFilter(ctx, sql.NullString{
 		String: defaultFilterId,
 		Valid:  true,
 	})

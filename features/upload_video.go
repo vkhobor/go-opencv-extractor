@@ -22,10 +22,10 @@ type UploadVideoFeature struct {
 	WakeJobs chan<- struct{}
 }
 
-func (i *UploadVideoFeature) DownloadVideo(data io.Reader, filterId string, name string) (savePath string, error error) {
+func (i *UploadVideoFeature) DownloadVideo(ctx context.Context, data io.Reader, filterId string, name string) (savePath string, error error) {
 	jobID := uuid.New().String()
 	mlog.Log().Info("Creating new job", "jobID", jobID, "filterID", filterId)
-	_, err := i.Queries.CreateJob(context.Background(), db.CreateJobParams{
+	_, err := i.Queries.CreateJob(ctx, db.CreateJobParams{
 		FilterID: sql.NullString{
 			String: filterId,
 			Valid:  true,
@@ -39,7 +39,7 @@ func (i *UploadVideoFeature) DownloadVideo(data io.Reader, filterId string, name
 
 	videoId := uuid.New().String()
 	mlog.Log().Info("Saving newly scraped video", "jobID", jobID, "videoID", videoId, "filterID", filterId)
-	err = i.SaveNewlyScraped(jobID, videoId, filterId, name)
+	err = i.SaveNewlyScraped(ctx, jobID, videoId, filterId, name)
 	if err != nil {
 		mlog.Log().Error("Failed to save newly scraped video", "error", err)
 		return "", err
@@ -83,7 +83,7 @@ func (i *UploadVideoFeature) DownloadVideo(data io.Reader, filterId string, name
 	}
 	mlog.Log().Info("Completed video data copy", "videoID", videoId, "bytesWritten", bytesWritten)
 
-	err = i.SaveDownloadAttempt(videoId, filePath, err)
+	err = i.SaveDownloadAttempt(ctx, videoId, filePath, err)
 	if err != nil {
 		mlog.Log().Error("Error while saving download attempt", "error", err, "videoID", videoId)
 		return savePath, err
@@ -104,8 +104,8 @@ func (i *UploadVideoFeature) DownloadVideo(data io.Reader, filterId string, name
 var ErrLimitExceeded = errors.New("over limit")
 var ErrAlreadyScrapedForFilter = errors.New("already scraped for filter")
 
-func (i *UploadVideoFeature) SaveNewlyScraped(jobId string, videoID string, filterID string, name string) error {
-	videoFromDb, err := i.Queries.GetYtVideoWithJob(context.Background(), videoID)
+func (i *UploadVideoFeature) SaveNewlyScraped(ctx context.Context, jobId string, videoID string, filterID string, name string) error {
+	videoFromDb, err := i.Queries.GetYtVideoWithJob(ctx, videoID)
 	if err == nil && videoFromDb.FilterID.String == filterID {
 		return ErrAlreadyScrapedForFilter
 	} else if err == nil {
@@ -114,7 +114,7 @@ func (i *UploadVideoFeature) SaveNewlyScraped(jobId string, videoID string, filt
 		return err
 	}
 
-	job, err := i.Queries.GetJob(context.Background(), jobId)
+	job, err := i.Queries.GetJob(ctx, jobId)
 	if err != nil {
 		return err
 	}
@@ -123,7 +123,7 @@ func (i *UploadVideoFeature) SaveNewlyScraped(jobId string, videoID string, filt
 		return ErrLimitExceeded
 	}
 
-	_, err = i.Queries.AddYtVideo(context.Background(), db.AddYtVideoParams{
+	_, err = i.Queries.AddYtVideo(ctx, db.AddYtVideoParams{
 		ID: videoID,
 		Name: sql.NullString{
 			String: name,
@@ -140,8 +140,8 @@ func (i *UploadVideoFeature) SaveNewlyScraped(jobId string, videoID string, filt
 
 var ErrHasDownloaded = errors.New("already downloaded")
 
-func (i *UploadVideoFeature) SaveDownloadAttempt(videoID string, savePath string, downloadError error) error {
-	attempts, err := i.Queries.GetVideoWithDownloadAttempts(context.Background(), videoID)
+func (i *UploadVideoFeature) SaveDownloadAttempt(ctx context.Context, videoID string, savePath string, downloadError error) error {
+	attempts, err := i.Queries.GetVideoWithDownloadAttempts(ctx, videoID)
 	if err != nil {
 		return err
 	}
@@ -156,7 +156,7 @@ func (i *UploadVideoFeature) SaveDownloadAttempt(videoID string, savePath string
 	}
 
 	if downloadError != nil {
-		err := i.Queries.AddDownloadAttempt(context.Background(), db.AddDownloadAttemptParams{
+		err := i.Queries.AddDownloadAttempt(ctx, db.AddDownloadAttemptParams{
 			ID: uuid.New().String(),
 			YtVideoID: sql.NullString{
 				String: videoID,
@@ -175,7 +175,7 @@ func (i *UploadVideoFeature) SaveDownloadAttempt(videoID string, savePath string
 
 	// TODO transaction
 	blobId := uuid.New()
-	err = i.Queries.AddBlob(context.Background(), db.AddBlobParams{
+	err = i.Queries.AddBlob(ctx, db.AddBlobParams{
 		ID:   blobId.String(),
 		Path: savePath,
 	})
@@ -183,7 +183,7 @@ func (i *UploadVideoFeature) SaveDownloadAttempt(videoID string, savePath string
 		return err
 	}
 
-	err = i.Queries.AddDownloadAttempt(context.Background(), db.AddDownloadAttemptParams{
+	err = i.Queries.AddDownloadAttempt(ctx, db.AddDownloadAttemptParams{
 		ID: uuid.New().String(),
 		YtVideoID: sql.NullString{
 			String: videoID,

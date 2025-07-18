@@ -62,7 +62,7 @@ func (jc *ImportVideoFeature) StartImportAttempt(ctx context.Context, videoID st
 	}
 
 	importAttemptId := uuid.New().String()
-	_, err = jc.Queries.AddImportAttempt(context.Background(), db.AddImportAttemptParams{
+	_, err = jc.Queries.AddImportAttempt(ctx, db.AddImportAttemptParams{
 		ID: importAttemptId,
 		YtVideoID: sql.NullString{
 			String: videoID,

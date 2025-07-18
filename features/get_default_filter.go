@@ -23,7 +23,7 @@ type ReferenceGetFeatureResponse struct {
 }
 
 func (f *ReferenceGetFeature) GetReference(ctx context.Context) (ReferenceGetFeatureResponse, error) {
-	res, err := f.Queries.GetFilterById(context.Background(), defaultFilterId)
+	res, err := f.Queries.GetFilterById(ctx, defaultFilterId)
 	if err != nil {
 		return ReferenceGetFeatureResponse{}, err
 	}
