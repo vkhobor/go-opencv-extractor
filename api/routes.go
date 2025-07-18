@@ -108,14 +108,6 @@ func NewRouter(
 
 	huma.Register(api, huma.Operation{
 		Method:        "GET",
-		Tags:          []string{"Jobs"},
-		Path:          "/api/jobs",
-		DefaultStatus: 200,
-		Summary:       "List all jobs",
-	}, jobs.HandleListJobs(queries))
-
-	huma.Register(api, huma.Operation{
-		Method:        "GET",
 		Tags:          []string{"Images"},
 		Path:          "/api/images",
 		DefaultStatus: 200,

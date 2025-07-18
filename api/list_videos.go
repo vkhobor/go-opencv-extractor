@@ -2,10 +2,10 @@ package api
 
 import (
 	"context"
+	"log/slog"
 
 	u "github.com/vkhobor/go-opencv/api/util"
 	"github.com/vkhobor/go-opencv/db"
-	"github.com/vkhobor/go-opencv/queries"
 )
 
 type ListVideoBody struct {
@@ -20,17 +20,19 @@ type ListVideosResponse struct {
 
 func HandleListVideos(dbQ *db.Queries) u.Handler[struct{}, ListVideosResponse] {
 	return func(ctx context.Context, e *struct{}) (*ListVideosResponse, error) {
-		queries := queries.Queries{
-			Queries: dbQ,
+
+		val, err := dbQ.GetVideosDownloaded(ctx)
+		if err != nil {
+			slog.Error("GetDownloadedVideos: Error while getting downloaded videos", "error", err)
+			return nil, err
 		}
-		res := queries.GetDownloadedVideos(true)
 
 		videosResponse := []ListVideoBody{}
-		for _, video := range res {
+		for _, video := range val {
 			videosResponse = append(videosResponse, ListVideoBody{
-				VideoID:  video.ID,
+				VideoID:  video.YtVideoID,
 				Progress: int(video.ImportProgress),
-				Name:     video.Name,
+				Name:     video.YtVideoName.String,
 			})
 		}
 

@@ -9,7 +9,6 @@ import (
 	"github.com/vkhobor/go-opencv/config"
 	"github.com/vkhobor/go-opencv/db"
 	"github.com/vkhobor/go-opencv/features"
-	"github.com/vkhobor/go-opencv/queries"
 )
 
 type ImportJob struct {
@@ -41,7 +40,7 @@ func HandleImportJob(q *db.Queries, config config.ServerConfig, wakeJobs chan<- 
 		}
 
 		uploadFeature := features.UploadVideoFeature{
-			Queries:  &queries.Queries{Queries: q},
+			Queries:  q,
 			Config:   conf,
 			WakeJobs: wakeJobs,
 		}

@@ -21,7 +21,6 @@ import (
 	"github.com/vkhobor/go-opencv/config"
 	"github.com/vkhobor/go-opencv/mlog"
 	pathutils "github.com/vkhobor/go-opencv/path"
-	"github.com/vkhobor/go-opencv/queries"
 
 	database "github.com/vkhobor/go-opencv/db"
 )
@@ -80,16 +79,16 @@ func RunServer(ctx context.Context, w io.Writer, args []string, programConfig co
 	mlog.Log().Info("Setup dependencies")
 	dbQueries := database.New(dbconn)
 
-	highLevelQueries := queries.Queries{
-		Queries: dbQueries,
-	}
-
 	dirConfig, err := programConfig.GetDirectoryConfig()
 	if err != nil {
 		return err
 	}
 
-	downloadedChan := make(chan queries.DownlodedVideo, 100)
+	downloadedChan := make(chan struct {
+		ID       string
+		JobID    string
+		FilterID string
+	}, 100)
 	defer close(downloadedChan)
 	wakeJobs := make(chan struct{}, 1)
 	defer close(wakeJobs)
@@ -97,7 +96,7 @@ func RunServer(ctx context.Context, w io.Writer, args []string, programConfig co
 	jobManager := background.DbMonitor{
 		Config:      dirConfig,
 		Wake:        wakeJobs,
-		Queries:     &highLevelQueries,
+		Queries:     dbQueries,
 		ImportInput: downloadedChan,
 	}
 

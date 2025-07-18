@@ -1,13 +1,13 @@
 package background
 
 import (
-	"github.com/vkhobor/go-opencv/features"
+	"github.com/vkhobor/go-opencv/features/import_video"
 	"github.com/vkhobor/go-opencv/mlog"
 )
 
 func (d *DbMonitor) StartImport() {
 	for video := range d.ImportInput {
-		importer := features.ImportVideoFeature{
+		importer := import_video.ImportVideoFeature{
 			Queries: d.Queries,
 			Config:  d.Config,
 		}
