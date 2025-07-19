@@ -22,19 +22,18 @@ func NewDbAdapter(db *sql.DB) DdAdapter {
 }
 
 type querierAdapter struct {
-	db.Querier
-	db *sql.DB
+	db.Queries
 }
 
 // WithTx implements features.QuerierWithTx.
-func (q querierAdapter) WithTx(tx db.DBTX) features.QuerierWithTx {
-	panic("unimplemented")
+func (q *querierAdapter) WithTx(tx db.DBTX) features.QuerierWithTx {
+	return &querierAdapter{Queries: *qDB.New(tx)}
 }
 
-var _ features.QuerierWithTx = querierAdapter{}
+var _ features.QuerierWithTx = &querierAdapter{}
 
 func newQuerierAdapter(db *sql.DB) *querierAdapter {
-	return &querierAdapter{db: db, Querier: qDB.New(db)}
+	return &querierAdapter{Queries: *qDB.New(db)}
 }
 
 type txAdapter struct {

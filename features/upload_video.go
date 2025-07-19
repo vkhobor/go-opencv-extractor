@@ -106,6 +106,12 @@ func (i *UploadVideoFeature) DownloadVideo(ctx context.Context, data io.Reader, 
 		mlog.Log().Info("Jobs already awake")
 	}
 
+	err = tx.Commit()
+	if err != nil {
+		mlog.Log().Error("Error while committing transaction", "error", err, "videoID", videoId)
+		return savePath, err
+	}
+
 	return savePath, nil
 }
 

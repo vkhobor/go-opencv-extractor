@@ -26,7 +26,7 @@ type FilterWithPaths struct {
 	Paths                      []string
 }
 
-func (d *ImportVideoFeature) GetRefImages(ctx context.Context, tx db.DBTX, jobId string) (FilterWithPaths, error) {
+func (d *ImportVideoFeature) getRefImages(ctx context.Context, tx db.DBTX, jobId string) (FilterWithPaths, error) {
 	queries := d.Querier.WithTx(tx)
 
 	res, err := queries.GetFilterForJob(ctx, jobId)
@@ -53,20 +53,11 @@ func (d *ImportVideoFeature) GetRefImages(ctx context.Context, tx db.DBTX, jobId
 	}, nil
 }
 
-func (jc *ImportVideoFeature) StartImportAttempt(ctx context.Context, tx db.DBTX, videoID string, filterID string) (string, error) {
+func (jc *ImportVideoFeature) startImportAttempt(ctx context.Context, tx db.DBTX, videoID string, filterID string) (string, error) {
 	queries := jc.Querier.WithTx(tx)
 
-	imported, err := jc.CheckImportedAlready(ctx, tx, videoID)
-	if err != nil {
-		return "", err
-	}
-
-	if imported {
-		return "", ErrHasImported
-	}
-
 	importAttemptId := uuid.New().String()
-	_, err = queries.AddImportAttempt(ctx, db.AddImportAttemptParams{
+	_, err := queries.AddImportAttempt(ctx, db.AddImportAttemptParams{
 		ID: importAttemptId,
 		YtVideoID: sql.NullString{
 			String: videoID,
@@ -93,7 +84,7 @@ func (jc *ImportVideoFeature) StartImportAttempt(ctx context.Context, tx db.DBTX
 	return importAttemptId, nil
 }
 
-func (jc *ImportVideoFeature) UpdateError(ctx context.Context, tx db.DBTX, id string, err error) error {
+func (jc *ImportVideoFeature) updateError(ctx context.Context, tx db.DBTX, id string, err error) error {
 	queries := jc.Querier.WithTx(tx)
 	return queries.UpdateImportAttemptError(ctx, db.UpdateImportAttemptErrorParams{
 		ID: id,
@@ -104,7 +95,7 @@ func (jc *ImportVideoFeature) UpdateError(ctx context.Context, tx db.DBTX, id st
 	})
 }
 
-func (jc *ImportVideoFeature) UpdateProgress(ctx context.Context, tx db.DBTX, id string, progress int) error {
+func (jc *ImportVideoFeature) updateProgress(ctx context.Context, id string, progress int) error {
 	if progress >= 100 {
 		return ErrCannotUpdateTo100
 	}
@@ -119,35 +110,15 @@ func (jc *ImportVideoFeature) UpdateProgress(ctx context.Context, tx db.DBTX, id
 }
 
 var ErrCannotUpdateTo100 = errors.New("cannot update to 100")
-var ErrHasImported = errors.New("already imported")
 
-func (jc *ImportVideoFeature) CheckImportedAlready(ctx context.Context, tx db.DBTX, videoID string) (bool, error) {
-	queries := jc.Querier.WithTx(tx)
-	videos, err := queries.GetVideoWithImportAttempts(ctx, videoID)
-
+func (jc *ImportVideoFeature) addFrameToVideo(ctx context.Context, frame Frame, importAttemptId string) error {
+	tx, err := jc.SqlDB.BeginTx(ctx, nil)
 	if err != nil {
-		return false, err
-	}
-
-	if len(videos) > 0 {
-		hasSuccessful := lo.SomeBy(videos, func(item db.GetVideoWithImportAttemptsRow) bool {
-			return !item.Error.Valid && item.Progress.Int64 == 100
-		})
-		if hasSuccessful {
-			return true, nil
-		}
-	}
-
-	return false, nil
-}
-
-func (jc *ImportVideoFeature) AddFrameToVideo(ctx context.Context, tx db.DBTX, videoID string, frame Frame, importAttemptId string) error {
-	queries := jc.Querier.WithTx(tx)
-	if imported, err := jc.CheckImportedAlready(ctx, tx, videoID); err != nil {
 		return err
-	} else if imported {
-		return ErrHasImported
 	}
+	defer tx.Rollback()
+
+	queries := jc.Querier.WithTx(tx)
 
 	blobID := uuid.New()
 	_ = queries.AddBlob(ctx, db.AddBlobParams{
@@ -170,22 +141,18 @@ func (jc *ImportVideoFeature) AddFrameToVideo(ctx context.Context, tx db.DBTX, v
 		},
 	})
 
-	return nil
-}
-
-func (jc *ImportVideoFeature) FinishImport(ctx context.Context, tx db.DBTX, videoID string, importAttemptId string) error {
-	queries := jc.Querier.WithTx(tx)
-
-	imported, err := jc.CheckImportedAlready(ctx, tx, videoID)
+	err = tx.Commit()
 	if err != nil {
 		return err
 	}
 
-	if imported {
-		return ErrHasImported
-	}
+	return nil
+}
 
-	err = queries.UpdateImportAttemptProgress(ctx, db.UpdateImportAttemptProgressParams{
+func (jc *ImportVideoFeature) finishImport(ctx context.Context, tx db.DBTX, videoID string, importAttemptId string) error {
+	queries := jc.Querier.WithTx(tx)
+
+	err := queries.UpdateImportAttemptProgress(ctx, db.UpdateImportAttemptProgressParams{
 		ID: importAttemptId,
 		Progress: sql.NullInt64{
 			Int64: int64(100),

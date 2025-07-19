@@ -10,7 +10,6 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/kevincobain2000/gol"
 	"github.com/vkhobor/go-opencv/api/filters"
-	"github.com/vkhobor/go-opencv/api/jobs"
 	"github.com/vkhobor/go-opencv/api/testsurf"
 	"github.com/vkhobor/go-opencv/config"
 )
@@ -56,7 +55,7 @@ func NewRouter(
 		Path:          "/api/jobs/video",
 		DefaultStatus: 201,
 		Summary:       "Create a direct video job",
-	}, jobs.HandleImportJob(db, programConfig, wakeJobs))
+	}, HandleImportJob(db, programConfig, wakeJobs))
 
 	huma.Register(api, huma.Operation{
 		Method:        "POST",
