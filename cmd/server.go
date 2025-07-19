@@ -21,9 +21,6 @@ import (
 	"github.com/vkhobor/go-opencv/config"
 	"github.com/vkhobor/go-opencv/mlog"
 	pathutils "github.com/vkhobor/go-opencv/path"
-	"github.com/vkhobor/go-opencv/queries"
-
-	database "github.com/vkhobor/go-opencv/db"
 )
 
 func RunServer(ctx context.Context, w io.Writer, args []string, programConfig config.ServerConfig) error {
@@ -78,28 +75,26 @@ func RunServer(ctx context.Context, w io.Writer, args []string, programConfig co
 	}
 
 	mlog.Log().Info("Setup dependencies")
-	dbQueries := database.New(dbconn)
-
-	highLevelQueries := queries.Queries{
-		Queries: dbQueries,
-	}
 
 	dirConfig, err := programConfig.GetDirectoryConfig()
 	if err != nil {
 		return err
 	}
 
-	downloadedChan := make(chan queries.DownlodedVideo, 100)
+	downloadedChan := make(chan struct {
+		ID       string
+		JobID    string
+		FilterID string
+	}, 100)
 	defer close(downloadedChan)
 	wakeJobs := make(chan struct{}, 1)
 	defer close(wakeJobs)
 
 	jobManager := background.DbMonitor{
-		Config:               dirConfig,
-		MaxErrorStopRetrying: 5,
-		Wake:                 wakeJobs,
-		Queries:              &highLevelQueries,
-		ImportInput:          downloadedChan,
+		Config:      dirConfig,
+		Wake:        wakeJobs,
+		SqlDB:       dbconn,
+		ImportInput: downloadedChan,
 	}
 
 	mlog.Log().Info("Starting jobs")
@@ -107,7 +102,7 @@ func RunServer(ctx context.Context, w io.Writer, args []string, programConfig co
 	jobManager.Wake <- struct{}{}
 
 	portString := fmt.Sprintf(":%d", programConfig.Port)
-	router := api.NewRouter(dbQueries, jobManager.Wake, dirConfig, programConfig)
+	router := api.NewRouter(dbconn, jobManager.Wake, dirConfig, programConfig)
 	srv := &http.Server{Addr: portString, Handler: router}
 	mlog.Log().Info("Server started", "port", programConfig.Port)
 

@@ -67,20 +67,4 @@ export class JobsService {
                 undefToErr(client.api.videosList().then((x) => x.data)),
         });
     }
-
-    getJobDetails(id: string) {
-        return this.#query({
-            queryKey: ['jobs', id] as const,
-            refetchInterval: 5000,
-            queryFn: () => undefToErr(new Promise(() => {})),
-        });
-    }
-
-    getJobVideos(id: string) {
-        return this.#query({
-            queryKey: ['jobs', id, 'videos'] as const,
-            refetchInterval: 5000,
-            queryFn: () => undefToErr(new Promise(() => {})),
-        });
-    }
 }

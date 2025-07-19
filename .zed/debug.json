@@ -1,0 +1,22 @@
+[
+  {
+    "label": "Run server",
+    "adapter": "Delve",
+    "request": "launch",
+    "mode": "debug",
+    // For Delve, the program can be a package name
+    "program": ".",
+    "args": [
+      "serve",
+      "-p",
+      "7001",
+      "--blob-storage",
+      "./.tmp/blob",
+      "--db",
+      "./.tmp/db.sqlite3",
+      "--log-folder",
+      "./.tmp/logs"
+    ]
+    // "buildFlags": [],
+  }
+]

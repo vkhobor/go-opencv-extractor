@@ -1,17 +1,24 @@
 package background
 
 import (
+	"context"
+	"database/sql"
+	"log/slog"
+
 	"github.com/vkhobor/go-opencv/config"
+	"github.com/vkhobor/go-opencv/db"
 	"github.com/vkhobor/go-opencv/mlog"
-	"github.com/vkhobor/go-opencv/queries"
 )
 
 type DbMonitor struct {
-	Wake                 chan struct{}
-	Queries              *queries.Queries
-	ImportInput          chan queries.DownlodedVideo
-	Config               config.DirectoryConfig
-	MaxErrorStopRetrying int
+	Wake        chan struct{}
+	SqlDB       *sql.DB
+	ImportInput chan struct {
+		ID       string
+		JobID    string
+		FilterID string
+	}
+	Config config.DirectoryConfig
 }
 
 func (jm *DbMonitor) Start() {
@@ -23,10 +30,23 @@ func (jm *DbMonitor) Start() {
 }
 
 func (jm *DbMonitor) PullWorkItemsFromDb() {
-	downloadedVideos := jm.Queries.GetDownloadedVideos(false)
 
-	mlog.Log().Debug("PullWorkItemsFromDb", "downloadedVideos", downloadedVideos)
-	for _, video := range downloadedVideos {
-		jm.ImportInput <- video
+	val, err := db.New(jm.SqlDB).GetVideosDownloadedButNotImported(context.Background())
+	if err != nil {
+		slog.Error("GetDownloadedVideos: Error while getting downloaded videos", "error", err)
+		return
+	}
+
+	mlog.Log().Debug("PullWorkItemsFromDb", "downloadedVideos", val)
+	for _, video := range val {
+		jm.ImportInput <- struct {
+			ID       string
+			JobID    string
+			FilterID string
+		}{
+			ID:       video.YtVideoID,
+			JobID:    video.JobID,
+			FilterID: video.FilterID.String,
+		}
 	}
 }

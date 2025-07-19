@@ -30,10 +30,10 @@ type HandleImagesResponse struct {
 	Body Response
 }
 
-func HandleImages(queries *db.Queries) util.Handler[ImagesRequest, HandleImagesResponse] {
+func HandleImages(sqlDB *sql.DB) util.Handler[ImagesRequest, HandleImagesResponse] {
 
 	return func(ctx context.Context, e *ImagesRequest) (*HandleImagesResponse, error) {
-
+		queries := db.New(sqlDB)
 		res, err := queries.GetPictures(ctx, db.GetPicturesParams{
 			Limit:               int64(e.Limit),
 			Offset:              int64(e.Offset),

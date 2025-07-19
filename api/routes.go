@@ -1,6 +1,7 @@
 package api
 
 import (
+	"database/sql"
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -9,14 +10,12 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/kevincobain2000/gol"
 	"github.com/vkhobor/go-opencv/api/filters"
-	"github.com/vkhobor/go-opencv/api/jobs"
 	"github.com/vkhobor/go-opencv/api/testsurf"
 	"github.com/vkhobor/go-opencv/config"
-	"github.com/vkhobor/go-opencv/db"
 )
 
 func NewRouter(
-	queries *db.Queries,
+	db *sql.DB,
 	wakeJobs chan<- struct{},
 	config config.DirectoryConfig,
 	programConfig config.ServerConfig,
@@ -48,15 +47,7 @@ func NewRouter(
 		Path:          "/api/videos",
 		DefaultStatus: 200,
 		Summary:       "List downloaded videos",
-	}, HandleListVideos(queries))
-
-	huma.Register(api, huma.Operation{
-		Method:        "POST",
-		Tags:          []string{"Jobs"},
-		Path:          "/api/jobs",
-		DefaultStatus: 201,
-		Summary:       "Create a new job",
-	}, jobs.HandleCreateJob(queries, wakeJobs, programConfig))
+	}, HandleListVideos(db))
 
 	huma.Register(api, huma.Operation{
 		Method:        "POST",
@@ -64,15 +55,7 @@ func NewRouter(
 		Path:          "/api/jobs/video",
 		DefaultStatus: 201,
 		Summary:       "Create a direct video job",
-	}, HandleImportJob(queries, programConfig, wakeJobs))
-
-	huma.Register(api, huma.Operation{
-		Method:        "POST",
-		Tags:          []string{"Jobs"},
-		Path:          "/api/jobs/{id}/actions/restart",
-		DefaultStatus: 202,
-		Summary:       "Restart the job pipeline",
-	}, jobs.HandleRestartJobPipeline(wakeJobs))
+	}, HandleImportJob(db, programConfig, wakeJobs))
 
 	huma.Register(api, huma.Operation{
 		Method:        "POST",
@@ -80,7 +63,7 @@ func NewRouter(
 		Path:          "/api/references",
 		DefaultStatus: 201,
 		Summary:       "Upload reference images",
-	}, filters.HandleReferenceUpload(queries, config))
+	}, filters.HandleReferenceUpload(db, config))
 
 	huma.Register(api, huma.Operation{
 		Method:        "POST",
@@ -123,44 +106,12 @@ func NewRouter(
 	}, testsurf.HandleVideoMetadata(config))
 
 	huma.Register(api, huma.Operation{
-		Method:        "POST",
-		Tags:          []string{"Jobs"},
-		Path:          "/api/jobs/{id}/actions/update-limit",
-		DefaultStatus: 202,
-		Summary:       "Update job limit",
-	}, jobs.HandleUpdateJobLimit(queries, wakeJobs))
-
-	huma.Register(api, huma.Operation{
-		Method:        "GET",
-		Tags:          []string{"Jobs"},
-		Path:          "/api/jobs",
-		DefaultStatus: 200,
-		Summary:       "List all jobs",
-	}, jobs.HandleListJobs(queries))
-
-	huma.Register(api, huma.Operation{
-		Method:        "GET",
-		Tags:          []string{"Jobs"},
-		Path:          "/api/jobs/{id}",
-		DefaultStatus: 200,
-		Summary:       "Get job details",
-	}, jobs.HandleJobDetails(queries))
-
-	huma.Register(api, huma.Operation{
-		Method:        "GET",
-		Tags:          []string{"Jobs"},
-		Path:          "/api/jobs/{id}/videos",
-		DefaultStatus: 200,
-		Summary:       "List videos found by job",
-	}, jobs.HandleJobVideosFound(queries))
-
-	huma.Register(api, huma.Operation{
 		Method:        "GET",
 		Tags:          []string{"Images"},
 		Path:          "/api/images",
 		DefaultStatus: 200,
 		Summary:       "List images",
-	}, HandleImages(queries))
+	}, HandleImages(db))
 
 	huma.Register(api, huma.Operation{
 		Method:        "GET",
@@ -168,9 +119,9 @@ func NewRouter(
 		Path:          "/api/references/{id}",
 		DefaultStatus: 200,
 		Summary:       "Get reference by ID",
-	}, filters.HandleReferenceGet(queries))
+	}, filters.HandleReferenceGet(db))
 
-	registerLegacyChiRoutes(router, queries, config)
+	registerLegacyChiRoutes(router, db, config)
 
 	router.NotFound(HandleCatchAll())
 
@@ -198,7 +149,7 @@ func NewRouter(
 }
 
 // registerLegacyChiRoutes registers routes directly using Chi router methods
-func registerLegacyChiRoutes(router chi.Router, queries *db.Queries, config config.DirectoryConfig) {
+func registerLegacyChiRoutes(router chi.Router, queries *sql.DB, config config.DirectoryConfig) {
 	// TODO migrate legacy routes
 	router.Get("/api/references", filters.HandleGetReferences(queries))
 	router.Get("/api/filters", filters.HandleGetFilters(queries))

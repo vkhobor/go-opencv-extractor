@@ -1,6 +1,5 @@
 package metadata
 
-// TODO move to its own package
 import (
 	"log/slog"
 	"os/exec"

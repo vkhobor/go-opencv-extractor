@@ -18,7 +18,6 @@ import (
 )
 
 func main() {
-
 	app := &cli.App{
 		Commands: []*cli.Command{
 			{
@@ -40,7 +39,6 @@ func main() {
 					&cli.StringFlag{
 						Name: "db",
 					},
-					// TODO add baseurl
 				},
 				Usage: "starts the server",
 				Action: func(cCtx *cli.Context) error {
@@ -60,10 +58,10 @@ func main() {
 						Db:          home + "/go-extractor/db.sqlite3",
 					}, "koanf"), nil)
 
-					k.Load(env.ProviderWithValue("GO_EXTRACTOR", ".", func(s string, v string) (string, interface{}) {
+					k.Load(env.ProviderWithValue("GO_EXTRACTOR", ".", func(s string, v string) (string, any) {
 						// Strip out the MYVAR_ prefix and lowercase and get the key while also replacing
 						// the _ character with . in the key (koanf delimeter).
-						key := strings.Replace(strings.ToLower(strings.TrimPrefix(s, "GO_EXTRACTOR")), "_", ".", -1)
+						key := strings.ReplaceAll(strings.ToLower(strings.TrimPrefix(s, "GO_EXTRACTOR")), "_", ".")
 
 						// If there is a space in the value, split the value into a slice by the space.
 						if strings.Contains(v, " ") {
@@ -77,7 +75,7 @@ func main() {
 					for _, name := range cCtx.FlagNames() {
 						if cCtx.IsSet(name) {
 							val := cCtx.Value(name)
-							normalized := strings.Replace(name, "-", "", -1)
+							normalized := strings.ReplaceAll(name, "-", "")
 							k.Set(normalized, val)
 						}
 					}

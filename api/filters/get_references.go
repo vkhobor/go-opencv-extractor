@@ -1,6 +1,7 @@
 package filters
 
 import (
+	"database/sql"
 	"net/http"
 
 	"github.com/go-chi/render"
@@ -8,13 +9,14 @@ import (
 	"github.com/vkhobor/go-opencv/db"
 )
 
-func HandleGetReferences(queries *db.Queries) http.HandlerFunc {
+func HandleGetReferences(sqlDB *sql.DB) http.HandlerFunc {
 	type reference struct {
 		ID string `json:"id"`
 	}
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
+			queries := db.New(sqlDB)
 			res, err := queries.GetFilters(r.Context())
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)

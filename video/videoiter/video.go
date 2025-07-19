@@ -19,7 +19,7 @@ type Video struct {
 
 func NewVideo(path string) (Video, error) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return Video{}, errors.New("Video file does not exist")
+		return Video{}, errors.New("Video file does not exist at " + path)
 	}
 	meta, err := metadata.ExtractFps(path)
 	if err != nil {

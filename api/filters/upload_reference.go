@@ -2,11 +2,11 @@ package filters
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/danielgtaylor/huma/v2"
 	u "github.com/vkhobor/go-opencv/api/util"
 	"github.com/vkhobor/go-opencv/config"
-	"github.com/vkhobor/go-opencv/db"
 	"github.com/vkhobor/go-opencv/features"
 )
 
@@ -35,9 +35,12 @@ type ReferenceUploadResponseBody struct {
 // TODO migrate to fully dynamic filters
 var defaultFilterId = "1fed33d4-0ea3-4b84-909c-261e4b2a3d43"
 
-func HandleReferenceUpload(queries *db.Queries, config config.DirectoryConfig) u.Handler[ReferenceUploadRequest, ReferenceUploadResponse] {
+func HandleReferenceUpload(queries *sql.DB, config config.DirectoryConfig) u.Handler[ReferenceUploadRequest, ReferenceUploadResponse] {
+	dbAdapter := u.NewDbAdapter(queries)
+
 	feature := &features.ReferenceUploadFeature{
-		Queries: queries,
+		Querier: dbAdapter.Querier,
+		SqlDB:   dbAdapter.TxEr,
 		Config:  config,
 	}
 

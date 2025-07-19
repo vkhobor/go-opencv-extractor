@@ -4,6 +4,7 @@ INSERT into
 VALUES
     (?, ?);
 
+
 -- name: GetBlob :one
 SELECT
     path

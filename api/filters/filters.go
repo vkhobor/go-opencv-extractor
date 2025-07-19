@@ -1,6 +1,7 @@
 package filters
 
 import (
+	"database/sql"
 	"net/http"
 
 	"github.com/go-chi/render"
@@ -13,9 +14,11 @@ type filter struct {
 	ID   string `json:"id"`
 }
 
-func HandleGetFilters(queries *db.Queries) http.HandlerFunc {
+func HandleGetFilters(sqlDB *sql.DB) http.HandlerFunc {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
+			queries := db.New(sqlDB)
+
 			res, err := queries.GetFilters(r.Context())
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)

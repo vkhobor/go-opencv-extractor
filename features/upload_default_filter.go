@@ -13,7 +13,8 @@ import (
 )
 
 type ReferenceUploadFeature struct {
-	Queries *db.Queries
+	SqlDB   TXer
+	Querier QuerierWithTx
 	Config  config.DirectoryConfig
 }
 
@@ -40,7 +41,18 @@ func (f *ReferenceUploadFeature) UploadReference(
 		return err
 	}
 
-	return f.saveToDb(ctx, path, config)
+	tx, err := f.SqlDB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	err = f.saveToDb(ctx, tx, path, config)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (f *ReferenceUploadFeature) overrideReferencesOnDisk(file io.Reader, fileName string) (string, error) {
@@ -68,15 +80,16 @@ func (f *ReferenceUploadFeature) overrideReferencesOnDisk(file io.Reader, fileNa
 	return path, nil
 }
 
-func (f *ReferenceUploadFeature) saveToDb(ctx context.Context, path string, config ReferenceConfig) error {
+func (f *ReferenceUploadFeature) saveToDb(ctx context.Context, tx db.DBTX, path string, config ReferenceConfig) error {
+	queries := f.Querier.WithTx(tx)
 
-	err := f.upsertFilter(ctx, config)
+	err := f.upsertFilter(ctx, tx, config)
 	if err != nil {
 		return err
 	}
 
 	blobId := uuid.NewString()
-	err = f.Queries.AddBlob(ctx, db.AddBlobParams{
+	err = queries.AddBlob(ctx, db.AddBlobParams{
 		ID:   blobId,
 		Path: path,
 	})
@@ -84,7 +97,7 @@ func (f *ReferenceUploadFeature) saveToDb(ctx context.Context, path string, conf
 		return err
 	}
 
-	err = f.Queries.DeleteImagesOnFilter(context.Background(), sql.NullString{
+	err = queries.DeleteImagesOnFilter(ctx, sql.NullString{
 		String: defaultFilterId,
 		Valid:  true,
 	})
@@ -92,7 +105,7 @@ func (f *ReferenceUploadFeature) saveToDb(ctx context.Context, path string, conf
 		return err
 	}
 
-	_, err = f.Queries.AttachImageToFilter(ctx, db.AttachImageToFilterParams{
+	_, err = queries.AttachImageToFilter(ctx, db.AttachImageToFilterParams{
 		FilterID: sql.NullString{
 			String: defaultFilterId,
 			Valid:  true,
@@ -105,8 +118,10 @@ func (f *ReferenceUploadFeature) saveToDb(ctx context.Context, path string, conf
 	return err
 }
 
-func (f *ReferenceUploadFeature) upsertFilter(ctx context.Context, config ReferenceConfig) error {
-	_, err := f.Queries.AddFilter(ctx, db.AddFilterParams{
+func (f *ReferenceUploadFeature) upsertFilter(ctx context.Context, tx db.DBTX, config ReferenceConfig) error {
+	queries := f.Querier.WithTx(tx)
+
+	_, err := queries.AddFilter(ctx, db.AddFilterParams{
 		ID: defaultFilterId,
 		Name: sql.NullString{
 			String: "Default",
