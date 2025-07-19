@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"database/sql"
 	"log/slog"
 
 	u "github.com/vkhobor/go-opencv/api/util"
@@ -18,10 +19,10 @@ type ListVideosResponse struct {
 	Body []ListVideoBody
 }
 
-func HandleListVideos(dbQ *db.Queries) u.Handler[struct{}, ListVideosResponse] {
+func HandleListVideos(dbQ *sql.DB) u.Handler[struct{}, ListVideosResponse] {
 	return func(ctx context.Context, e *struct{}) (*ListVideosResponse, error) {
-
-		val, err := dbQ.GetVideosDownloaded(ctx)
+		queries := db.New(dbQ)
+		val, err := queries.GetVideosDownloaded(ctx)
 		if err != nil {
 			slog.Error("GetDownloadedVideos: Error while getting downloaded videos", "error", err)
 			return nil, err

@@ -8,7 +8,7 @@ import (
 )
 
 type ReferenceGetFeature struct {
-	Queries *db.Queries
+	Querier QuerierWithTx
 }
 
 type ReferenceGetFeatureResponse struct {
@@ -23,7 +23,7 @@ type ReferenceGetFeatureResponse struct {
 }
 
 func (f *ReferenceGetFeature) GetReference(ctx context.Context) (ReferenceGetFeatureResponse, error) {
-	res, err := f.Queries.GetFilterById(ctx, defaultFilterId)
+	res, err := f.Querier.GetFilterById(ctx, defaultFilterId)
 	if err != nil {
 		return ReferenceGetFeatureResponse{}, err
 	}

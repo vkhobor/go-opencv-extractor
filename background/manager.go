@@ -2,6 +2,7 @@ package background
 
 import (
 	"context"
+	"database/sql"
 	"log/slog"
 
 	"github.com/vkhobor/go-opencv/config"
@@ -11,7 +12,7 @@ import (
 
 type DbMonitor struct {
 	Wake        chan struct{}
-	Queries     *db.Queries
+	SqlDB       *sql.DB
 	ImportInput chan struct {
 		ID       string
 		JobID    string
@@ -29,7 +30,8 @@ func (jm *DbMonitor) Start() {
 }
 
 func (jm *DbMonitor) PullWorkItemsFromDb() {
-	val, err := jm.Queries.GetVideosDownloadedButNotImported(context.Background())
+
+	val, err := db.New(jm.SqlDB).GetVideosDownloadedButNotImported(context.Background())
 	if err != nil {
 		slog.Error("GetDownloadedVideos: Error while getting downloaded videos", "error", err)
 		return

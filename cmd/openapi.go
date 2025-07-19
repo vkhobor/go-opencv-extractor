@@ -17,7 +17,6 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/vkhobor/go-opencv/api"
 	"github.com/vkhobor/go-opencv/config"
-	database "github.com/vkhobor/go-opencv/db"
 	"github.com/vkhobor/go-opencv/mlog"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -29,8 +28,6 @@ func RunOpenApiServer(ctx context.Context, _ io.Writer, _ []string, port int, ou
 		return err
 	}
 	defer db.Close()
-
-	dbQueries := database.New(db)
 
 	conf := config.ServerConfig{
 		BlobStorage: "/",
@@ -44,7 +41,7 @@ func RunOpenApiServer(ctx context.Context, _ io.Writer, _ []string, port int, ou
 	portString := fmt.Sprintf(":%d", port)
 
 	mlog.Log().Info("Starting router", "port", port)
-	router := api.NewRouter(dbQueries, emptyChan, dirConfig, config.ServerConfig{})
+	router := api.NewRouter(db, emptyChan, dirConfig, config.ServerConfig{})
 
 	savingOpenApiDone := make(chan struct{})
 

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"database/sql"
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -12,11 +13,10 @@ import (
 	"github.com/vkhobor/go-opencv/api/jobs"
 	"github.com/vkhobor/go-opencv/api/testsurf"
 	"github.com/vkhobor/go-opencv/config"
-	"github.com/vkhobor/go-opencv/db"
 )
 
 func NewRouter(
-	queries *db.Queries,
+	db *sql.DB,
 	wakeJobs chan<- struct{},
 	config config.DirectoryConfig,
 	programConfig config.ServerConfig,
@@ -48,7 +48,7 @@ func NewRouter(
 		Path:          "/api/videos",
 		DefaultStatus: 200,
 		Summary:       "List downloaded videos",
-	}, HandleListVideos(queries))
+	}, HandleListVideos(db))
 
 	huma.Register(api, huma.Operation{
 		Method:        "POST",
@@ -56,7 +56,7 @@ func NewRouter(
 		Path:          "/api/jobs/video",
 		DefaultStatus: 201,
 		Summary:       "Create a direct video job",
-	}, jobs.HandleImportJob(queries, programConfig, wakeJobs))
+	}, jobs.HandleImportJob(db, programConfig, wakeJobs))
 
 	huma.Register(api, huma.Operation{
 		Method:        "POST",
@@ -64,7 +64,7 @@ func NewRouter(
 		Path:          "/api/references",
 		DefaultStatus: 201,
 		Summary:       "Upload reference images",
-	}, filters.HandleReferenceUpload(queries, config))
+	}, filters.HandleReferenceUpload(db, config))
 
 	huma.Register(api, huma.Operation{
 		Method:        "POST",
@@ -112,7 +112,7 @@ func NewRouter(
 		Path:          "/api/images",
 		DefaultStatus: 200,
 		Summary:       "List images",
-	}, HandleImages(queries))
+	}, HandleImages(db))
 
 	huma.Register(api, huma.Operation{
 		Method:        "GET",
@@ -120,9 +120,9 @@ func NewRouter(
 		Path:          "/api/references/{id}",
 		DefaultStatus: 200,
 		Summary:       "Get reference by ID",
-	}, filters.HandleReferenceGet(queries))
+	}, filters.HandleReferenceGet(db))
 
-	registerLegacyChiRoutes(router, queries, config)
+	registerLegacyChiRoutes(router, db, config)
 
 	router.NotFound(HandleCatchAll())
 
@@ -150,7 +150,7 @@ func NewRouter(
 }
 
 // registerLegacyChiRoutes registers routes directly using Chi router methods
-func registerLegacyChiRoutes(router chi.Router, queries *db.Queries, config config.DirectoryConfig) {
+func registerLegacyChiRoutes(router chi.Router, queries *sql.DB, config config.DirectoryConfig) {
 	// TODO migrate legacy routes
 	router.Get("/api/references", filters.HandleGetReferences(queries))
 	router.Get("/api/filters", filters.HandleGetFilters(queries))

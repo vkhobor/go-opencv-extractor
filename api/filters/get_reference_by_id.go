@@ -2,9 +2,9 @@ package filters
 
 import (
 	"context"
+	"database/sql"
 
 	u "github.com/vkhobor/go-opencv/api/util"
-	"github.com/vkhobor/go-opencv/db"
 	"github.com/vkhobor/go-opencv/features"
 )
 
@@ -16,9 +16,11 @@ type ReferenceGetResponse struct {
 	Body features.ReferenceGetFeatureResponse `json:"body"`
 }
 
-func HandleReferenceGet(queries *db.Queries) u.Handler[ReferenceGetRequest, ReferenceGetResponse] {
+func HandleReferenceGet(queries *sql.DB) u.Handler[ReferenceGetRequest, ReferenceGetResponse] {
+	dbAdapter := u.NewDbAdapter(queries)
+
 	feature := &features.ReferenceGetFeature{
-		Queries: queries,
+		Querier: dbAdapter.Querier,
 	}
 
 	return func(ctx context.Context, req *ReferenceGetRequest) (*ReferenceGetResponse, error) {

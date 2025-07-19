@@ -8,9 +8,11 @@ import (
 )
 
 func (d *DbMonitor) StartImport() {
+	adapter := NewDbAdapter(d.SqlDB)
 	for video := range d.ImportInput {
 		importer := import_video.ImportVideoFeature{
-			Queries: d.Queries,
+			SqlDB:   adapter.TxEr,
+			Querier: adapter.Querier,
 			Config:  d.Config,
 		}
 

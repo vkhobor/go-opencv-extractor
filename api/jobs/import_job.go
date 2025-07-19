@@ -2,12 +2,12 @@ package jobs
 
 import (
 	"context"
+	"database/sql"
 	"path/filepath"
 
 	"github.com/danielgtaylor/huma/v2"
 	u "github.com/vkhobor/go-opencv/api/util"
 	"github.com/vkhobor/go-opencv/config"
-	"github.com/vkhobor/go-opencv/db"
 	"github.com/vkhobor/go-opencv/features"
 )
 
@@ -32,15 +32,16 @@ type ImportJobRequest struct {
 	}]
 }
 
-func HandleImportJob(q *db.Queries, config config.ServerConfig, wakeJobs chan<- struct{}) u.Handler[ImportJobRequest, ImportJobResponse] {
+func HandleImportJob(q *sql.DB, config config.ServerConfig, wakeJobs chan<- struct{}) u.Handler[ImportJobRequest, ImportJobResponse] {
 	return func(ctx context.Context, wb *ImportJobRequest) (*ImportJobResponse, error) {
 		conf, err := config.GetDirectoryConfig()
 		if err != nil {
 			return nil, err
 		}
-
+		adapt := u.NewDbAdapter(q)
 		uploadFeature := features.UploadVideoFeature{
-			Queries:  q,
+			DbSql:    adapt.TxEr,
+			Querier:  adapt.Querier,
 			Config:   conf,
 			WakeJobs: wakeJobs,
 		}

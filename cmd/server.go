@@ -21,8 +21,6 @@ import (
 	"github.com/vkhobor/go-opencv/config"
 	"github.com/vkhobor/go-opencv/mlog"
 	pathutils "github.com/vkhobor/go-opencv/path"
-
-	database "github.com/vkhobor/go-opencv/db"
 )
 
 func RunServer(ctx context.Context, w io.Writer, args []string, programConfig config.ServerConfig) error {
@@ -77,7 +75,6 @@ func RunServer(ctx context.Context, w io.Writer, args []string, programConfig co
 	}
 
 	mlog.Log().Info("Setup dependencies")
-	dbQueries := database.New(dbconn)
 
 	dirConfig, err := programConfig.GetDirectoryConfig()
 	if err != nil {
@@ -96,7 +93,7 @@ func RunServer(ctx context.Context, w io.Writer, args []string, programConfig co
 	jobManager := background.DbMonitor{
 		Config:      dirConfig,
 		Wake:        wakeJobs,
-		Queries:     dbQueries,
+		SqlDB:       dbconn,
 		ImportInput: downloadedChan,
 	}
 
@@ -105,7 +102,7 @@ func RunServer(ctx context.Context, w io.Writer, args []string, programConfig co
 	jobManager.Wake <- struct{}{}
 
 	portString := fmt.Sprintf(":%d", programConfig.Port)
-	router := api.NewRouter(dbQueries, jobManager.Wake, dirConfig, programConfig)
+	router := api.NewRouter(dbconn, jobManager.Wake, dirConfig, programConfig)
 	srv := &http.Server{Addr: portString, Handler: router}
 	mlog.Log().Info("Server started", "port", programConfig.Port)
 
