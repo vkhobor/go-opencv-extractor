@@ -4,5 +4,4 @@
 
 ## Examples
 
-You can find and example video with reference pictures in the `examples` directory.
-You can test with those.
+You can find and example video with reference pictures here: https://drive.google.com/drive/folders/1D8G2S-EWgcTO-FMfbxrASbkY3pg-4oNR?usp=sharing
