@@ -2,7 +2,7 @@ import { Component, computed, effect, inject, signal } from '@angular/core';
 import { LayoutComponent } from '../../../components/layout/layout.component';
 import { ImagesService } from '../../../services/images.service';
 import { JsonPipe } from '@angular/common';
-import enviroment from '../../../../enviroments/enviroment';
+import enviroment from '../../../../environments/environment';
 import { ZipService } from '../../../services/zip.service';
 import { ActionsComponent } from '../../../components/actions/actions.component';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -13,7 +13,7 @@ import { BadgeComponent } from '../../../components/badge/badge.component';
     selector: 'app-found-images-screen',
     imports: [LayoutComponent, BadgeComponent, JsonPipe, ActionsComponent],
     templateUrl: './found-images-screen.component.html',
-    styleUrl: './found-images-screen.component.css'
+    styleUrl: './found-images-screen.component.css',
 })
 export class FoundImagesScreenComponent {
     imagesService = inject(ImagesService);

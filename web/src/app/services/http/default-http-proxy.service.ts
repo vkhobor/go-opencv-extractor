@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpProxyService } from './http-proxy.service';
 import { HttpClient } from '@angular/common/http';
-import env from '../../../enviroments/enviroment';
+import env from '../../../environments/environment';
 
 @Injectable({
     providedIn: 'root',

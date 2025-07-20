@@ -13,7 +13,7 @@ import { ModalLayoutComponent } from '../../../../components/modal/modal-layout/
 import { CreateNewJobFormComponent } from '../../../newjob/components/form/create-new-job-form.component';
 import { ButtonComponent } from '../../../../components/button/button.component';
 import { ReferencesService } from '../../../../services/references.service';
-import enviroment from '../../../../../enviroments/enviroment';
+import enviroment from '../../../../../environments/environment';
 import {
     FormControl,
     FormGroup,
