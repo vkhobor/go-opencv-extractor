@@ -27,7 +27,7 @@ ARG TARGETOS
 
 COPY --from=web-builder /web/dist ./web/dist
 
-RUN CGO_ENABLED=1 GO111MODULE=on GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -a -o /build/extractor main.go
+RUN CGO_ENABLED=1 GO111MODULE=on GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -a -o /build/extractor ./cmd/cli
 
 # run server
 FROM vkhobor/bullseye-gocv-multiplatform as server-runner
@@ -36,7 +36,7 @@ RUN apt-get update -qq && apt-get install ffmpeg -y
 
 WORKDIR /build
 COPY --from=server-builder /build/extractor ./
-COPY --from=server-builder /go/src/go-opencv-extractor/db/migrations ./db/migrations
+COPY --from=server-builder /go/src/go-opencv-extractor/internal/db/migrations ./db/migrations
 
 EXPOSE 7001
 

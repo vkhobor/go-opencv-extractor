@@ -4,7 +4,7 @@ import "embed"
 
 // Relative paths are not supported in embed.FS.
 // Meaning that accessing a file in a will be interpreted as acessing from where embed.go is located.
-// So don't do this: go:embed all:dist/extractor/browser
+// So don't do this: go:embed all:dist/extractor/browser and expect that it will be available on FS at /
 
 //go:embed all:dist
 var StaticFiles embed.FS
