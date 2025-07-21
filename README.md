@@ -1,3 +1,7 @@
+## Description
+
+The project parses videos based on the [SURF algorithm](https://en.wikipedia.org/wiki/Speeded_up_robust_features), extracting images that match some reference image provided.
+
 ## Run
 
  `docker run -p 7001:7001 ghcr.io/vkhobor/go-opencv-extractor:latest`
