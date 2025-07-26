@@ -8,6 +8,17 @@ The project parses videos based on the [SURF algorithm](https://en.wikipedia.org
 
  Note: the image at first pull is quite large yet, because of debian base.
 
+## Run tests
+
+Before running tests add the example folder below to `./samples` folder.
+
+Then run:
+
+`go test ./...`
+
+The tests are minimal given the scope of the project
+
+
 ## Examples
 
 You can find and example video with reference pictures here: https://drive.google.com/drive/folders/1D8G2S-EWgcTO-FMfbxrASbkY3pg-4oNR?usp=sharing

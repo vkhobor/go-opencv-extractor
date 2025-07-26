@@ -12,8 +12,8 @@ import (
 
 type Video struct {
 	path        string
-	startFrame  int
-	endFrame    int
+	startFrame  int // Inclusive start frame
+	endFrame    int // Inclusive end frame
 	originalFPS float64
 }
 

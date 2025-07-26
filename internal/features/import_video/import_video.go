@@ -13,6 +13,7 @@ import (
 	"github.com/vkhobor/go-opencv/internal/config"
 	"github.com/vkhobor/go-opencv/internal/features"
 	"github.com/vkhobor/go-opencv/internal/mlog"
+	"github.com/vkhobor/go-opencv/internal/uiter"
 	"github.com/vkhobor/go-opencv/internal/video/videoiter"
 	"gocv.io/x/gocv"
 
@@ -134,8 +135,12 @@ func (d *ImportVideoFeature) handleSingle(
 
 	fpsWant := filter.SamplingWantFPS()
 
-	frames := videoiter.AllSampledFrames(video, fpsWant, progressHandler)
-	wantFrames := filter.FrameFilter(frames)
+	frames := videoiter.AllSampledFrames(video, fpsWant)
+	framesWithProgress := uiter.Tap(frames, func(fi videoiter.FrameInfo, err error) {
+		progress := video.CurrentProgress(fi.FrameNum)
+		progressHandler(progress)
+	})
+	wantFrames := filter.FrameFilter(framesWithProgress)
 
 	err = d.collectFramesToDisk(ctx, wantFrames, d.Config.GetImagesDir(), videoID, importAttemptId)
 	if err != nil {

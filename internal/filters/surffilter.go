@@ -49,8 +49,11 @@ func (f *SURFVideoFilter) FrameFilter(frames iter.Seq2[videoiter.FrameInfo, erro
 			if distanceIsMoreThanDuration(previousFrame, frame, time.Minute*2) {
 				if f.surfMatcher.IsImageMatch(&frame.Frame) {
 					previousFrame = frame.Clone()
-					yield(frame, nil)
-					continue
+					if yield(frame, nil) {
+						continue
+					} else {
+						return
+					}
 				}
 			}
 
@@ -71,8 +74,11 @@ func (f *SURFVideoFilter) FrameFilter(frames iter.Seq2[videoiter.FrameInfo, erro
 			// but probably the camera cut so worth checking that we need it or not
 			if f.surfMatcher.IsImageMatch(&frame.Frame) {
 				previousFrame = frame.Clone()
-				yield(frame, nil)
-				continue
+				if yield(frame, nil) {
+					continue
+				} else {
+					return
+				}
 			}
 		}
 	}

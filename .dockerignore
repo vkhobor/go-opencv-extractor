@@ -13,4 +13,3 @@ bin
 taskfile.yaml
 *.md
 **/*.sqlite3
-
