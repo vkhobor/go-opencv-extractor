@@ -26,7 +26,7 @@ func moduloToAchieveTargetFps(originalFPS, targetFPS float64) int {
 	return int(math.Ceil(float64(originalFPS) / float64(targetFPS)))
 }
 
-func AllSampledFrames(v Video, fpsWant int, progress func(Progress)) iter.Seq2[FrameInfo, error] {
+func AllSampledFrames(v Video, fpsWant int) iter.Seq2[FrameInfo, error] {
 	return func(yield func(FrameInfo, error) bool) {
 		capture, err := gocv.OpenVideoCapture(v.path)
 		if err != nil {
@@ -45,12 +45,10 @@ func AllSampledFrames(v Video, fpsWant int, progress func(Progress)) iter.Seq2[F
 		for {
 			capture.Grab(samplingFactor - 1)
 
-			if !capture.Read(&currentFrame) || v.endFrame <= int(capture.Get(gocv.VideoCapturePosFrames)) {
+			frameNumber := int(capture.Get(gocv.VideoCapturePosFrames))
+			if !capture.Read(&currentFrame) || v.endFrame < frameNumber {
 				break
 			}
-
-			frameNumber := int(capture.Get(gocv.VideoCapturePosFrames))
-			progress(v.CurrentProgress(frameNumber))
 
 			info := FrameInfo{
 				FrameNum:      frameNumber,
